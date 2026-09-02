@@ -22,5 +22,8 @@
   "homepage": "https://github.com/Webghost01-NG/fhevm-pooltogether-security#readme",
   "dependencies": {
     "@fhevm/solidity": "0.13.3"
+  },
+  "devDependencies": {
+    "forge-std": "^1.1.2"
   }
 }
