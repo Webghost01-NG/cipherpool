@@ -153,7 +153,7 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
         if (cleartextAmount > 0) {
             euint64 newBalance = FHE.sub(_balances[msg.sender], cleartextAmount);
             _balances[msg.sender] = FHE.allowThis(newBalance);
-            _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
+            _balances[msg.sender] = FHE.allow(newBalance, msg.sender);
             _totalDepositsPlain -= cleartextAmount;
 
             emit WithdrawalFinalized(msg.sender, consumedHash, cleartextAmount);
@@ -185,9 +185,50 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
     }
 
     /**
-     * @notice Placeholder for prize draw (implemented in Issue #13).
+     * @notice Executes an encrypted prize lottery draw across all registered depositors.
+     * @dev Uses homomorphic randomness with bounded reduction and cumulative interval evaluation.
+     * @param prizeAmount The plaintext prize amount to award to the winner.
      */
-    function draw(uint64 prizeAmount) external virtual override {}
+    function draw(uint64 prizeAmount) external override nonReentrant {
+        if (prizeAmount == 0) {
+            revert ZeroPrizeAmount();
+        }
+        if (_totalDepositsPlain == 0 || participants.length == 0) {
+            revert EmptyPool();
+        }
+
+        // 1. Generate homomorphic random winning ticket bounded by total deposits
+        euint64 winningTicket = FHE.randEuint64(_totalDepositsPlain);
+
+        // 2. Cumulative interval search across participants
+        euint64 cumEnd = FHE.asEuint64(0);
+        euint64 prizeEnc = FHE.asEuint64(prizeAmount);
+
+        uint256 len = participants.length;
+        for (uint256 i = 0; i < len; i++) {
+            address p = participants[i];
+            euint64 bal = _balances[p];
+
+            euint64 cumStart = cumEnd;
+            cumEnd = FHE.add(cumEnd, bal);
+
+            // Winner condition: cumStart <= winningTicket < cumEnd
+            ebool geStart = FHE.ge(winningTicket, cumStart);
+            ebool ltEnd = FHE.lt(winningTicket, cumEnd);
+            ebool isWinner = FHE.and(geStart, ltEnd);
+
+            // Award prize homomorphically without revealing winner identity
+            euint64 award = FHE.select(isWinner, prizeEnc, FHE.asEuint64(0));
+            _prizes[p] = FHE.add(_prizes[p], award);
+
+            // Update ACL allowances for the user
+            _prizes[p] = FHE.allowThis(_prizes[p]);
+            _prizes[p] = FHE.allow(_prizes[p], p);
+        }
+
+        currentDrawId++;
+        emit DrawExecuted(currentDrawId, prizeAmount, block.timestamp, len);
+    }
 
     /**
      * @notice Returns the pending withdrawal request for a given user.
