@@ -8,5 +8,6 @@ remappings = [
     "@fhevm/solidity/=node_modules/@fhevm/solidity/",
     "encrypted-types/=node_modules/encrypted-types/",
     "forge-std/=node_modules/forge-std/",
-    "ds-test/=lib/ds-test/src/"
+    "ds-test/=lib/ds-test/src/",
+    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"
 ]

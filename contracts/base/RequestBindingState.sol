@@ -3,15 +3,15 @@ pragma solidity ^0.8.24;
 
 import {FHE, euint64} from "@fhevm/solidity/lib/FHE.sol";
 import {IPoolTypes} from "../interfaces/IPoolTypes.sol";
-import {IPoolErrors} from "../interfaces/IPoolErrors.sol";
 import {IPoolEvents} from "../interfaces/IPoolEvents.sol";
+import {IPoolErrors} from "../interfaces/IPoolErrors.sol";
 
 /**
  * @title RequestBindingState
  * @notice Abstract base contract implementing the storage-anchored withdrawal request state machine.
  * @dev Enforces immutable slot binding, single-use active flags, and atomic storage deletion.
  */
-abstract contract RequestBindingState is IPoolTypes, IPoolErrors, IPoolEvents {
+abstract contract RequestBindingState is IPoolTypes, IPoolEvents, IPoolErrors {
     /// @notice Primary storage mapping for user pending withdrawal requests.
     mapping(address => WithdrawalRequest) internal _pendingWithdrawals;
 
@@ -19,13 +19,13 @@ abstract contract RequestBindingState is IPoolTypes, IPoolErrors, IPoolEvents {
     mapping(address => uint256) public userWithdrawalNonces;
 
     /// @notice Minimum delay (in seconds) before an unfinalized withdrawal request can be cancelled.
-    uint64 public immutable cancellationDelay;
+    uint64 internal immutable _cancellationDelay;
 
     /**
-     * @param _cancellationDelay Minimum duration before stale requests can be cancelled.
+     * @param delay Minimum duration before stale requests can be cancelled.
      */
-    constructor(uint64 _cancellationDelay) {
-        cancellationDelay = _cancellationDelay;
+    constructor(uint64 delay) {
+        _cancellationDelay = delay;
     }
 
     /**
@@ -86,7 +86,7 @@ abstract contract RequestBindingState is IPoolTypes, IPoolErrors, IPoolEvents {
      * @param user The address of the user.
      * @return The active or empty WithdrawalRequest struct.
      */
-    function getPendingWithdrawal(address user) external view returns (WithdrawalRequest memory) {
+    function getPendingWithdrawal(address user) external view virtual returns (WithdrawalRequest memory) {
         return _pendingWithdrawals[user];
     }
 
@@ -95,7 +95,14 @@ abstract contract RequestBindingState is IPoolTypes, IPoolErrors, IPoolEvents {
      * @param user The address of the user.
      * @return The current nonce value.
      */
-    function getUserWithdrawalNonce(address user) external view returns (uint256) {
+    function getUserWithdrawalNonce(address user) external view virtual returns (uint256) {
         return userWithdrawalNonces[user];
+    }
+
+    /**
+     * @notice Returns the cancellation delay in seconds.
+     */
+    function cancellationDelay() external view virtual returns (uint64) {
+        return _cancellationDelay;
     }
 }
