@@ -97,19 +97,92 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
     }
 
     /**
-     * @notice Placeholder for withdrawal request (implemented in Issue #12).
+     * @notice Initiates an asynchronous 2-step withdrawal request.
+     * @dev Homomorphically evaluates balance sufficiency and authorizes handle for KMS public decryption.
+     * @param amount The plaintext amount requested for withdrawal.
      */
-    function requestWithdrawal(uint64 amount) external virtual override {}
+    function requestWithdrawal(uint64 amount) external override nonReentrant {
+        if (amount == 0) {
+            revert ZeroDepositAmount();
+        }
+
+        // 1. Homomorphically evaluate balance sufficiency
+        euint64 amountEnc = FHE.asEuint64(amount);
+        ebool sufficient = FHE.ge(_balances[msg.sender], amountEnc);
+        euint64 approvedEnc = FHE.select(sufficient, amountEnc, FHE.asEuint64(0));
+
+        // 2. Authorize approved ciphertext handle for KMS off-chain public decryption
+        FHE.makePubliclyDecryptable(approvedEnc);
+
+        // 3. Commit domain-bound request to storage (enforces single-use active state)
+        _createWithdrawalRequest(msg.sender, approvedEnc, amount);
+    }
 
     /**
-     * @notice Placeholder for withdrawal finalization (implemented in Issue #12).
+     * @notice Finalizes a pending withdrawal using a verified KMS threshold decryption proof.
+     * @dev Verifies KMS signatures against storage-anchored handle, consumes request, and transfers assets.
+     * @param cleartextAmount The decrypted plaintext amount verified by the KMS signers.
+     * @param decryptionProof The KMS threshold signature proof.
      */
-    function finalizeWithdrawal(uint64 cleartextAmount, bytes calldata decryptionProof) external virtual override {}
+    function finalizeWithdrawal(
+        uint64 cleartextAmount,
+        bytes calldata decryptionProof
+    ) external override nonReentrant {
+        WithdrawalRequest storage req = _pendingWithdrawals[msg.sender];
+        if (!req.active) {
+            revert NoActiveWithdrawalRequest(msg.sender);
+        }
+
+        // Defensive range assertion: KMS output must strictly be requestedAmount or 0
+        if (cleartextAmount != req.requestedAmount && cleartextAmount != 0) {
+            revert InvalidDecryptedAmount(cleartextAmount, req.requestedAmount);
+        }
+
+        // Storage-anchored handle extraction (calldata CANNOT inject or alter handles)
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = FHE.toBytes32(req.handle);
+
+        // Verify KMS threshold signature
+        bytes memory abiEncodedCleartexts = abi.encode(cleartextAmount);
+        FHE.checkSignatures(handles, abiEncodedCleartexts, decryptionProof);
+
+        // Checks-Effects-Interactions: Delete request from storage BEFORE custody transfer
+        bytes32 consumedHash = _deleteWithdrawalRequest(msg.sender);
+
+        // Settle payout if balance was sufficient
+        if (cleartextAmount > 0) {
+            euint64 newBalance = FHE.sub(_balances[msg.sender], cleartextAmount);
+            _balances[msg.sender] = FHE.allowThis(newBalance);
+            _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
+            _totalDepositsPlain -= cleartextAmount;
+
+            emit WithdrawalFinalized(msg.sender, consumedHash, cleartextAmount);
+
+            IERC20(custodyAsset).safeTransfer(msg.sender, cleartextAmount);
+        } else {
+            emit WithdrawalFinalized(msg.sender, consumedHash, 0);
+        }
+    }
 
     /**
-     * @notice Placeholder for withdrawal cancellation (implemented in Issue #12).
+     * @notice Cancels a stale pending withdrawal request if the cancellation delay has elapsed.
+     * @dev Atomic storage deletion resets state and reclaims gas.
      */
-    function cancelWithdrawal() external virtual override {}
+    function cancelWithdrawal() external override nonReentrant {
+        WithdrawalRequest storage req = _pendingWithdrawals[msg.sender];
+        if (!req.active) {
+            revert NoActiveWithdrawalRequest(msg.sender);
+        }
+
+        uint256 elapsed = block.timestamp - req.timestamp;
+        if (elapsed <= _cancellationDelay) {
+            revert WithdrawalNotStale(elapsed, _cancellationDelay);
+        }
+
+        bytes32 cancelledHash = _deleteWithdrawalRequest(msg.sender);
+
+        emit WithdrawalCancelled(msg.sender, cancelledHash);
+    }
 
     /**
      * @notice Placeholder for prize draw (implemented in Issue #13).
