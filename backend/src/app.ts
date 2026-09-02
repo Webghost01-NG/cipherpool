@@ -1,9 +1,15 @@
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { healthRouter } from "./routes/health.js";
+import { createApiRouter } from "./routes/api.js";
+import { IndexerStore } from "./indexer/store.js";
+import { KMSRelayerService } from "./relayer/relayer.js";
 import { defaultLogger } from "./utils/logger.js";
 
-export function createApp(): Express {
+export function createApp(
+  store: IndexerStore = new IndexerStore(),
+  relayer?: KMSRelayerService
+): Express {
   const app = express();
 
   app.use(cors());
@@ -25,6 +31,9 @@ export function createApp(): Express {
 
   // Health check routes
   app.use("/health", healthRouter);
+
+  // V1 API routes
+  app.use("/api/v1", createApiRouter(store, relayer));
 
   // Fallback 404 handler
   app.use((_req: Request, res: Response) => {
