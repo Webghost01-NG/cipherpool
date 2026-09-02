@@ -5,6 +5,8 @@ import {FHE, euint64, ebool, externalEuint64} from "@fhevm/solidity/lib/FHE.sol"
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IConfidentialPool} from "./interfaces/IConfidentialPool.sol";
 import {RequestBindingState} from "./base/RequestBindingState.sol";
@@ -14,7 +16,13 @@ import {RequestBindingState} from "./base/RequestBindingState.sol";
  * @notice Production implementation of the Confidential PoolTogether prize savings pool.
  * @dev Combines Zama fhEVM v0.13.3 encrypted accounting with storage-anchored 2-step settlement.
  */
-contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyGuard {
+contract ConfidentialPool is
+    RequestBindingState,
+    IConfidentialPool,
+    ReentrancyGuard,
+    Ownable2Step,
+    Pausable
+{
     using SafeERC20 for IERC20;
 
     /// @notice Address of the underlying ERC-20 asset held in custody.
@@ -48,11 +56,25 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
     constructor(
         address _custodyAsset,
         uint64 _cancellationDelay
-    ) RequestBindingState(_cancellationDelay) {
+    ) RequestBindingState(_cancellationDelay) Ownable(msg.sender) {
         if (_custodyAsset == address(0)) {
             revert InvalidAssetAddress();
         }
         custodyAsset = _custodyAsset;
+    }
+
+    /**
+     * @notice Emergency administrative pause halts new deposits, withdrawals, and draws.
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpauses normal protocol operations.
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /**
@@ -65,7 +87,7 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
         externalEuint64 inputHandle,
         bytes calldata inputProof,
         uint64 plainCustodyAmount
-    ) external override nonReentrant {
+    ) external override nonReentrant whenNotPaused {
         if (plainCustodyAmount == 0) {
             revert ZeroDepositAmount();
         }
@@ -101,7 +123,7 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
      * @dev Homomorphically evaluates balance sufficiency and authorizes handle for KMS public decryption.
      * @param amount The plaintext amount requested for withdrawal.
      */
-    function requestWithdrawal(uint64 amount) external override nonReentrant {
+    function requestWithdrawal(uint64 amount) external override nonReentrant whenNotPaused {
         if (amount == 0) {
             revert ZeroDepositAmount();
         }
@@ -189,7 +211,7 @@ contract ConfidentialPool is RequestBindingState, IConfidentialPool, ReentrancyG
      * @dev Uses homomorphic randomness with bounded reduction and cumulative interval evaluation.
      * @param prizeAmount The plaintext prize amount to award to the winner.
      */
-    function draw(uint64 prizeAmount) external override nonReentrant {
+    function draw(uint64 prizeAmount) external override nonReentrant whenNotPaused {
         if (prizeAmount == 0) {
             revert ZeroPrizeAmount();
         }
