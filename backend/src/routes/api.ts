@@ -14,6 +14,12 @@ export function createApiRouter(store: IndexerStore, relayer?: KMSRelayerService
     requestHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid 32-byte requestHash format"),
   });
 
+  if (process.env.NODE_ENV !== "production") {
+    router.get("/debug/error", () => {
+      throw new Error("Simulated unhandled route failure");
+    });
+  }
+
   router.get("/pool/state", (_req: Request, res: Response) => {
     const latest = store.getLatestDraw();
     res.status(200).json({
