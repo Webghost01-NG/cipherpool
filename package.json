@@ -1,0 +1,26 @@
+{
+  "name": "zama",
+  "version": "1.0.0",
+  "description": "A rigorous security research, formal analysis, and adversarial verification project focused on confidential prize savings protocols built on Zama's Fully Homomorphic Encryption Virtual Machine (fhEVM).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Webghost01-NG/fhevm-pooltogether-security.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues"
+  },
+  "homepage": "https://github.com/Webghost01-NG/fhevm-pooltogether-security#readme",
+  "dependencies": {
+    "@fhevm/solidity": "0.13.3"
+  }
+}
