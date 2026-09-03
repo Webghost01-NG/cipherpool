@@ -72,6 +72,10 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
         pool.draw(prize3);
         assertEq(pool.currentDrawId(), 3);
         assertEq(pool.reservedPrizesPlain(), TOTAL_PRIZE_YIELD);
+        assertEq(
+            pool.totalAccountedBalancePlain(),
+            uint64(USER_COUNT) * DEPOSIT_AMOUNT + TOTAL_PRIZE_YIELD
+        );
         assertEq(pool.availableYieldPlain(), 0);
 
         // Verify each participant has valid balance and prize handles in state
@@ -157,8 +161,11 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
         assertEq(usdc.balanceOf(user1), user1PreBal + withdrawAmount1);
 
         // Verify pool custody consistency
-        uint64 remainingExpected = (uint64(USER_COUNT) * DEPOSIT_AMOUNT) - withdrawAmount0 - withdrawAmount1;
+        uint64 remainingExpected =
+            (uint64(USER_COUNT) * DEPOSIT_AMOUNT) + TOTAL_PRIZE_YIELD - withdrawAmount0 - withdrawAmount1;
         assertEq(pool.totalDepositsPlain(), remainingExpected);
-        assertEq(usdc.balanceOf(address(pool)), remainingExpected + TOTAL_PRIZE_YIELD);
+        assertEq(pool.reservedPrizesPlain(), 0);
+        assertEq(pool.totalAccountedBalancePlain(), remainingExpected);
+        assertEq(usdc.balanceOf(address(pool)), remainingExpected);
     }
 }

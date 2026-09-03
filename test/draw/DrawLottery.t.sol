@@ -56,6 +56,7 @@ contract DrawLotteryTest is Test, FHEVMMockHarness, IPoolErrors {
         pool.draw(2_500);
 
         assertEq(pool.reservedPrizesPlain(), 2_500);
+        assertEq(pool.totalAccountedBalancePlain(), 12_500);
         assertEq(pool.availableYieldPlain(), 0);
         assertEq(pool.currentDrawId(), 1);
     }
@@ -77,8 +78,24 @@ contract DrawLotteryTest is Test, FHEVMMockHarness, IPoolErrors {
 
         pool.draw(1_000);
         assertEq(pool.reservedPrizesPlain(), 3_000);
+        assertEq(pool.totalAccountedBalancePlain(), 13_000);
         assertEq(pool.availableYieldPlain(), 0);
         assertEq(pool.currentDrawId(), 2);
+    }
+
+    function test_RevertWhen_PrizeWouldExceedEncryptedAccountingDomain() public {
+        usdc.mint(alice, type(uint64).max);
+        _depositPrincipal(type(uint64).max);
+        usdc.mint(address(pool), 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccountingCapacityExceeded.selector,
+                uint256(type(uint64).max) + 1,
+                uint256(type(uint64).max)
+            )
+        );
+        pool.draw(1);
     }
 
     function _depositPrincipal(uint64 amount) internal {

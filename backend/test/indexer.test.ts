@@ -36,6 +36,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
 
     assert.equal(store.getUserDeposit(alice), 50_000n);
     assert.equal(store.getTotalDeposits(), 50_000n);
+    assert.equal(store.getTotalAccountedBalance(), 50_000n);
   });
 
   test("should index WithdrawalRequested, update state, and trigger callback", () => {
@@ -121,6 +122,16 @@ describe("Blockchain Indexer & State Store Tests", () => {
     const recorded = store.getPendingWithdrawalByHash(rHash);
     assert.equal(recorded?.status, "FINALIZED");
     assert.equal(store.getUserDeposit(alice), 10_000n);
+    assert.equal(store.getTotalAccountedBalance(), 10_000n);
+
+    indexer.processLog({
+      topics: finalLog.topics,
+      data: finalLog.data,
+      blockNumber: 103,
+      transactionHash: "0xddd",
+    });
+    assert.equal(store.getUserDeposit(alice), 10_000n);
+    assert.equal(store.getTotalAccountedBalance(), 10_000n);
   });
 
   test("should handle WithdrawalCancelled and transition state to CANCELLED", () => {
@@ -181,5 +192,15 @@ describe("Blockchain Indexer & State Store Tests", () => {
     const latest = store.getLatestDraw();
     assert.equal(latest?.drawId, 1n);
     assert.equal(latest?.prizeAmount, 5_000n);
+    assert.equal(store.getTotalAccountedBalance(), 5_000n);
+
+    indexer.processLog({
+      topics: log.topics,
+      data: log.data,
+      blockNumber: 106,
+      transactionHash: "0x111",
+    });
+    assert.equal(store.getDrawCount(), 1);
+    assert.equal(store.getTotalAccountedBalance(), 5_000n);
   });
 });

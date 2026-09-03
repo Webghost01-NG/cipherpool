@@ -163,7 +163,7 @@ stateDiagram-v2
        _balances[msg.sender] = FHE.sub(_balances[msg.sender], FHE.asEuint64(cleartextAmount));
        _balances[msg.sender] = FHE.allowThis(_balances[msg.sender]);
        _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
-       totalDepositsPlain -= cleartextAmount;
+       _consumeAccountedLiabilities(cleartextAmount);
        ```
      - Transfer underlying asset:
        ```solidity

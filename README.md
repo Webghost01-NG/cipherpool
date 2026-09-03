@@ -126,7 +126,7 @@ docker compose up --build
 ### Known deployment limitations
 
 - The repository implementation derives each encrypted deposit credit from the exact public custody amount, removing the independent-value trust boundary. The currently deployed Sepolia pool predates this fix and must not accept deposits until a reviewed replacement is deployed.
-- The repository implementation reserves custody yield whenever `draw` allocates a prize, preventing repeated use of the same assets. The current Sepolia deployment predates this fix, and `compoundPrizes` still requires an accounting correction; draws must remain disabled until both fixes are deployed.
+- The repository implementation accounts for principal and prize liabilities in a privacy-preserving aggregate. Compounding moves only ciphertext, while withdrawals settle prize and base tranches through a public aggregate waterfall. The current Sepolia deployment predates these fixes, so writes must remain disabled until a reviewed replacement is deployed.
 - `finalizeWithdrawal` keys requests by `msg.sender`; therefore the requesting wallet—not a backend relayer—must submit the KMS proof on-chain. The frontend now follows this requirement.
 
 ---

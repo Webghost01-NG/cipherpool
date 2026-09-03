@@ -11,6 +11,7 @@ export const POOL_ABI = [
   "function getPrizeHandle(address user) external view returns (bytes32)",
   "function totalDepositsPlain() external view returns (uint64)",
   "function reservedPrizesPlain() external view returns (uint256)",
+  "function totalAccountedBalancePlain() external view returns (uint256)",
   "function availableYieldPlain() external view returns (uint256)",
   "function getParticipantCount() external view returns (uint256)",
   "function currentDrawId() external view returns (uint256)",

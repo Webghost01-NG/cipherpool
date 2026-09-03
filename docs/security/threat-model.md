@@ -117,7 +117,7 @@ graph TD
 ---
 
 ### 4.4 Modulo Bias in Confidential Draws
-- **Threat Vector:** Does the prize draw's modulo reduction (`FHE.rem(rand, totalDepositsPlain)`) introduce exploitable statistical bias favoring specific participants?
+- **Threat Vector:** Does the prize draw's bounded random ticket (`FHE.randEuint64(totalAccountedBalancePlain)`) introduce exploitable statistical bias favoring specific participants?
 - **Root Mitigation:**
   - As proven in the Phase 1G.6 mathematical audit:
     $$\Delta P_{\text{abs}} = \frac{1}{2^{64}} \approx 5.42 \times 10^{-20}$$
@@ -136,7 +136,7 @@ The protocol maintains strict cryptographic boundaries regarding what is private
 | **Aggregate Reserved Prizes (`_reservedPrizesPlain`)** | **PUBLIC** | Plaintext custody liability; does not identify winners. |
 | **Lottery Random Seed (`randVal`)** | **CONFIDENTIAL** | Generated homomorphically via `FHE.randEuint64()`. Never decrypted. |
 | **Winner Identification during Draw** | **CONFIDENTIAL** | Homomorphic cumulative sum + `FHE.select`. Zero plaintext branching. |
-| **Total Pool Size (`totalDepositsPlain`)** | **PUBLIC** | Required as plaintext divisor for `FHE.rem`. Visible on-chain. |
+| **Total Accounted Balance (`totalAccountedBalancePlain`)** | **PUBLIC** | Aggregate base and prize liabilities used as the encrypted draw bound. |
 | **Deposit / Withdrawal Custody Amounts** | **PUBLIC** | Standard ERC-20 `Transfer` events are observable on the EVM ledger. |
 | **Withdrawal Sufficiency Bit** | **PUBLIC (at settlement)** | KMS decrypts to requested amount (if sufficient) or 0 (if insufficient). |
 
@@ -157,7 +157,9 @@ $$\text{totalDepositsPlain} + \text{reservedPrizesPlain} \le \text{custodyAsset.
 
 Therefore, a draw can allocate at most:
 
-$$\text{availableYieldPlain} = \max(0, \text{custody} - \text{principal} - \text{reserved prizes})$$
+$$\text{availableYieldPlain} = \max(0, \text{custody} - \text{base liability} - \text{reserved prizes})$$
+
+Compounding does not change this total: it only transfers a user's encrypted value from `_prizes` to `_balances`. Draw weights use `_balances[user] + _prizes[user]`, so the public draw bound remains equal to the encrypted cumulative intervals without revealing the winner. Successful withdrawals consume the aggregate prize tranche first and the base-deposit tranche second; this deterministic waterfall discloses no per-user prize attribution.
 
 ---
 

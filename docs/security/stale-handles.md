@@ -126,14 +126,14 @@ Let:
 > **Theorem 3 (Conservation of Principal):**  
 > *Under any sequence of deposits, cancellations, and finalizations, the total custody balance held by the pool strictly equals the plaintext accounting invariant:*
 >
-> $$\text{custodyAsset.balanceOf}(\text{address}(\text{this})) + \text{vault.principalDeposited}() \ge \text{totalDepositsPlain}$$
+> $$\text{custodyAsset.balanceOf}(\text{address}(\text{this})) + \text{vault.principalDeposited}() \ge \text{totalAccountedBalancePlain}$$
 
 **Proof:**
-1. On deposit of $M$: `totalDepositsPlain` increments by $M$, and $M$ tokens are transferred into custody. Invariant holds with equality.
-2. On cancellation: `totalDepositsPlain` is unaffected, custody balance is unaffected. Invariant holds.
+1. On deposit of $M$: the base liability and `totalAccountedBalancePlain` increment by $M$, and $M$ tokens are transferred into custody. Invariant holds with equality.
+2. On cancellation: aggregate accounting and custody are unaffected. Invariant holds.
 3. On finalization of $M$:
-   - If balance was sufficient: `totalDepositsPlain` decrements by $M$, and exactly $M$ tokens are transferred out. Both sides decrease by $M$. Invariant holds.
-   - If balance was insufficient: `totalDepositsPlain` is unaffected, 0 tokens are transferred out. Invariant holds.
+   - If balance was sufficient: the aggregate prize/base waterfall decreases `totalAccountedBalancePlain` by $M$, and exactly $M$ tokens are transferred out. Both sides decrease by $M$.
+   - If balance was insufficient: aggregate accounting is unaffected and 0 tokens are transferred out.
 4. Therefore, solvency is preserved across all states. $\blacksquare$
 
 ---
