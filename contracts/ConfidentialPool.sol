@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import {FHE, euint64, ebool, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, euint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -78,22 +78,18 @@ contract ConfidentialPool is
     }
 
     /**
-     * @notice Deposits underlying ERC-20 tokens while crediting an encrypted balance ciphertext.
-     * @param inputHandle The external ciphertext handle submitted by the user.
-     * @param inputProof The cryptographic ZK proof verifying encryption bound to this contract.
-     * @param plainCustodyAmount The plaintext custody amount transferred from caller.
+     * @notice Deposits underlying ERC-20 tokens and credits the same amount to an encrypted balance.
+     * @dev The contract derives the ciphertext from the custody amount, so callers cannot provide
+     *      independent values for custody and encrypted accounting.
+     * @param amount The amount transferred from the caller and credited to their encrypted balance.
      */
-    function deposit(
-        externalEuint64 inputHandle,
-        bytes calldata inputProof,
-        uint64 plainCustodyAmount
-    ) external override nonReentrant whenNotPaused {
-        if (plainCustodyAmount == 0) {
+    function deposit(uint64 amount) external override nonReentrant whenNotPaused {
+        if (amount == 0) {
             revert ZeroDepositAmount();
         }
 
-        // 1. Verify encrypted user input via Zama InputVerifier
-        euint64 amountEnc = FHE.fromExternal(inputHandle, inputProof);
+        // 1. Derive the encrypted credit from the sole custody amount.
+        euint64 amountEnc = FHE.asEuint64(amount);
 
         // 2. Homomorphic balance incrementation & participant tracking
         if (!isParticipant[msg.sender]) {
@@ -109,13 +105,13 @@ contract ConfidentialPool is
         _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
 
         // 4. Accounting & event emission
-        _totalDepositsPlain += plainCustodyAmount;
+        _totalDepositsPlain += amount;
         uint256 nonce = userDepositNonces[msg.sender]++;
 
-        emit Deposited(msg.sender, nonce, plainCustodyAmount, externalEuint64.unwrap(inputHandle));
+        emit Deposited(msg.sender, nonce, amount, FHE.toBytes32(amountEnc));
 
         // 5. Custody asset transfer (Checks-Effects-Interactions)
-        IERC20(custodyAsset).safeTransferFrom(msg.sender, address(this), plainCustodyAmount);
+        IERC20(custodyAsset).safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /**

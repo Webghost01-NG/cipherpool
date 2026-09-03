@@ -15,7 +15,7 @@ This audit validates the formal Solidity interface definitions created in `contr
 - `IPoolErrors.sol`: Protocol-wide custom errors.
 - `IPoolEvents.sol`: Off-chain indexing and relayer event definitions.
 - `IPoolTypes.sol`: Canonical structs for requests, draws, and pool configuration.
-- `IConfidentialPool.sol`: Core contract interface for encrypted deposit, 2-step withdrawal, and draw.
+- `IConfidentialPool.sol`: Core contract interface for custody-bound encrypted accounting, 2-step withdrawal, and draw.
 - `IConfidentialVault.sol`: Strategy custody and yield harvesting interface.
 
 ---
@@ -23,7 +23,7 @@ This audit validates the formal Solidity interface definitions created in `contr
 ## 2. Invariant & Security Verification
 
 ### 2.1 Type Alignment with Zama fhEVM v0.13.3
-- User input arguments strictly use `externalEuint64` (not `bytes32` or legacy `einput`).
+- Deposits accept a single public `uint64` custody amount and derive the matching `euint64` credit on-chain.
 - Internal encrypted handles strictly use `euint64` imported from `@fhevm/solidity/lib/FHE.sol`.
 - Return handles for off-chain re-encryption strictly return raw `bytes32` via `getBalanceHandle` and `getPrizeHandle`.
 

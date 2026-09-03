@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {CoprocessorConfig} from "@fhevm/solidity/lib/Impl.sol";
 import {ZamaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
@@ -129,7 +128,7 @@ contract SepoliaRuntimeChecklistTest is Test, FHEVMMockHarness, IPoolTypes {
     // Point 12: Zero deposit amount protection
     function test_Checklist_12_ZeroDepositProtection() public {
         vm.expectRevert();
-        pool.deposit(externalEuint64.wrap(bytes32(0)), hex"", 0);
+        pool.deposit(0);
     }
 
     // Point 13: Zero withdrawal request protection

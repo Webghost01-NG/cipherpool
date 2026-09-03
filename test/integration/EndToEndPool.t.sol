@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {FHE, externalEuint64, euint64} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, euint64} from "@fhevm/solidity/lib/FHE.sol";
 
 import {ConfidentialPool} from "../../contracts/ConfidentialPool.sol";
 import {IPoolErrors} from "../../contracts/interfaces/IPoolErrors.sol";
@@ -44,11 +44,9 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
         // Step 1: 10 concurrent users deposit
         for (uint256 i = 0; i < USER_COUNT; i++) {
             address user = users[i];
-            externalEuint64 mockInputHandle = externalEuint64.wrap(bytes32(uint256(0x2000 + i)));
-            bytes memory mockProof = abi.encodePacked("zkProof", i);
 
             vm.prank(user);
-            pool.deposit(mockInputHandle, mockProof, DEPOSIT_AMOUNT);
+            pool.deposit(DEPOSIT_AMOUNT);
 
             assertEq(pool.userDepositNonces(user), 1);
             assertTrue(pool.isParticipant(user));

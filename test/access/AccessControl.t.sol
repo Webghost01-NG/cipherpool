@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
@@ -49,11 +48,8 @@ contract AccessControlTest is Test {
     function test_RevertWhen_DepositWhilePaused() public {
         pool.pause();
 
-        externalEuint64 mockInputHandle = externalEuint64.wrap(bytes32(uint256(0x111)));
-        bytes memory mockProof = hex"1234";
-
         vm.expectRevert(Pausable.EnforcedPause.selector);
-        pool.deposit(mockInputHandle, mockProof, 100);
+        pool.deposit(100);
     }
 
     function test_RevertWhen_RequestWithdrawalWhilePaused() public {

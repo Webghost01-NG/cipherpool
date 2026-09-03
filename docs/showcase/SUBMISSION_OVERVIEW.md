@@ -24,7 +24,7 @@ In traditional transparent prize savings pools (such as PoolTogether on Ethereum
 ## 2. The Solution: CipherPool
 
 CipherPool leverages **Zama fhEVM v0.13.3** homomorphic encryption to create a confidential, provably fair prize savings protocol:
-- **Encrypted Principals:** User deposits are encrypted on the client and stored strictly in ciphertext form (`euint64`).
+- **Encrypted Principals:** Public custody deposits are converted on-chain into encrypted running balances (`euint64`), binding every encrypted credit to assets transferred.
 - **Encrypted Lottery Draws:** Randomness (`FHE.randEuint64`) selects winners homomorphically using cumulative interval evaluation without ever revealing participant balances or individual winner identities.
 - **2-Step Storage-Anchored Settlement:** Withdrawals use homomorphic balance comparisons (`FHE.ge`) and KMS threshold signatures verified against immutable storage slots (`FHE.checkSignatures`), fully preventing handle substitution and replay attacks.
 - **Escape Valve:** Users retain self-sovereign control via `cancelWithdrawal` if an off-chain relayer or KMS experiences a delay.
@@ -36,8 +36,8 @@ CipherPool leverages **Zama fhEVM v0.13.3** homomorphic encryption to create a c
 ```
 [User / Frontend]
        │
-       ▼ (1. Encrypt input with ZK proof)
-[ConfidentialPool.sol] ─── (2. Deposit USDC + credit euint64 balance)
+       ▼ (1. Submit public custody amount)
+[ConfidentialPool.sol] ─── (2. Deposit USDC + derive matching euint64 credit)
        │
        ▼ (3. Yield Strategy)
 [ConfidentialVault.sol] (4. Harvest yield into prize pool)
@@ -59,10 +59,10 @@ CipherPool leverages **Zama fhEVM v0.13.3** homomorphic encryption to create a c
 1. **Connect Wallet:**
    - Launch the frontend (`npm run build:frontend` or local dev).
    - Connect MetaMask configured to Ethereum Sepolia (Chain ID: `11155111`).
-2. **Confidential Deposit:**
+2. **Deposit into an Encrypted Position:**
    - Enter deposit amount in USDC (e.g. 100 USDC).
-   - Approve custody allowance, generate client ZK proof, and submit on-chain transaction.
-   - Observe balance remaining encrypted in the pool.
+   - Approve custody allowance and submit the public deposit transaction.
+   - Observe the contract-derived running balance remaining encrypted in the pool.
 3. **Client-Side Balance Reveal:**
    - Click "Reveal Balance" to authorize an EIP-712 decryption signature via the wallet.
    - Decrypt your private balance locally with zero leakage to unauthorized viewers.

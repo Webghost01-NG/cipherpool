@@ -11,12 +11,12 @@ interface IPoolEvents {
     /// @param user The address of the depositor.
     /// @param nonce The per-user deposit sequence counter.
     /// @param plainAmount The plaintext custody amount transferred to the pool.
-    /// @param inputHandle The external ciphertext handle submitted by the user.
+    /// @param encryptedAmountHandle The ciphertext handle derived from the deposited custody amount.
     event Deposited(
         address indexed user,
         uint256 indexed nonce,
         uint64 plainAmount,
-        bytes32 indexed inputHandle
+        bytes32 indexed encryptedAmountHandle
     );
 
     /// @notice Emitted when an asynchronous 2-step withdrawal is requested.

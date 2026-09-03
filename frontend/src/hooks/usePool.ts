@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ethers } from "ethers";
 import { useWallet } from "./useWallet.js";
-import {
-  getBrowserFhevmInstance,
-  InputEncryptionAdapter,
-} from "../../../client/src/adapters/InputEncryption.js";
+import { getBrowserFhevmInstance } from "../../../client/src/adapters/InputEncryption.js";
 import { POOL_ABI, ERC20_ABI } from "../contracts/abi.js";
 import {
   DEFAULT_BACKEND_URL,
@@ -242,8 +239,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         ensureReceipt(await approval.wait());
       }
 
-      const encrypted = await new InputEncryptionAdapter(contractAddress, address).encryptUint64(amount);
-      const transaction = await pool.deposit(encrypted.handle, encrypted.inputProof, amount);
+      const transaction = await pool.deposit(amount);
       callbacks.onBroadcast?.(transaction.hash);
       const receipt = ensureReceipt(await transaction.wait());
       await refreshPoolData();

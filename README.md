@@ -23,7 +23,7 @@ Transparent blockchain prize savings protocols expose participant balances and w
 
 ## 2. The Solution: CipherPool
 
-CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to enable completely private prize savings:
+CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to protect pool positions and prize calculations:
 - **Encrypted Principals (`euint64`):** Balances are homomorphically encrypted and incremented without revealing numbers to other users, searchers, or node operators.
 - **Encrypted Lottery Draws (`FHE.randEuint64`):** Bounded homomorphic randomness derives winning tickets via cumulative intervals without leaking winner identity or ticket amounts.
 - **Storage-Anchored 2-Step Settlement:** Withdrawal requests anchor ciphertext handles directly in immutable contract storage slots, preventing calldata manipulation and handle substitution attacks.
@@ -37,8 +37,8 @@ CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to enable co
 ```
 [User / Frontend]
        │
-       ▼ (1. Client ZK-PoK Proof of Encryption)
-[ConfidentialPool.sol] ─── (2. Custody Deposit & Homomorphic Credit)
+       ▼ (1. Public Custody Amount)
+[ConfidentialPool.sol] ─── (2. Custody Deposit & Contract-Derived Encrypted Credit)
        │
        ▼ (3. Principal Segregation & Strategy Management)
 [ConfidentialVault.sol] ─── (4. Yield Harvest into Prize Pool)
@@ -125,7 +125,7 @@ docker compose up --build
 
 ### Known deployment limitations
 
-- `deposit` does not cryptographically bind `plainCustodyAmount` to the encrypted amount. A new contract version must remove this accounting trust boundary before production use.
+- The repository implementation derives each encrypted deposit credit from the exact public custody amount, removing the independent-value trust boundary. The currently deployed Sepolia pool predates this fix and must not accept deposits until a reviewed replacement is deployed.
 - Prize liabilities are not reserved when `draw` executes, and `compoundPrizes` does not update plaintext principal accounting. Draw execution should remain operationally disabled until a reviewed contract upgrade is deployed.
 - `finalizeWithdrawal` keys requests by `msg.sender`; therefore the requesting wallet—not a backend relayer—must submit the KMS proof on-chain. The frontend now follows this requirement.
 
@@ -139,4 +139,4 @@ docker compose up --build
 ### 30-Second Layman Explanation
 > **What problem does this project solve?** When you save money in conventional crypto prize lotteries, everyone can see your bankroll and track your every move.  
 > **Why can't ordinary blockchain apps solve it?** Blockchains are completely transparent by default, exposing every account balance and transaction.  
-> **How does CipherPool solve it?** CipherPool uses math called Fully Homomorphic Encryption. It encrypts your deposit so the computer can run fair lotteries and calculate prizes without ever seeing or revealing how much money you actually have.
+> **How does CipherPool solve it?** CipherPool converts each public deposit into an encrypted running balance. The protocol can then calculate lottery weights and prizes without revealing a user's current pool position.
