@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  backend-relayer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - RPC_URL=${RPC_URL:-https://rpc.sepolia.org}
+      - CHAIN_ID=11155111
+      - POOL_CONTRACT_ADDRESS=${POOL_CONTRACT_ADDRESS:-0x5FbDB2315678afecb367f032d93F642f64180aa3}
+      - KMS_GATEWAY_URL=https://gateway.sepolia.zama.ai
+      - POLL_INTERVAL_MS=3000
+      - MAX_RETRIES=5
+    restart: unless-stopped
