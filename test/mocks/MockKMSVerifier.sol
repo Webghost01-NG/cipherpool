@@ -4,9 +4,17 @@ pragma solidity ^0.8.24;
 contract MockKMSVerifier {
     address[] public signers;
     uint256 public threshold = 1;
+    address public signerAddress;
 
     constructor() {
-        signers.push(msg.sender);
+        signerAddress = 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7;
+        signers.push(signerAddress);
+    }
+
+    function setSigner(address _signer) external {
+        signerAddress = _signer;
+        signers = new address[](1);
+        signers[0] = _signer;
     }
 
     function eip712Domain()
@@ -31,6 +39,20 @@ contract MockKMSVerifier {
             bytes32(0),
             new uint256[](0)
         );
+    }
+
+    function getContextSignersAndThresholdFromExtraData(
+        bytes calldata
+    ) external view returns (address[] memory, uint256) {
+        return (signers, threshold);
+    }
+
+    function verifyDecryptionEIP712KMSSignatures(
+        bytes32[] memory,
+        bytes memory,
+        bytes memory
+    ) external pure returns (bool) {
+        return true;
     }
 
     function verifyDecryptionEIP712KMSSignatures(
