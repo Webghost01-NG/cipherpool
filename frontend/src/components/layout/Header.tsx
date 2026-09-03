@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Shield, ExternalLink, Copy, Check } from "lucide-react";
+import { Shield, Copy, Check } from "lucide-react";
 import { Badge } from "../common/UIPrimitives.js";
+import { WalletButton } from "../wallet/WalletButton.js";
 
 export interface HeaderProps {
   activeTab?: string;
@@ -100,24 +101,8 @@ export const Header: React.FC<HeaderProps> = ({
           ))}
         </nav>
 
-        {/* Technical Status & Contract Identifier */}
+        {/* Technical Status & Wallet Action */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              backgroundColor: "var(--bg-secondary)",
-              border: "1px solid var(--border-subtle)",
-              fontSize: "0.8125rem",
-            }}
-          >
-            <span className="pulsing-dot" />
-            <span style={{ color: "var(--text-secondary)" }}>Sepolia fhEVM</span>
-          </div>
-
           <button
             onClick={handleCopy}
             title="Copy contract address"
@@ -138,6 +123,8 @@ export const Header: React.FC<HeaderProps> = ({
             <span>{truncated}</span>
             {copied ? <Check size={14} color="var(--accent-emerald)" /> : <Copy size={14} />}
           </button>
+
+          <WalletButton />
         </div>
       </div>
     </header>
