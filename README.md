@@ -62,12 +62,13 @@ CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to protect p
 - **Live Relayer & Indexer (Render):** [https://cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
 - **Relayer Health Check:** [https://cipherpool-backend.onrender.com/health](https://cipherpool-backend.onrender.com/health)
 
-### Verified Smart Contracts (Ethereum Sepolia)
-| Component | Sepolia Contract Address | Network | Etherscan Verification |
+### Bytecode-Verified Smart Contracts (Ethereum Sepolia)
+| Component | Sepolia Contract Address | Status | Deployment Evidence |
 | :--- | :--- | :--- | :--- |
-| **ConfidentialPool** | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) | Ethereum Sepolia (11155111) | [Deploy Tx: `0x93276d...`](https://sepolia.etherscan.io/tx/0x93276d8a857582f24169bc37550a38d7f1bf1e4cd6a94df7f1d95dbf3efb3253) |
-| **ConfidentialVault** | [`0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7`](https://sepolia.etherscan.io/address/0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7) | Ethereum Sepolia (11155111) | [Deploy Tx: `0x1f4b0b...`](https://sepolia.etherscan.io/tx/0x1f4b0bcc4e4436095a7d7412987ef4ec11c1cc72725066d131278d26bc88c9d4) |
-| **Custody Asset (USDC)** | [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) | Ethereum Sepolia (11155111) | [Circle Proxy](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) |
+| **Active ConfidentialPool** | [`0xf4Ea29C0966913031770e2Bee2C3259bd5f51714`](https://sepolia.etherscan.io/address/0xf4Ea29C0966913031770e2Bee2C3259bd5f51714) | Corrected deployment | [Deploy transaction](https://sepolia.etherscan.io/tx/0xbe748232c494872cd98215e8e39b23855787b3f92ecd66e2f2f2703954ca8f24) |
+| **Active ConfidentialVault** | [`0x21e4aEeE2DCbc7f6d99729C38CdF4CDA73f86507`](https://sepolia.etherscan.io/address/0x21e4aEeE2DCbc7f6d99729C38CdF4CDA73f86507) | Bound to active pool | [Deploy transaction](https://sepolia.etherscan.io/tx/0xeb9f1565eb8010f0d1c983e29bf7e0a66575ed707da56f816d450422a2ec0436) |
+| **Archived ConfidentialPool** | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) | Exit only; new writes disabled | [Original deployment](https://sepolia.etherscan.io/tx/0x1f4b0bcc4e4436095a7d7412987ef4ec11c1cc72725066d131278d26bc88c9d4) |
+| **Custody Asset (USDC)** | [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) | Circle Sepolia USDC | [Token contract](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) |
 | **Zama ACL** | [`0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D`](https://sepolia.etherscan.io/address/0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D) | Canonical Sepolia | [Verified Coprocessor ACL](https://sepolia.etherscan.io/address/0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D) |
 | **Zama Coprocessor** | [`0x92C920834Ec8941d2C77D188936E1f7A6f49c127`](https://sepolia.etherscan.io/address/0x92C920834Ec8941d2C77D188936E1f7A6f49c127) | Canonical Sepolia | [Verified fhEVM Executor](https://sepolia.etherscan.io/address/0x92C920834Ec8941d2C77D188936E1f7A6f49c127) |
 | **Zama KMSVerifier** | [`0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A`](https://sepolia.etherscan.io/address/0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A) | Canonical Sepolia | [Threshold KMS Verifier](https://sepolia.etherscan.io/address/0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A) |
@@ -125,9 +126,11 @@ docker compose up --build
 
 ### Known deployment limitations
 
-- The repository implementation derives each encrypted deposit credit from the exact public custody amount, removing the independent-value trust boundary. The currently deployed Sepolia pool predates this fix and must not accept deposits until a reviewed replacement is deployed.
-- The repository implementation accounts for principal and prize liabilities in a privacy-preserving aggregate. Compounding moves only ciphertext, while withdrawals settle prize and base tranches through a public aggregate waterfall. The current Sepolia deployment predates these fixes, so writes must remain disabled until a reviewed replacement is deployed.
+- Frontend writes require both the operations switch and live verification of the configured Sepolia chain, pool runtime bytecode hash, corrected accounting getter, custody address, and token metadata.
+- The archived pool remains available only to finalize or cancel requests that already existed before migration. It must never be restored as a write target.
 - `finalizeWithdrawal` keys requests by `msg.sender`; therefore the requesting wallet—not a backend relayer—must submit the KMS proof on-chain. The frontend now follows this requirement.
+
+Deployment evidence, service configuration, and rollback instructions are documented in [`docs/operations/sepolia-deployment.md`](docs/operations/sepolia-deployment.md).
 
 ---
 

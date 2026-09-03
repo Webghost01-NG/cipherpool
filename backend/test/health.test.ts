@@ -34,6 +34,8 @@ describe("Backend Core & Health Tests", () => {
       NODE_ENV: "test",
       RPC_URL: "http://localhost:8545",
       POOL_CONTRACT_ADDRESS: "0x2222222222222222222222222222222222222222",
+      CUSTODY_ASSET_ADDRESS: "0x3333333333333333333333333333333333333333",
+      POOL_RUNTIME_CODE_HASH: "0x" + "ab".repeat(32),
       INDEXER_START_BLOCK: "123",
     });
     assert.equal(customConfig.PORT, 4000);

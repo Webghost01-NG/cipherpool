@@ -27,10 +27,24 @@ function readTokenDecimals(): number {
   return Number.isInteger(value) && value >= 0 && value <= 255 ? value : -1;
 }
 
+function readPositiveInteger(name: string): number {
+  const value = Number(environment[name]);
+  return Number.isSafeInteger(value) && value > 0 ? value : -1;
+}
+
+function readBytes32(name: string): string {
+  const value = environment[name]?.trim() ?? "";
+  return /^0x[a-fA-F0-9]{64}$/.test(value) ? value.toLowerCase() : "";
+}
+
 export const runtimeConfig = Object.freeze({
+  chainId: readPositiveInteger("VITE_CHAIN_ID"),
   poolAddress: readAddress("VITE_POOL_ADDRESS"),
+  legacyPoolAddress: readAddress("VITE_LEGACY_POOL_ADDRESS"),
   vaultAddress: readAddress("VITE_VAULT_ADDRESS"),
   custodyAssetAddress: readAddress("VITE_USDC_ADDRESS"),
+  poolRuntimeCodeHash: readBytes32("VITE_POOL_RUNTIME_CODE_HASH"),
+  deploymentBlock: readPositiveInteger("VITE_POOL_DEPLOYMENT_BLOCK"),
   backendUrl: readUrl("VITE_BACKEND_URL"),
   explorerUrl: readUrl("VITE_EXPLORER_URL"),
   tokenSymbol: environment.VITE_TOKEN_SYMBOL?.trim() ?? "",
@@ -39,8 +53,17 @@ export const runtimeConfig = Object.freeze({
 });
 
 export const configurationErrors = [
+  runtimeConfig.chainId !== 11155111 && "VITE_CHAIN_ID must be Ethereum Sepolia (11155111).",
   !runtimeConfig.poolAddress && "VITE_POOL_ADDRESS must be a valid EVM address.",
+  !runtimeConfig.legacyPoolAddress && "VITE_LEGACY_POOL_ADDRESS must be a valid EVM address.",
+  runtimeConfig.poolAddress &&
+    runtimeConfig.legacyPoolAddress &&
+    runtimeConfig.poolAddress.toLowerCase() === runtimeConfig.legacyPoolAddress.toLowerCase() &&
+    "Active and legacy pool addresses must differ.",
+  !runtimeConfig.vaultAddress && "VITE_VAULT_ADDRESS must be a valid EVM address.",
   !runtimeConfig.custodyAssetAddress && "VITE_USDC_ADDRESS must be a valid EVM address.",
+  !runtimeConfig.poolRuntimeCodeHash && "VITE_POOL_RUNTIME_CODE_HASH must be a bytes32 hash.",
+  runtimeConfig.deploymentBlock < 0 && "VITE_POOL_DEPLOYMENT_BLOCK must be a positive integer.",
   !runtimeConfig.backendUrl && "VITE_BACKEND_URL must be a valid absolute URL.",
   !runtimeConfig.explorerUrl && "VITE_EXPLORER_URL must be a valid absolute URL.",
   !runtimeConfig.tokenSymbol && "VITE_TOKEN_SYMBOL is required.",
@@ -48,6 +71,7 @@ export const configurationErrors = [
 ].filter((message): message is string => Boolean(message));
 
 export const DEFAULT_POOL_ADDRESS = runtimeConfig.poolAddress;
+export const DEFAULT_LEGACY_POOL_ADDRESS = runtimeConfig.legacyPoolAddress;
 export const DEFAULT_VAULT_ADDRESS = runtimeConfig.vaultAddress;
 export const DEFAULT_USDC_ADDRESS = runtimeConfig.custodyAssetAddress;
 export const DEFAULT_BACKEND_URL = runtimeConfig.backendUrl;

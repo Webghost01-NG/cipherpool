@@ -14,11 +14,18 @@ import { BalanceRevealCard } from "./components/flows/BalanceRevealCard.js";
 import { DepositCard } from "./components/flows/DepositCard.js";
 import { WithdrawalCard } from "./components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "./components/flows/LotteryDrawCard.js";
+import { LegacyExitCard } from "./components/flows/LegacyExitCard.js";
 import { TxStatusModal } from "./components/common/TxStatusModal.js";
 import { useWallet } from "./hooks/useWallet.js";
 import { usePool, TransactionCallbacks } from "./hooks/usePool.js";
+import { useLegacyExit } from "./hooks/useLegacyExit.js";
 import { useTxLifecycle } from "./hooks/useTxLifecycle.js";
-import { configurationErrors, DEFAULT_POOL_ADDRESS, runtimeConfig } from "./contracts/config.js";
+import {
+  configurationErrors,
+  DEFAULT_LEGACY_POOL_ADDRESS,
+  DEFAULT_POOL_ADDRESS,
+  runtimeConfig,
+} from "./contracts/config.js";
 import { formatTokenAmount } from "./utils/format.js";
 
 export const App: React.FC = () => {
@@ -35,6 +42,8 @@ export const App: React.FC = () => {
     backendStatus,
     dataError,
     lastUpdatedAt,
+    deploymentVerification,
+    writesEnabled,
     isOwner,
     deposit,
     requestWithdrawal,
@@ -44,6 +53,7 @@ export const App: React.FC = () => {
     hideBalance,
     drawLottery,
   } = usePool(DEFAULT_POOL_ADDRESS);
+  const legacyExit = useLegacyExit(DEFAULT_LEGACY_POOL_ADDRESS);
   const {
     txState,
     startTx,
@@ -123,8 +133,15 @@ export const App: React.FC = () => {
           <div className="callout" role="alert" style={{ marginBottom: "1rem" }}>
             <ShieldCheck size={18} />
             <span>
-              Safety mode is active. New deposits, withdrawal requests, and draws are paused pending the documented contract accounting upgrade. Existing withdrawal finalization and cancellation remain available.
+              The operational safety switch is off. New deposits, withdrawal requests, and draws are disabled; active and archived withdrawal exits remain available.
             </span>
+          </div>
+        )}
+
+        {runtimeConfig.protocolWritesEnabled && deploymentVerification.status !== "verified" && (
+          <div className="callout" role="alert" style={{ marginBottom: "1rem" }}>
+            <AlertTriangle size={18} />
+            <span>Writes remain locked until runtime verification succeeds. {deploymentVerification.message}</span>
           </div>
         )}
 
@@ -139,6 +156,10 @@ export const App: React.FC = () => {
               Pool contract {poolStats.isPaused ? "paused" : "unpaused"}
             </span>
             <span className="status-item"><LockKeyhole size={14} /> Ethereum Sepolia</span>
+            <span className="status-item">
+              <span className={"status-dot " + (deploymentVerification.status === "verified" ? "status-dot--ok" : "status-dot--warn")} />
+              Deployment {deploymentVerification.status}
+            </span>
           </div>
           <span>
             {lastUpdatedAt ? "Live state checked " + new Date(lastUpdatedAt).toLocaleTimeString() : "Checking live state…"}
@@ -189,7 +210,7 @@ export const App: React.FC = () => {
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
                 walletBalance={asset.walletBalance}
-                writesEnabled={runtimeConfig.protocolWritesEnabled}
+                writesEnabled={writesEnabled}
               />
             </div>
             <div className="stack">
@@ -225,7 +246,7 @@ export const App: React.FC = () => {
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
                 cancellationDelaySeconds={cancellationDelaySeconds}
-                writesEnabled={runtimeConfig.protocolWritesEnabled}
+                writesEnabled={writesEnabled}
               />
               <Card
                 eyebrow="Why it matters"
@@ -238,6 +259,37 @@ export const App: React.FC = () => {
                 </div>
               </Card>
             </div>
+          </section>
+        )}
+
+        {activeTab === "pool" && DEFAULT_LEGACY_POOL_ADDRESS && (
+          <section style={{ marginBottom: "2rem" }} aria-label="Archived pool exit actions">
+            <LegacyExitCard
+              legacyPoolAddress={DEFAULT_LEGACY_POOL_ADDRESS}
+              explorerUrl={runtimeConfig.explorerUrl}
+              pendingWithdrawal={legacyExit.pendingWithdrawal}
+              cancellationDelaySeconds={legacyExit.cancellationDelaySeconds}
+              walletConnected={status === "connected"}
+              isLoading={legacyExit.isLoading}
+              isChecking={legacyExit.isChecking}
+              error={legacyExit.error}
+              tokenSymbol={runtimeConfig.tokenSymbol}
+              tokenDecimals={Math.max(runtimeConfig.tokenDecimals, 0)}
+              onFinalizeWithdrawal={() =>
+                runAction(
+                  "Finalize archived withdrawal",
+                  () => legacyExit.finalizeWithdrawal(transactionCallbacks),
+                  "Archived withdrawal finalized on Ethereum Sepolia."
+                )
+              }
+              onCancelWithdrawal={() =>
+                runAction(
+                  "Cancel archived withdrawal",
+                  () => legacyExit.cancelWithdrawal(transactionCallbacks),
+                  "Archived withdrawal request cancelled on Ethereum Sepolia."
+                )
+              }
+            />
           </section>
         )}
 
@@ -257,7 +309,7 @@ export const App: React.FC = () => {
               isOwner={isOwner && !poolStats.isPaused}
               tokenSymbol={asset.symbol}
               tokenDecimals={asset.decimals}
-              writesEnabled={runtimeConfig.protocolWritesEnabled}
+              writesEnabled={writesEnabled}
             />
             <Card className="panel--ink" eyebrow="Draw invariant" title="The winner is never exposed">
               <div className="balance-display">
