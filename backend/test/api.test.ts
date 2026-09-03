@@ -4,7 +4,7 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import { IndexerStore } from "../src/indexer/store.js";
 import { KMSRelayerService } from "../src/relayer/relayer.js";
-import { MockKMSClient } from "../src/relayer/kms.js";
+import { TestKMSClient } from "./helpers/test-kms.js";
 
 describe("Typed REST API Integration Tests", () => {
   const alice = "0x1111111111111111111111111111111111111111";
@@ -93,13 +93,8 @@ describe("Typed REST API Integration Tests", () => {
       status: "PENDING",
     });
 
-    const kmsClient = new MockKMSClient(5_000n, 0);
-    const submitter = {
-      async finalizeWithdrawal() {
-        return "0xconfirmedtx";
-      },
-    };
-    const relayer = new KMSRelayerService(store, kmsClient, submitter);
+    const kmsClient = new TestKMSClient(5_000n);
+    const relayer = new KMSRelayerService(store, kmsClient);
 
     const app = createApp(store, relayer);
     const res = await request(app)
@@ -107,8 +102,10 @@ describe("Typed REST API Integration Tests", () => {
       .send({ requestHash: dummyRequestHash });
 
     assert.equal(res.status, 200);
-    assert.equal(res.body.status, "success");
+    assert.equal(res.body.status, "proof_ready");
     assert.equal(res.body.requestHash, dummyRequestHash);
+    assert.equal(res.body.cleartextAmount, "5000");
+    assert.match(res.body.decryptionProof, /^0x[a-f0-9]+$/);
   });
 
   test("POST /api/v1/relayer/process should reject malformed requestHash", async () => {

@@ -2,14 +2,9 @@ import { IndexerStore } from "../indexer/store.js";
 import { IKMSClient, DecryptionResult } from "./kms.js";
 import { Logger } from "../utils/logger.js";
 
-export interface IContractSubmitter {
-  finalizeWithdrawal(cleartext: bigint, proof: string): Promise<string>;
-}
-
 export class KMSRelayerService {
   private store: IndexerStore;
   private kmsClient: IKMSClient;
-  private submitter: IContractSubmitter;
   private logger: Logger;
   private inFlight: Set<string> = new Set();
   public maxRetries: number;
@@ -18,12 +13,10 @@ export class KMSRelayerService {
   constructor(
     store: IndexerStore,
     kmsClient: IKMSClient,
-    submitter: IContractSubmitter,
     options: { maxRetries?: number; baseBackoffMs?: number } = {}
   ) {
     this.store = store;
     this.kmsClient = kmsClient;
-    this.submitter = submitter;
     this.logger = new Logger("KMSRelayerService");
     this.maxRetries = options.maxRetries ?? 3;
     this.baseBackoffMs = options.baseBackoffMs ?? 50;
@@ -33,21 +26,21 @@ export class KMSRelayerService {
     return this.inFlight.has(requestHash);
   }
 
-  public async processRequest(requestHash: string): Promise<boolean> {
+  public async processRequest(requestHash: string): Promise<DecryptionResult | null> {
     const req = this.store.getPendingWithdrawalByHash(requestHash);
     if (!req || req.status !== "PENDING") {
       this.logger.debug("Request not found or not pending", { requestHash });
-      return false;
+      return null;
     }
 
     // Idempotency check: prevent duplicate concurrent processing
     if (this.inFlight.has(requestHash)) {
       this.logger.warn("Request is already in flight. Suppressing duplicate execution.", { requestHash });
-      return false;
+      return null;
     }
 
     this.inFlight.add(requestHash);
-    this.logger.info("Initiating automated KMS relayer settlement", {
+    this.logger.info("Preparing a user-submittable withdrawal proof", {
       requestHash,
       user: req.user,
       amount: req.requestedAmount.toString(),
@@ -78,21 +71,18 @@ export class KMSRelayerService {
         throw new Error("Failed to retrieve valid decryption proof from KMS");
       }
 
-      // Submit on-chain finalization transaction
-      const txHash = await this.submitter.finalizeWithdrawal(result.cleartext, result.proof);
-      this.logger.info("Successfully broadcast finalizeWithdrawal transaction", {
+      this.logger.info("Withdrawal proof is ready for the requesting wallet", {
         requestHash,
-        txHash,
         cleartext: result.cleartext.toString(),
       });
 
-      return true;
+      return result;
     } catch (err: unknown) {
       this.logger.error("Terminal failure processing withdrawal request", {
         requestHash,
         error: err instanceof Error ? err.message : String(err),
       });
-      return false;
+      return null;
     } finally {
       this.inFlight.delete(requestHash);
     }
@@ -103,8 +93,8 @@ export class KMSRelayerService {
     let processed = 0;
 
     for (const req of pending) {
-      const success = await this.processRequest(req.requestHash);
-      if (success) processed++;
+      const result = await this.processRequest(req.requestHash);
+      if (result) processed++;
     }
 
     return processed;

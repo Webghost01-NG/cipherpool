@@ -14,6 +14,9 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       onReveal: async () => {},
       onHide: () => {},
       isLoading: false,
+      walletConnected: false,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
     });
     assert.ok(card);
     assert.equal(card.props.isRevealed, false);
@@ -24,6 +27,10 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       onDeposit: async () => {},
       isLoading: false,
       walletConnected: true,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
+      walletBalance: "1000000",
+      writesEnabled: true,
     });
     assert.ok(card);
     assert.equal(card.props.walletConnected, true);
@@ -40,9 +47,14 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
         status: "PENDING",
       },
       onRequestWithdrawal: async () => {},
+      onFinalizeWithdrawal: async () => {},
       onCancelWithdrawal: async () => {},
       isLoading: false,
       walletConnected: true,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
+      cancellationDelaySeconds: 86400,
+      writesEnabled: true,
     });
     assert.ok(cardPending);
     assert.equal(cardPending.props.pendingWithdrawal.hasPending, true);
@@ -50,12 +62,16 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
 
   test("LotteryDrawCard displays prize and executes round draw", () => {
     const card = React.createElement(LotteryDrawCard, {
-      prizePool: "25000",
+      availableYield: "25000",
       totalDraws: 5,
       onExecuteDraw: async () => {},
       isLoading: false,
+      isOwner: true,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
+      writesEnabled: true,
     });
     assert.ok(card);
-    assert.equal(card.props.prizePool, "25000");
+    assert.equal(card.props.availableYield, "25000");
   });
 });

@@ -17,6 +17,13 @@ export interface KmsRelayerAdapterConfig {
   maxPollAttempts?: number;
 }
 
+export interface WithdrawalProofResponse {
+  status: "proof_ready";
+  requestHash: string;
+  cleartextAmount: string;
+  decryptionProof: string;
+}
+
 export class KmsRelayerAdapter {
   private backendApiUrl: string;
   private pollIntervalMs: number;
@@ -40,9 +47,10 @@ export class KmsRelayerAdapter {
   }
 
   /**
-   * Triggers the relayer to execute automated KMS proof settlement.
+   * Requests a public KMS proof. The requesting wallet must submit the proof
+   * because pending withdrawals are keyed by msg.sender in the pool contract.
    */
-  public async triggerRelayerSettlement(requestHash: string): Promise<{ status: string; requestHash: string }> {
+  public async requestWithdrawalProof(requestHash: string): Promise<WithdrawalProofResponse> {
     const response = await fetch(`${this.backendApiUrl}/api/v1/relayer/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,10 +59,10 @@ export class KmsRelayerAdapter {
 
     if (!response.ok) {
       const errorBody = (await response.json()) as { error?: string; message?: string };
-      throw new Error(errorBody.message || `Relayer trigger failed: HTTP ${response.status}`);
+      throw new Error(errorBody.message || `Proof request failed: HTTP ${response.status}`);
     }
 
-    return (await response.json()) as { status: string; requestHash: string };
+    return (await response.json()) as WithdrawalProofResponse;
   }
 
   /**

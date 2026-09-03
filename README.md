@@ -2,6 +2,9 @@
 
 > **CipherPool**: A no-loss confidential prize savings protocol on Zama fhEVM where balances, tickets, and lottery draws remain fully encrypted on-chain.
 
+> [!WARNING]
+> The current Sepolia pool is a research deployment, not production software. Review the open security limitations below before depositing test assets.
+
 [![CipherPool CI](https://github.com/Webghost01-NG/fhevm-pooltogether-security/actions/workflows/ci.yml/badge.svg)](https://github.com/Webghost01-NG/fhevm-pooltogether-security/actions)
 [![fhEVM v0.13.3](https://img.shields.io/badge/Zama_fhEVM-v0.13.3-blue)](https://docs.zama.ai/fhevm)
 [![Solidity ^0.8.24](https://img.shields.io/badge/Solidity-^0.8.24-orange)](https://soliditylang.org/)
@@ -81,8 +84,13 @@ CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to enable co
 ```bash
 git clone https://github.com/Webghost01-NG/fhevm-pooltogether-security.git
 cd fhevm-pooltogether-security
-npm install
+npm ci
+cp .env.example .env
+cp frontend/.env.example frontend/.env
 ```
+
+Set `RPC_URL` to a real Sepolia RPC endpoint. Frontend deployment addresses and service URLs are environment configuration; the application intentionally refuses transaction flows when required values are missing.
+`INDEXER_START_BLOCK` must be the pool deployment block so restarts reconstruct all indexed state.
 
 ### Run Tests
 ```bash
@@ -102,7 +110,7 @@ npm run build:backend
 npm run build:frontend
 ```
 
-### Run Backend Relayer via Docker
+### Run Backend Indexer and Proof Service via Docker
 ```bash
 docker compose up --build
 ```
@@ -114,6 +122,12 @@ docker compose up --build
 1. **Storage Anchoring:** Calldata can never dictate the ciphertext handle fed into `FHE.checkSignatures`. Handles are immutably retrieved from `_pendingWithdrawals[msg.sender].handle`.
 2. **Reentrancy Protection:** Checks-Effects-Interactions (CEI) combined with OpenZeppelin `ReentrancyGuard` on all state-altering operations.
 3. **KMS Threshold Security:** Relies on the honest-majority assumption of Zama's KMS signing committee.
+
+### Known deployment limitations
+
+- `deposit` does not cryptographically bind `plainCustodyAmount` to the encrypted amount. A new contract version must remove this accounting trust boundary before production use.
+- Prize liabilities are not reserved when `draw` executes, and `compoundPrizes` does not update plaintext principal accounting. Draw execution should remain operationally disabled until a reviewed contract upgrade is deployed.
+- `finalizeWithdrawal` keys requests by `msg.sender`; therefore the requesting wallet—not a backend relayer—must submit the KMS proof on-chain. The frontend now follows this requirement.
 
 ---
 

@@ -38,6 +38,14 @@ export class IndexerStore {
       pending.status = "FINALIZED";
       this.pendingWithdrawalsByUser.delete(event.user.toLowerCase());
     }
+    if (event.cleartextAmount > 0n) {
+      const userKey = event.user.toLowerCase();
+      const currentDeposit = this.deposits.get(userKey) ?? 0n;
+      this.deposits.set(
+        userKey,
+        event.cleartextAmount >= currentDeposit ? 0n : currentDeposit - event.cleartextAmount
+      );
+    }
     this.finalizedWithdrawals.set(event.requestHash, event);
   }
 

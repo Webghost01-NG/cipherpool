@@ -1,6 +1,7 @@
-import React from "react";
-import { Card, Button, Badge } from "../common/UIPrimitives.js";
-import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import React, { useEffect } from "react";
+import { Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { Badge, Button, Card } from "../common/UIPrimitives.js";
+import { formatTokenAmount } from "../../utils/format.js";
 
 export interface BalanceRevealCardProps {
   isRevealed: boolean;
@@ -8,6 +9,9 @@ export interface BalanceRevealCardProps {
   onReveal: () => Promise<void>;
   onHide: () => void;
   isLoading: boolean;
+  walletConnected: boolean;
+  tokenSymbol: string;
+  tokenDecimals: number;
 }
 
 export const BalanceRevealCard: React.FC<BalanceRevealCardProps> = ({
@@ -16,47 +20,51 @@ export const BalanceRevealCard: React.FC<BalanceRevealCardProps> = ({
   onReveal,
   onHide,
   isLoading,
+  walletConnected,
+  tokenSymbol,
+  tokenDecimals,
 }) => {
+  useEffect(() => {
+    if (!isRevealed) return;
+    const timeout = window.setTimeout(onHide, 60_000);
+    return () => window.clearTimeout(timeout);
+  }, [isRevealed, onHide]);
+
+  const displayValue =
+    isRevealed && revealedAmount !== null
+      ? formatTokenAmount(revealedAmount, tokenDecimals, tokenDecimals) + " " + tokenSymbol
+      : "••••••";
+
   return (
     <Card
-      title="Confidential Position"
-      subtitle="On-Chain euint64 Ciphertext Balance"
-      headerAction={<Badge variant="info">Zama FHE Encrypted</Badge>}
+      className="panel--ink"
+      eyebrow="Private position"
+      title="Only you can reveal this balance"
+      subtitle="The ciphertext stays on-chain. Decryption happens locally after wallet authorization."
+      headerAction={<Badge variant="success"><LockKeyhole size={11} /> ACL protected</Badge>}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+      <div className="balance-display">
         <div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
-            USER DEPOSIT BALANCE
-          </div>
-          <div
-            className="mono"
-            style={{
-              fontSize: "1.75rem",
-              fontWeight: 700,
-              color: isRevealed ? "var(--accent-emerald)" : "var(--text-primary)",
-              letterSpacing: isRevealed ? "normal" : "2px",
-            }}
+          <span className="balance-display__label">Available principal</span>
+          <strong className="balance-display__value">{displayValue}</strong>
+        </div>
+        <p className="balance-display__hint">
+          {isRevealed
+            ? "This value will hide automatically after 60 seconds and is never persisted."
+            : "Authorize a one-time EIP-712 request to decrypt the position assigned to your wallet."}
+        </p>
+        {isRevealed ? (
+          <Button variant="secondary" onClick={onHide}><EyeOff size={16} /> Hide balance</Button>
+        ) : (
+          <Button
+            variant="secondary"
+            onClick={onReveal}
+            disabled={!walletConnected}
+            isLoading={isLoading}
           >
-            {isRevealed && revealedAmount ? `${Number(revealedAmount).toLocaleString()} USDC` : "•••••••• USDC"}
-          </div>
-          <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-            {isRevealed
-              ? "Decrypted locally via volatile EIP-712 token. Key never leaves memory."
-              : "Raw balance is stored as an opaque 32-byte ciphertext handle in EVM storage."}
-          </p>
-        </div>
-
-        <div>
-          {isRevealed ? (
-            <Button variant="secondary" onClick={onHide}>
-              <EyeOff size={16} /> Hide Balance
-            </Button>
-          ) : (
-            <Button variant="primary" isLoading={isLoading} onClick={onReveal}>
-              <Eye size={16} /> Reveal Balance (EIP-712)
-            </Button>
-          )}
-        </div>
+            <Eye size={16} /> {walletConnected ? "Reveal privately" : "Connect wallet to reveal"}
+          </Button>
+        )}
       </div>
     </Card>
   );
