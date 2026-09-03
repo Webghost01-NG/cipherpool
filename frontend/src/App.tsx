@@ -1,14 +1,62 @@
 import React, { useState } from "react";
 import { Layout } from "./components/layout/Layout.js";
 import { Card, Badge, Button, StatBox } from "./components/common/UIPrimitives.js";
-import { Lock, Sparkles, ArrowRight, ShieldCheck, Database, Cpu } from "lucide-react";
+import { BalanceRevealCard } from "./components/flows/BalanceRevealCard.js";
+import { DepositCard } from "./components/flows/DepositCard.js";
+import { WithdrawalCard } from "./components/flows/WithdrawalCard.js";
+import { LotteryDrawCard } from "./components/flows/LotteryDrawCard.js";
+import { useWallet } from "./hooks/useWallet.js";
+import { usePool } from "./hooks/usePool.js";
+import { ShieldCheck, Info, CheckCircle2, ArrowRight } from "lucide-react";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("pool");
+  const { address, status } = useWallet();
+  const isWalletConnected = status === "connected" && !!address;
+
+  const {
+    poolStats,
+    isBalanceRevealed,
+    revealedBalance,
+    pendingWithdrawal,
+    isLoading,
+    txMessage,
+    deposit,
+    requestWithdrawal,
+    cancelWithdrawal,
+    revealBalance,
+    hideBalance,
+    drawLottery,
+  } = usePool();
 
   return (
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-      {/* Judge-First Hero Section */}
+      {/* Toast Notification for Transaction Lifecycle */}
+      {txMessage && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            backgroundColor: "var(--bg-secondary)",
+            border: "1px solid var(--accent-cyan)",
+            borderRadius: "10px",
+            padding: "14px 20px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+            zIndex: 90,
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            maxWidth: "420px",
+          }}
+        >
+          <CheckCircle2 size={20} color="var(--accent-cyan)" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: "0.875rem", color: "var(--text-primary)" }}>{txMessage}</div>
+        </div>
+      )}
+
+      {/* Hero Section */}
       <section style={{ marginBottom: "var(--space-2xl)" }}>
         <div style={{ maxWidth: "840px" }}>
           <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "var(--space-md)" }}>
@@ -38,19 +86,10 @@ export const App: React.FC = () => {
             Deposit custody assets to earn yield while entering confidential lottery draws.
             Your deposit balance, ticket distribution, and lottery selections remain <strong>100% encrypted on-chain</strong> at all times.
           </p>
-
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <Button variant="primary" onClick={() => setActiveTab("pool")}>
-              Launch Pool Application <ArrowRight size={16} />
-            </Button>
-            <Button variant="secondary" onClick={() => setActiveTab("docs")}>
-              <ShieldCheck size={16} color="var(--accent-emerald)" /> View Cryptographic Audits
-            </Button>
-          </div>
         </div>
       </section>
 
-      {/* Protocol Metrics Grid */}
+      {/* Metrics Row */}
       <section
         style={{
           display: "grid",
@@ -61,19 +100,19 @@ export const App: React.FC = () => {
       >
         <StatBox
           label="TOTAL ENCRYPTED PRINCIPAL"
-          value="1,420,500 USDC"
+          value={`${Number(poolStats.totalDeposits).toLocaleString()} USDC`}
           subtext="100% Capital Preserved"
           badge={<Badge variant="info">Encrypted</Badge>}
         />
         <StatBox
           label="ESTIMATED PRIZE POOL"
-          value="24,850 USDC"
+          value={`${Number(poolStats.prizePool).toLocaleString()} USDC`}
           subtext="Harvested Strategy Yield"
           badge={<Badge variant="success">Active</Badge>}
         />
         <StatBox
           label="DRAWS COMPLETED"
-          value="12 Rounds"
+          value={`${poolStats.totalDraws} Rounds`}
           subtext="Homomorphic Modulo Derivation"
           badge={<Badge variant="neutral">Verified</Badge>}
         />
@@ -85,84 +124,93 @@ export const App: React.FC = () => {
         />
       </section>
 
-      {/* Technical Architecture Storytelling Cards */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: "var(--space-lg)",
-          marginBottom: "var(--space-2xl)",
-        }}
-      >
-        <Card
-          title="1. Confidential Deposit"
-          subtitle="InputVerifier Coprocessor Proof"
+      {/* Interactive Flow Views */}
+      {activeTab === "pool" && (
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+            gap: "var(--space-lg)",
+            marginBottom: "var(--space-2xl)",
+          }}
         >
-          <div style={{ color: "var(--text-secondary)", fontSize: "0.875rem", lineHeight: 1.6 }}>
-            <p style={{ marginBottom: "var(--space-md)" }}>
-              Users encrypt their deposit amount client-side. The Zama InputVerifier validates the ZK proof on-chain without revealing the deposited value to miners or validators.
-            </p>
-            <div
-              className="mono"
-              style={{
-                backgroundColor: "var(--bg-primary)",
-                padding: "10px",
-                borderRadius: "6px",
-                fontSize: "0.75rem",
-                color: "var(--accent-cyan)",
-              }}
-            >
-              FHE.asEuint64(encryptedInput)
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
+            <BalanceRevealCard
+              isRevealed={isBalanceRevealed}
+              revealedAmount={revealedBalance}
+              onReveal={revealBalance}
+              onHide={hideBalance}
+              isLoading={isLoading}
+            />
+            <DepositCard
+              onDeposit={deposit}
+              isLoading={isLoading}
+              walletConnected={isWalletConnected}
+            />
           </div>
-        </Card>
 
-        <Card
-          title="2. Private Lottery Draw"
-          subtitle="Homomorphic Bounded Randomness"
-        >
-          <div style={{ color: "var(--text-secondary)", fontSize: "0.875rem", lineHeight: 1.6 }}>
-            <p style={{ marginBottom: "var(--space-md)" }}>
-              The contract derives a cryptographic winner homomorphically using <code>FHE.randEuint64</code>. The winning index is evaluated in ciphertext without exposing winner identity or ticket distribution.
-            </p>
-            <div
-              className="mono"
-              style={{
-                backgroundColor: "var(--bg-primary)",
-                padding: "10px",
-                borderRadius: "6px",
-                fontSize: "0.75rem",
-                color: "var(--accent-emerald)",
-              }}
-            >
-              FHE.select(isWinner, prize, zero)
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
+            <WithdrawalCard
+              pendingWithdrawal={pendingWithdrawal}
+              onRequestWithdrawal={requestWithdrawal}
+              onCancelWithdrawal={cancelWithdrawal}
+              isLoading={isLoading}
+              walletConnected={isWalletConnected}
+            />
+            <LotteryDrawCard
+              prizePool={poolStats.prizePool}
+              totalDraws={poolStats.totalDraws}
+              onExecuteDraw={drawLottery}
+              isLoading={isLoading}
+            />
           </div>
-        </Card>
+        </section>
+      )}
 
-        <Card
-          title="3. 2-Step Async Withdrawal"
-          subtitle="Storage-Anchored KMS Settlement"
-        >
-          <div style={{ color: "var(--text-secondary)", fontSize: "0.875rem", lineHeight: 1.6 }}>
-            <p style={{ marginBottom: "var(--space-md)" }}>
-              Withdrawals evaluate sufficiency homomorphically and store an ephemeral handle. The off-chain Zama KMS produces an EIP-712 threshold signature proof verified before custody disbursement.
-            </p>
-            <div
-              className="mono"
-              style={{
-                backgroundColor: "var(--bg-primary)",
-                padding: "10px",
-                borderRadius: "6px",
-                fontSize: "0.75rem",
-                color: "var(--accent-amber)",
-              }}
-            >
-              FHE.checkSignatures(handle, cleartext, proof)
+      {activeTab === "draw" && (
+        <section style={{ maxWidth: "680px", margin: "0 auto", marginBottom: "var(--space-2xl)" }}>
+          <LotteryDrawCard
+            prizePool={poolStats.prizePool}
+            totalDraws={poolStats.totalDraws}
+            onExecuteDraw={drawLottery}
+            isLoading={isLoading}
+          />
+        </section>
+      )}
+
+      {activeTab === "docs" && (
+        <section style={{ maxWidth: "800px", margin: "0 auto", marginBottom: "var(--space-2xl)" }}>
+          <Card title="Cryptographic Assurance & Security Specifications">
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", color: "var(--text-secondary)", fontSize: "0.875rem", lineHeight: 1.6 }}>
+              <p>
+                CipherPool eliminates MEV exploitation and ticket stalking by retaining lottery tickets and user deposits entirely inside the ciphertext domain (<code>euint64</code>) using Zama fhEVM.
+              </p>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <a
+                  href="https://github.com/Webghost01-NG/fhevm-pooltogether-security/blob/main/docs/security/replay-boundaries.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ textDecoration: "none" }}
+                >
+                  <Button variant="secondary">
+                    <ShieldCheck size={16} color="var(--accent-cyan)" /> EIP-712 Replay Boundaries
+                  </Button>
+                </a>
+                <a
+                  href="https://github.com/Webghost01-NG/fhevm-pooltogether-security/blob/main/docs/security/stale-handles.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ textDecoration: "none" }}
+                >
+                  <Button variant="secondary">
+                    <ShieldCheck size={16} color="var(--accent-amber)" /> Stale Handles & Race Proofs
+                  </Button>
+                </a>
+              </div>
             </div>
-          </div>
-        </Card>
-      </section>
+          </Card>
+        </section>
+      )}
     </Layout>
   );
 };
