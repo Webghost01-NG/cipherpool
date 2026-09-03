@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
+import {FheType} from "@fhevm/solidity/lib/FheType.sol";
+
 contract MockFHEVMExecutor {
     uint256 private _nonce;
 
     function verify(bytes32 inputHandle, bytes memory, uint8) external returns (bytes32) {
+        return inputHandle;
+    }
+
+    function verifyInput(
+        bytes32 inputHandle,
+        address,
+        bytes memory,
+        FheType
+    ) external returns (bytes32) {
         return inputHandle;
     }
 
@@ -60,6 +71,10 @@ contract MockFHEVMExecutor {
         return keccak256(abi.encodePacked("select", control, ifTrue, ifFalse, ++_nonce));
     }
 
+    function fheIfThenElse(bytes32 control, bytes32 ifTrue, bytes32 ifFalse) external returns (bytes32) {
+        return keccak256(abi.encodePacked("select", control, ifTrue, ifFalse, ++_nonce));
+    }
+
     function fheRand(bytes1) external returns (bytes32) {
         return keccak256(abi.encodePacked("rand", ++_nonce));
     }
@@ -72,7 +87,15 @@ contract MockFHEVMExecutor {
         return handle;
     }
 
+    function cast(bytes32 handle, FheType) external returns (bytes32) {
+        return handle;
+    }
+
     function trivialEncrypt(uint256 val, bytes1) external returns (bytes32) {
+        return bytes32(val);
+    }
+
+    function trivialEncrypt(uint256 val, FheType) external returns (bytes32) {
         return bytes32(val);
     }
 

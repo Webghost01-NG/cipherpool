@@ -11,6 +11,10 @@ contract MockACL {
         allowed[handle][account] = true;
     }
 
+    function allowTransient(bytes32 handle, address account) external {
+        allowed[handle][account] = true;
+    }
+
     function allowForDecryption(bytes32 handle) external {
         allowedForDecryption[handle] = true;
     }
