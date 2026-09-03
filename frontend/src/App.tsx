@@ -10,6 +10,7 @@ import { useWallet } from "./hooks/useWallet.js";
 import { usePool } from "./hooks/usePool.js";
 import { useTxLifecycle } from "./hooks/useTxLifecycle.js";
 import { ShieldCheck, Info, CheckCircle2 } from "lucide-react";
+import { DEFAULT_POOL_ADDRESS } from "./contracts/config.js";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("pool");
@@ -28,7 +29,7 @@ export const App: React.FC = () => {
     revealBalance,
     hideBalance,
     drawLottery,
-  } = usePool();
+  } = usePool(DEFAULT_POOL_ADDRESS);
 
   const {
     txState,
@@ -44,12 +45,11 @@ export const App: React.FC = () => {
   const handleDeposit = async (amount: bigint) => {
     try {
       startTx("Confidential Deposit");
-      await new Promise((r) => setTimeout(r, 400));
-      const simulatedTx = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-      setBroadcasting(simulatedTx);
-      await new Promise((r) => setTimeout(r, 600));
-      setMining();
-      await deposit(amount);
+      const res = await deposit(amount);
+      if (res.txHash) {
+        setBroadcasting(res.txHash);
+        setMining();
+      }
       setConfirmed(`Successfully encrypted and deposited ${Number(amount).toLocaleString()} USDC!`);
     } catch (err: unknown) {
       setFailed(err instanceof Error ? err : String(err));
@@ -59,14 +59,12 @@ export const App: React.FC = () => {
   const handleRequestWithdrawal = async (amount: bigint) => {
     try {
       startTx("Request 2-Step Withdrawal");
-      await new Promise((r) => setTimeout(r, 400));
-      const simulatedTx = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-      setBroadcasting(simulatedTx);
-      await new Promise((r) => setTimeout(r, 600));
-      setMining();
-      await requestWithdrawal(amount);
-      setWaitingKms(simulatedTx);
-      await new Promise((r) => setTimeout(r, 1200));
+      const res = await requestWithdrawal(amount);
+      if (res.txHash) {
+        setBroadcasting(res.txHash);
+        setMining();
+        setWaitingKms(res.requestHash || res.txHash);
+      }
       setConfirmed(`Withdrawal of ${Number(amount).toLocaleString()} USDC anchored in storage and queued for KMS settlement.`);
     } catch (err: unknown) {
       setFailed(err instanceof Error ? err : String(err));
@@ -76,8 +74,11 @@ export const App: React.FC = () => {
   const handleCancelWithdrawal = async () => {
     try {
       startTx("Cancel Withdrawal (Escape Valve)");
-      await new Promise((r) => setTimeout(r, 500));
-      await cancelWithdrawal();
+      const res = await cancelWithdrawal();
+      if (res.txHash) {
+        setBroadcasting(res.txHash);
+        setMining();
+      }
       setConfirmed("Withdrawal request cleared. Encrypted principal restored to active balance.");
     } catch (err: unknown) {
       setFailed(err instanceof Error ? err : String(err));
@@ -87,9 +88,11 @@ export const App: React.FC = () => {
   const handleDrawLottery = async (prizeAmount: bigint) => {
     try {
       startTx("Confidential Round Draw");
-      await new Promise((r) => setTimeout(r, 400));
-      setMining();
-      await drawLottery(prizeAmount);
+      const res = await drawLottery(prizeAmount);
+      if (res.txHash) {
+        setBroadcasting(res.txHash);
+        setMining();
+      }
       setConfirmed("Confidential draw executed! Winning index derived homomorphically via FHE.randEuint64.");
     } catch (err: unknown) {
       setFailed(err instanceof Error ? err : String(err));
@@ -97,7 +100,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+    <Layout activeTab={activeTab} onTabChange={setActiveTab} contractAddress={DEFAULT_POOL_ADDRESS}>
       <TxStatusModal state={txState} onClose={reset} />
 
       {/* Hero Section */}
@@ -162,7 +165,7 @@ export const App: React.FC = () => {
         />
         <StatBox
           label="KMS RELAYER STATUS"
-          value="Online (15s)"
+          value="Online (Sepolia)"
           subtext="Threshold EIP-712 Signers"
           badge={<Badge variant="success">Operational</Badge>}
         />

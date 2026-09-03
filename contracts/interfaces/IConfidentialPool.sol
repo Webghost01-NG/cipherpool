@@ -56,6 +56,12 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function draw(uint64 prizeAmount) external;
 
     /**
+     * @notice Merges caller's accumulated confidential prizes into their active principal balance.
+     * @dev Homomorphically adds _prizes[msg.sender] into _balances[msg.sender] and resets _prizes[msg.sender].
+     */
+    function compoundPrizes() external;
+
+    /**
      * @notice Returns the pending withdrawal request for a given user.
      * @param user The address of the user.
      * @return The active or empty WithdrawalRequest struct.

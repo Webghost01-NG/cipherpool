@@ -24,11 +24,8 @@ contract DeploySepolia is Script {
     uint64 public constant CANCELLATION_DELAY = 1 days;
 
     function run() external returns (address poolAddress, address vaultAddress) {
-        uint256 deployerPrivateKey = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
-
-        address deployer = vm.addr(deployerPrivateKey);
         console.log("=== CipherPool Sepolia Deployment ===");
-        console.log("Deployer Address:", deployer);
+        console.log("Deployer Address:", msg.sender);
         console.log("Chain ID:", block.chainid);
 
         // 1. Verify ZamaConfig addresses on Sepolia
@@ -42,7 +39,7 @@ contract DeploySepolia is Script {
             console.log("Non-Sepolia chain detected. Skipping strict Sepolia address check.");
         }
 
-        vm.startBroadcast(deployer);
+        vm.startBroadcast();
 
         // 2. Deploy ConfidentialPool
         ConfidentialPool pool = new ConfidentialPool(SEPOLIA_USDC, CANCELLATION_DELAY);
