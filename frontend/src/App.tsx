@@ -153,7 +153,7 @@ export const App: React.FC = () => {
 
         <section className="metrics-grid" aria-label="Live pool metrics">
           <StatBox label="Protected principal" value={totalDeposits + " " + asset.symbol} subtext="Read from the pool contract" />
-          <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="Custody above recorded principal" />
+          <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="After principal and reserved prizes" />
           <StatBox label="Private savers" value={poolStats.participantCount} subtext="Registered on-chain participants" />
           <StatBox
             label="Confirmed rounds"

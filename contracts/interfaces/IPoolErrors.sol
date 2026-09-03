@@ -47,6 +47,11 @@ interface IPoolErrors {
     /// @param available The amount of underlying assets currently available.
     error InsufficientCustodyBalance(uint256 required, uint256 available);
 
+    /// @notice Thrown when a draw attempts to allocate principal or previously reserved yield.
+    /// @param requested The prize amount requested for the draw.
+    /// @param available The unallocated custody yield available for prizes.
+    error InsufficientPrizeYield(uint256 requested, uint256 available);
+
     /// @notice Thrown when an unauthorized caller attempts an administrative or restricted function.
     /// @param caller The address of the unauthorized caller.
     error UnauthorizedCaller(address caller);

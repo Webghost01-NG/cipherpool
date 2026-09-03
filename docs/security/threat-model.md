@@ -133,6 +133,7 @@ The protocol maintains strict cryptographic boundaries regarding what is private
 | :--- | :---: | :--- |
 | **Individual User Balances (`_balances[user]`)** | **CONFIDENTIAL** | Encrypted `euint64`. Stored as opaque `bytes32` handles. |
 | **Accumulated Prize Winnings (`_prizes[user]`)** | **CONFIDENTIAL** | Encrypted `euint64`. Stored as opaque `bytes32` handles. |
+| **Aggregate Reserved Prizes (`_reservedPrizesPlain`)** | **PUBLIC** | Plaintext custody liability; does not identify winners. |
 | **Lottery Random Seed (`randVal`)** | **CONFIDENTIAL** | Generated homomorphically via `FHE.randEuint64()`. Never decrypted. |
 | **Winner Identification during Draw** | **CONFIDENTIAL** | Homomorphic cumulative sum + `FHE.select`. Zero plaintext branching. |
 | **Total Pool Size (`totalDepositsPlain`)** | **PUBLIC** | Required as plaintext divisor for `FHE.rem`. Visible on-chain. |
@@ -149,6 +150,14 @@ The security proofs of Confidential PoolTogether depend upon the following found
 2. **KMS Honest Majority ($t$-of-$n$):** At least $t$ signers within the Zama Key Management System are honest and will only sign decryption proofs for handles marked `allowedForDecryption == true` in the deployed `ACL.sol` contract.
 3. **Coprocessor DAG Integrity:** The deployed `FHEVMExecutor` contract on Sepolia correctly computes homomorphic operations and respects transient ACL allowances.
 4. **EVM Transaction Serialization:** Block builders and EVM state transition functions strictly serialize transactions within each block, upholding sequential state commitment.
+
+The pool additionally enforces the prize solvency bound:
+
+$$\text{totalDepositsPlain} + \text{reservedPrizesPlain} \le \text{custodyAsset.balanceOf(pool)}$$
+
+Therefore, a draw can allocate at most:
+
+$$\text{availableYieldPlain} = \max(0, \text{custody} - \text{principal} - \text{reserved prizes})$$
 
 ---
 
