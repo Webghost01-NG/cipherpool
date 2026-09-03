@@ -41,7 +41,6 @@ graph TD
     end
 
     subgraph "Trust Zone 4: Protocol Host Coprocessor Infrastructure"
-        InputVerif["InputVerifier.sol (Sepolia: 0xf0Ffdc...)"]
         Executor["FHEVMExecutor.sol (Sepolia: 0x92C920...)"]
         ACL["ACL.sol (Persistent & Transient)"]
         KMSVerif["KMSVerifier.sol (Sepolia: 0xbE0E38...)"]
@@ -51,10 +50,9 @@ graph TD
         KMS_Nodes["Threshold KMS Signers (FHE Private Key Holders)"]
     end
 
-    User -->|Calldata: externalEuint64 + proof| Pool
+    User -->|Calldata: public custody amount| Pool
     Attacker -.->|Mempool monitoring & calldata injection| Pool
-    Pool -->|ZK Verification| InputVerif
-    Pool -->|FHE Opcodes| Executor
+    Pool -->|Contract-derived encryption + FHE opcodes| Executor
     Pool -->|Public Decryption Grants| ACL
     Relayer -->|Pulls public decryptable handles| ACL
     Relayer -->|Requests threshold decrypt| KMS_Nodes
@@ -80,10 +78,10 @@ graph TD
 
 | Adversary Class | Resources & Access | Objective | Protocol Defense Mechanism |
 | :--- | :--- | :--- | :--- |
-| **A1: Malicious Depositor** | Can submit arbitrary calldata, ZK proofs, and transactions. | Steal pool funds, overdraft balance, or replay proofs. | - `FHE.select` balance sufficiency gating.<br>- Storage-anchored handle verification.<br>- Atomic slot deletion (`delete pendingWithdrawals`). |
+| **A1: Malicious Depositor** | Can submit arbitrary calldata and transactions. | Inflate an encrypted balance beyond deposited custody or overdraft the pool. | - One `uint64 amount` drives both custody transfer and `FHE.asEuint64` credit.<br>- `FHE.select` balance sufficiency gating.<br>- Storage-anchored handle verification. |
 | **A2: MEV Searcher / Front-Runner** | Can monitor public mempool, reorder, or front-run transactions. | Front-run withdrawal finalization or steal in-flight payouts. | - `pendingWithdrawals[msg.sender]` restricts finalization to caller.<br>- `CANCELLATION_DELAY = 1 days` prevents cancellation front-running. |
 | **A3: Byzantine Relayer** | Controls off-chain KMS proof transport; can censor or delay proofs. | Extort users, censor withdrawals, or forge decrypted amounts. | - Calldata tampering invalidates EIP-712 KMS digest.<br>- User can cancel stale requests after `CANCELLATION_DELAY`.<br>- Anyone (user or relayer) can submit valid proofs. |
-| **A4: Malicious Peer Contract** | Deployed on same chain; shares same `KMSVerifier` and coprocessor. | Substitute handles across contracts to claim unauthorized funds. | - `InputVerifier.sol:301` binds user deposit proofs to target `contractAddress`.<br>- Fresh LWE encryption noise ensures $P_{\text{collision}} < 2^{-160}$.<br>- Finalization reads handles strictly from internal storage. |
+| **A4: Malicious Peer Contract** | Deployed on same chain; shares the same `KMSVerifier` and coprocessor. | Substitute handles across contracts to claim unauthorized funds. | - Deposit credits are created internally, not accepted as caller-supplied handles.<br>- Finalization reads handles strictly from internal storage.<br>- FHE ACLs restrict handle use. |
 | **A5: Colluding Validator** | Controls block building and transaction inclusion. | Force concurrent finalization and cancellation in same block. | - EVM transaction serialization guarantees strict mutual exclusion ($\text{Finalized} \cap \text{Cancelled} = \emptyset$). |
 
 ---
@@ -91,10 +89,10 @@ graph TD
 ## 4. Comprehensive Attack Surface & Mitigation Taxonomy
 
 ### 4.1 Handle Provenance & Cross-Contract Re-Use
-- **Threat Vector:** Because FHEVM computation handles are deterministic DAG node hashes over `(op, lhs, rhs, scalar, acl, chainId)` without `msg.sender`, can Contract B consume a proof generated for Contract A?
+- **Threat Vector:** Can an attacker submit or substitute a ciphertext handle created outside the pool to obtain an unbacked balance or withdrawal?
 - **Root Mitigation:**
-  1. **Input Proof Binding:** In `InputVerifier.sol:301`, user input proofs require an EIP-712 signature over `CiphertextVerification` committing strictly to `contractAddress`. A deposit proof for Contract A is rejected on Contract B.
-  2. **Cryptographic Entropy:** LWE encryption generates fresh random Gaussian noise per deposit. Even with identical numerical amounts, deposit handles across contracts are mathematically distinct ($P_{\text{collision}} < 2^{-160}$).
+  1. **Contract-Derived Deposits:** `deposit(uint64 amount)` creates the encrypted credit with `FHE.asEuint64(amount)`; calldata has no ciphertext-handle field.
+  2. **Single Amount Source:** The same `amount` is used for the encrypted credit, plaintext accounting, and custody transfer.
   3. **Storage Anchoring:** `finalizeWithdrawal` constructs `handles[0]` exclusively from `pendingWithdrawals[msg.sender].handle` in storage. Calldata cannot supply or alter the handle.
 
 ---

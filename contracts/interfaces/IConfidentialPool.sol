@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import {externalEuint64, euint64} from "@fhevm/solidity/lib/FHE.sol";
+import {euint64} from "@fhevm/solidity/lib/FHE.sol";
 import {IPoolTypes} from "./IPoolTypes.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 import {IPoolErrors} from "./IPoolErrors.sol";
@@ -13,16 +13,10 @@ import {IPoolErrors} from "./IPoolErrors.sol";
  */
 interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     /**
-     * @notice Deposits funds into the confidential pool with zero-knowledge input proof.
-     * @param inputHandle The external encrypted handle submitted by the user.
-     * @param inputProof The cryptographic proof verifying user encryption under dApp context.
-     * @param plainCustodyAmount The plaintext custody amount transferred from caller.
+     * @notice Deposits funds and derives the encrypted balance credit from the custody amount.
+     * @param amount The amount transferred from the caller and credited to their encrypted balance.
      */
-    function deposit(
-        externalEuint64 inputHandle,
-        bytes calldata inputProof,
-        uint64 plainCustodyAmount
-    ) external;
+    function deposit(uint64 amount) external;
 
     /**
      * @notice Initiates an asynchronous 2-step withdrawal request.

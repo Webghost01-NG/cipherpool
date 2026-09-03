@@ -21,7 +21,7 @@ The plan validates that the protocol adheres to its fundamental security promise
 
 ## 2. Adversarial Test Vector Matrix
 
-The matrix below establishes 12 primary exploit test vectors spanning all core contract interactions:
+The matrix below establishes 13 primary exploit test vectors spanning all core contract interactions:
 
 | Vector ID | Category | Target Method | Exploit Hypothesis | Expected Failure / Mitigation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -37,6 +37,7 @@ The matrix below establishes 12 primary exploit test vectors spanning all core c
 | **ADV-10** | Vault Principal Overdraw | `withdrawFromStrategy` | Pool or owner attempts to withdraw more assets than `principalDeposited`. | Reverts with `InsufficientCustodyBalance(requested, principal)`. |
 | **ADV-11** | Circuit Breaker Ingress | `deposit`, `requestWithdrawal` | User attempts to deposit or request withdrawal while contract is paused. | Reverts with `EnforcedPause()`. |
 | **ADV-12** | Paused Escape Valve | `finalizeWithdrawal`, `cancelWithdrawal` | User attempts to finalize pending KMS proof or cancel stale request while paused. | **ALLOWED (BY DESIGN)** to preserve non-custodial asset escape rights. |
+| **ADV-13** | Deposit Credit Inflation | `deposit` | Attacker invokes the removed three-argument selector with an encrypted value larger than the custody amount. | Rejected at the ABI boundary; the sole `amount` now drives custody, plaintext accounting, and encrypted credit. |
 
 ---
 

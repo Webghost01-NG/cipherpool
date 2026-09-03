@@ -1,5 +1,5 @@
 export const POOL_ABI = [
-  "function deposit(bytes32 inputHandle, bytes calldata inputProof, uint64 plainCustodyAmount) external",
+  "function deposit(uint64 amount) external",
   "function requestWithdrawal(uint64 amount) external",
   "function finalizeWithdrawal(uint64 cleartextAmount, bytes calldata decryptionProof) external",
   "function cancelWithdrawal() external",
@@ -16,7 +16,7 @@ export const POOL_ABI = [
   "function cancellationDelay() external view returns (uint64)",
   "function owner() external view returns (address)",
   "function paused() external view returns (bool)",
-  "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
+  "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed encryptedAmountHandle)",
   "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
   "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
   "event WithdrawalCancelled(address indexed user, bytes32 indexed requestHash)",
