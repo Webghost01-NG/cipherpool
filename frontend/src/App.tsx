@@ -5,9 +5,11 @@ import { BalanceRevealCard } from "./components/flows/BalanceRevealCard.js";
 import { DepositCard } from "./components/flows/DepositCard.js";
 import { WithdrawalCard } from "./components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "./components/flows/LotteryDrawCard.js";
+import { TxStatusModal } from "./components/common/TxStatusModal.js";
 import { useWallet } from "./hooks/useWallet.js";
 import { usePool } from "./hooks/usePool.js";
-import { ShieldCheck, Info, CheckCircle2, ArrowRight } from "lucide-react";
+import { useTxLifecycle } from "./hooks/useTxLifecycle.js";
+import { ShieldCheck, Info, CheckCircle2 } from "lucide-react";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("pool");
@@ -20,7 +22,6 @@ export const App: React.FC = () => {
     revealedBalance,
     pendingWithdrawal,
     isLoading,
-    txMessage,
     deposit,
     requestWithdrawal,
     cancelWithdrawal,
@@ -29,32 +30,75 @@ export const App: React.FC = () => {
     drawLottery,
   } = usePool();
 
+  const {
+    txState,
+    startTx,
+    setBroadcasting,
+    setMining,
+    setWaitingKms,
+    setConfirmed,
+    setFailed,
+    reset,
+  } = useTxLifecycle();
+
+  const handleDeposit = async (amount: bigint) => {
+    try {
+      startTx("Confidential Deposit");
+      await new Promise((r) => setTimeout(r, 400));
+      const simulatedTx = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      setBroadcasting(simulatedTx);
+      await new Promise((r) => setTimeout(r, 600));
+      setMining();
+      await deposit(amount);
+      setConfirmed(`Successfully encrypted and deposited ${Number(amount).toLocaleString()} USDC!`);
+    } catch (err: unknown) {
+      setFailed(err instanceof Error ? err : String(err));
+    }
+  };
+
+  const handleRequestWithdrawal = async (amount: bigint) => {
+    try {
+      startTx("Request 2-Step Withdrawal");
+      await new Promise((r) => setTimeout(r, 400));
+      const simulatedTx = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      setBroadcasting(simulatedTx);
+      await new Promise((r) => setTimeout(r, 600));
+      setMining();
+      await requestWithdrawal(amount);
+      setWaitingKms(simulatedTx);
+      await new Promise((r) => setTimeout(r, 1200));
+      setConfirmed(`Withdrawal of ${Number(amount).toLocaleString()} USDC anchored in storage and queued for KMS settlement.`);
+    } catch (err: unknown) {
+      setFailed(err instanceof Error ? err : String(err));
+    }
+  };
+
+  const handleCancelWithdrawal = async () => {
+    try {
+      startTx("Cancel Withdrawal (Escape Valve)");
+      await new Promise((r) => setTimeout(r, 500));
+      await cancelWithdrawal();
+      setConfirmed("Withdrawal request cleared. Encrypted principal restored to active balance.");
+    } catch (err: unknown) {
+      setFailed(err instanceof Error ? err : String(err));
+    }
+  };
+
+  const handleDrawLottery = async (prizeAmount: bigint) => {
+    try {
+      startTx("Confidential Round Draw");
+      await new Promise((r) => setTimeout(r, 400));
+      setMining();
+      await drawLottery(prizeAmount);
+      setConfirmed("Confidential draw executed! Winning index derived homomorphically via FHE.randEuint64.");
+    } catch (err: unknown) {
+      setFailed(err instanceof Error ? err : String(err));
+    }
+  };
+
   return (
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-      {/* Toast Notification for Transaction Lifecycle */}
-      {txMessage && (
-        <div
-          role="status"
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            backgroundColor: "var(--bg-secondary)",
-            border: "1px solid var(--accent-cyan)",
-            borderRadius: "10px",
-            padding: "14px 20px",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
-            zIndex: 90,
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            maxWidth: "420px",
-          }}
-        >
-          <CheckCircle2 size={20} color="var(--accent-cyan)" style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: "0.875rem", color: "var(--text-primary)" }}>{txMessage}</div>
-        </div>
-      )}
+      <TxStatusModal state={txState} onClose={reset} />
 
       {/* Hero Section */}
       <section style={{ marginBottom: "var(--space-2xl)" }}>
@@ -143,7 +187,7 @@ export const App: React.FC = () => {
               isLoading={isLoading}
             />
             <DepositCard
-              onDeposit={deposit}
+              onDeposit={handleDeposit}
               isLoading={isLoading}
               walletConnected={isWalletConnected}
             />
@@ -152,15 +196,15 @@ export const App: React.FC = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
             <WithdrawalCard
               pendingWithdrawal={pendingWithdrawal}
-              onRequestWithdrawal={requestWithdrawal}
-              onCancelWithdrawal={cancelWithdrawal}
+              onRequestWithdrawal={handleRequestWithdrawal}
+              onCancelWithdrawal={handleCancelWithdrawal}
               isLoading={isLoading}
               walletConnected={isWalletConnected}
             />
             <LotteryDrawCard
               prizePool={poolStats.prizePool}
               totalDraws={poolStats.totalDraws}
-              onExecuteDraw={drawLottery}
+              onExecuteDraw={handleDrawLottery}
               isLoading={isLoading}
             />
           </div>
@@ -172,7 +216,7 @@ export const App: React.FC = () => {
           <LotteryDrawCard
             prizePool={poolStats.prizePool}
             totalDraws={poolStats.totalDraws}
-            onExecuteDraw={drawLottery}
+            onExecuteDraw={handleDrawLottery}
             isLoading={isLoading}
           />
         </section>
