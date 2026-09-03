@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {FHE, euint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
+import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -21,7 +22,8 @@ contract ConfidentialPool is
     IConfidentialPool,
     ReentrancyGuard,
     Ownable2Step,
-    Pausable
+    Pausable,
+    ZamaEthereumConfig
 {
     using SafeERC20 for IERC20;
 
