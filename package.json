@@ -7,10 +7,12 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "forge test && npm run test:backend && npm run test:client",
+    "test": "forge test && npm run test:backend && npm run test:client && npm run test:frontend",
     "build:backend": "tsc",
     "test:backend": "tsx --test backend/test/*.test.ts",
-    "test:client": "tsx --test client/test/*.test.ts"
+    "test:client": "tsx --test client/test/*.test.ts",
+    "build:frontend": "vite build",
+    "test:frontend": "tsx --test frontend/test/*.test.ts"
   },
   "repository": {
     "type": "git",
@@ -34,12 +36,17 @@
     "dotenv": "^17.4.2",
     "ethers": "^6.17.0",
     "express": "^5.2.1",
+    "lucide-react": "^1.39.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "supertest": "^7.2.2",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "forge-std": "^1.1.2"
+    "@vitejs/plugin-react": "^4.7.0",
+    "forge-std": "^1.1.2",
+    "vite": "^5.4.21"
   }
 }
