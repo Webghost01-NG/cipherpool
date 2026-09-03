@@ -14,7 +14,8 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
     const cssContent = fs.readFileSync(path.join(process.cwd(), "frontend/src/styles/theme.css"), "utf-8");
 
     assert.ok(cssContent.includes("box-sizing: border-box"), "Global box-sizing ensures no overflow padding");
-    assert.ok(cssContent.includes("width: min(100% - 2rem, 1180px)"), "Fluid container prevents ultra-wide distortion");
+    assert.ok(cssContent.includes("width: min(100% - 2rem, 1240px)"), "Fluid container prevents ultra-wide distortion");
+    assert.ok(cssContent.includes("grid-template-columns: repeat(3, minmax(0, 1fr))"), "Desktop actions use an app-first three-column grid");
     assert.ok(cssContent.includes("@media (max-width: 620px)"), "Mobile layout breakpoint is present");
   });
 

@@ -98,95 +98,127 @@ export const App: React.FC = () => {
     >
       <TxStatusModal state={txState} onClose={reset} />
 
-      <section className="hero">
-        <div className="container hero__grid">
-          <div>
-            <p className="eyebrow">Encrypted savings • verifiable outcomes</p>
-            <h1>Save in public. Compete in <em>private.</em></h1>
-          </div>
-          <div className="hero__aside">
-            <p>
-              CipherPool turns testnet USDC deposits into confidential prize entries.
-              Balances and ticket weight stay encrypted while the protocol proves every state transition on-chain.
+      <div className="container dashboard-shell">
+        <section className="console-intro" aria-labelledby="console-title">
+          <div className="console-intro__copy">
+            <p className="eyebrow"><span className="signal-pulse" aria-hidden="true" /> Confidential savings console</p>
+            <h1 id="console-title">Your position stays <em>private.</em></h1>
+            <p className="console-intro__description">
+              Deposit testnet USDC, enter verifiable prize rounds, and withdraw through threshold decryption—without publishing your balance or ticket weight.
             </p>
-            <div className="hero__proof">
-              <span className="proof-chip"><ShieldCheck size={15} /> Encrypted principal</span>
-              <span className="proof-chip"><Fingerprint size={15} /> Private odds</span>
-              <span className="proof-chip"><KeyRound size={15} /> User-authorized reveal</span>
+            <div className="console-intro__proofs" aria-label="Privacy guarantees">
+              <span><ShieldCheck size={15} /> Encrypted accounting</span>
+              <span><Fingerprint size={15} /> Wallet-bound access</span>
+              <span><KeyRound size={15} /> Verifiable exits</span>
             </div>
           </div>
+
+          <aside className="assurance-card" aria-label="Live protocol assurance">
+            <div className="assurance-card__header">
+              <div>
+                <p className="eyebrow">Runtime assurance</p>
+                <h2>Protocol state</h2>
+              </div>
+              <Badge variant={deploymentVerification.status === "verified" ? "success" : "warning"}>
+                {deploymentVerification.status}
+              </Badge>
+            </div>
+            <dl className="assurance-list">
+              <div>
+                <dt>Network</dt>
+                <dd><LockKeyhole size={13} /> Ethereum Sepolia</dd>
+              </div>
+              <div>
+                <dt>Indexer</dt>
+                <dd><span className={"status-dot " + (backendStatus === "online" ? "status-dot--ok" : "status-dot--warn")} /> {backendStatus}</dd>
+              </div>
+              <div>
+                <dt>Transactions</dt>
+                <dd><span className={"status-dot " + (writesEnabled ? "status-dot--ok" : "status-dot--warn")} /> {writesEnabled ? "enabled" : "safety-locked"}</dd>
+              </div>
+            </dl>
+          </aside>
+        </section>
+
+        <div className="alert-stack">
+          {configurationErrors.length > 0 && (
+            <div className="callout callout--alert" role="alert">
+              <AlertTriangle size={18} />
+              <span>
+                This build is missing required deployment configuration: {configurationErrors.join(" ")}
+                Transactions are disabled until the environment is corrected.
+              </span>
+            </div>
+          )}
+
+          {!runtimeConfig.protocolWritesEnabled && (
+            <div className="callout callout--alert" role="alert">
+              <ShieldCheck size={18} />
+              <span>
+                The operational safety switch is off. New deposits, withdrawal requests, and draws are disabled; active and archived withdrawal exits remain available.
+              </span>
+            </div>
+          )}
+
+          {runtimeConfig.protocolWritesEnabled && deploymentVerification.status !== "verified" && (
+            <div className="callout callout--alert" role="alert">
+              <AlertTriangle size={18} />
+              <span>Writes remain locked until runtime verification succeeds. {deploymentVerification.message}</span>
+            </div>
+          )}
+
+          {dataError && (
+            <div className="callout callout--alert" role="status">
+              <Activity size={17} /><span>{dataError}</span>
+            </div>
+          )}
         </div>
-      </section>
 
-      <div className="container">
-        {configurationErrors.length > 0 && (
-          <div className="callout" role="alert" style={{ marginBottom: "1rem" }}>
-            <AlertTriangle size={18} />
-            <span>
-              This build is missing required deployment configuration: {configurationErrors.join(" ")}
-              Transactions are disabled until the environment is corrected.
+        <section className="protocol-frame" aria-label="Live pool overview">
+          <div className="status-ribbon" aria-live="polite">
+            <div className="status-ribbon__group">
+              <span className="status-item">
+                <span className={"status-dot " + (backendStatus === "online" ? "status-dot--ok" : "status-dot--warn")} />
+                Indexer {backendStatus}
+              </span>
+              <span className="status-item">
+                <span className={"status-dot " + (!poolStats.isPaused ? "status-dot--ok" : "status-dot--warn")} />
+                Pool {poolStats.isPaused ? "paused" : "unpaused"}
+              </span>
+              <span className="status-item"><LockKeyhole size={13} /> Ethereum Sepolia</span>
+              <span className="status-item">
+                <span className={"status-dot " + (deploymentVerification.status === "verified" ? "status-dot--ok" : "status-dot--warn")} />
+                Deployment {deploymentVerification.status}
+              </span>
+            </div>
+            <span className="status-ribbon__time">
+              {lastUpdatedAt ? "Checked " + new Date(lastUpdatedAt).toLocaleTimeString() : "Checking live state…"}
             </span>
           </div>
-        )}
 
-        {!runtimeConfig.protocolWritesEnabled && (
-          <div className="callout" role="alert" style={{ marginBottom: "1rem" }}>
-            <ShieldCheck size={18} />
-            <span>
-              The operational safety switch is off. New deposits, withdrawal requests, and draws are disabled; active and archived withdrawal exits remain available.
-            </span>
+          <div className="metrics-grid" aria-label="Live pool metrics">
+            <StatBox label="Accounted balances" value={totalDeposits + " " + asset.symbol} subtext="Principal + awarded prizes" />
+            <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="After reserved liabilities" />
+            <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" />
+            <StatBox
+              label="Confirmed rounds"
+              value={poolStats.totalDraws}
+              subtext="Recorded on Sepolia"
+              badge={<Badge variant="info">Live</Badge>}
+            />
           </div>
-        )}
-
-        {runtimeConfig.protocolWritesEnabled && deploymentVerification.status !== "verified" && (
-          <div className="callout" role="alert" style={{ marginBottom: "1rem" }}>
-            <AlertTriangle size={18} />
-            <span>Writes remain locked until runtime verification succeeds. {deploymentVerification.message}</span>
-          </div>
-        )}
-
-        <div className="status-ribbon" aria-live="polite">
-          <div className="status-ribbon__group">
-            <span className="status-item">
-              <span className={"status-dot " + (backendStatus === "online" ? "status-dot--ok" : "status-dot--warn")} />
-              Indexer {backendStatus}
-            </span>
-            <span className="status-item">
-              <span className={"status-dot " + (!poolStats.isPaused ? "status-dot--ok" : "status-dot--warn")} />
-              Pool contract {poolStats.isPaused ? "paused" : "unpaused"}
-            </span>
-            <span className="status-item"><LockKeyhole size={14} /> Ethereum Sepolia</span>
-            <span className="status-item">
-              <span className={"status-dot " + (deploymentVerification.status === "verified" ? "status-dot--ok" : "status-dot--warn")} />
-              Deployment {deploymentVerification.status}
-            </span>
-          </div>
-          <span>
-            {lastUpdatedAt ? "Live state checked " + new Date(lastUpdatedAt).toLocaleTimeString() : "Checking live state…"}
-          </span>
-        </div>
-
-        {dataError && (
-          <div className="callout" role="status" style={{ marginTop: "1rem" }}>
-            <Activity size={17} /><span>{dataError}</span>
-          </div>
-        )}
-
-        <section className="metrics-grid" aria-label="Live pool metrics">
-          <StatBox label="Accounted balances" value={totalDeposits + " " + asset.symbol} subtext="Principal plus awarded prizes" />
-          <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="After principal and reserved prizes" />
-          <StatBox label="Private savers" value={poolStats.participantCount} subtext="Registered on-chain participants" />
-          <StatBox
-            label="Confirmed rounds"
-            value={poolStats.totalDraws}
-            subtext="Draw IDs recorded on Sepolia"
-            badge={<Badge variant="info">Live</Badge>}
-          />
         </section>
 
         {activeTab === "pool" && (
-          <section className="workspace" aria-label="Savings actions">
-            <div className="stack">
+          <div className="tab-stage">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Private operations</p>
+                <h2>Manage your savings</h2>
+              </div>
+              <p>Balances reveal only after wallet authorization. Deposits and settlement remain independently verifiable on-chain.</p>
+            </div>
+            <section className="operations-grid" aria-label="Savings actions">
               <BalanceRevealCard
                 isRevealed={isBalanceRevealed}
                 revealedAmount={revealedBalance}
@@ -212,8 +244,6 @@ export const App: React.FC = () => {
                 walletBalance={asset.walletBalance}
                 writesEnabled={writesEnabled}
               />
-            </div>
-            <div className="stack">
               <WithdrawalCard
                 pendingWithdrawal={pendingWithdrawal}
                 onRequestWithdrawal={(amount) =>
@@ -248,22 +278,19 @@ export const App: React.FC = () => {
                 cancellationDelaySeconds={cancellationDelaySeconds}
                 writesEnabled={writesEnabled}
               />
-              <Card
-                eyebrow="Why it matters"
-                title="No public balance leaderboard"
-                subtitle="Observers can verify custody and activity without learning individual ticket weight."
-              >
-                <div className="callout">
-                  <Layers3 size={18} />
-                  <span>Encrypted accounting prevents whale tracking and makes mempool-based odds exploitation materially harder.</span>
-                </div>
-              </Card>
-            </div>
-          </section>
+            </section>
+            <aside className="privacy-note">
+              <span className="privacy-note__icon"><Layers3 size={18} /></span>
+              <div>
+                <strong>No public balance leaderboard</strong>
+                <p>Observers can verify custody and activity without learning individual ticket weight, reducing whale tracking and odds exploitation.</p>
+              </div>
+            </aside>
+          </div>
         )}
 
         {activeTab === "pool" && DEFAULT_LEGACY_POOL_ADDRESS && (
-          <section style={{ marginBottom: "2rem" }} aria-label="Archived pool exit actions">
+          <section className="legacy-stage" aria-label="Archived pool exit actions">
             <LegacyExitCard
               legacyPoolAddress={DEFAULT_LEGACY_POOL_ADDRESS}
               explorerUrl={runtimeConfig.explorerUrl}
@@ -294,52 +321,64 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === "draw" && (
-          <section className="workspace" aria-label="Prize round">
-            <LotteryDrawCard
-              availableYield={poolStats.availableYield}
-              totalDraws={poolStats.totalDraws}
-              onExecuteDraw={(amount) =>
-                runAction(
-                  "Confidential prize draw",
-                  () => drawLottery(amount, transactionCallbacks),
-                  "Prize round confirmed on Ethereum Sepolia."
-                )
-              }
-              isLoading={isLoading}
-              isOwner={isOwner && !poolStats.isPaused}
-              tokenSymbol={asset.symbol}
-              tokenDecimals={asset.decimals}
-              writesEnabled={writesEnabled}
-            />
-            <Card className="panel--ink" eyebrow="Draw invariant" title="The winner is never exposed">
-              <div className="balance-display">
-                <strong className="balance-display__value">{poolStats.totalDraws}</strong>
-                <p className="balance-display__hint">
-                  Encrypted rounds completed. Winner selection uses bounded fhEVM randomness against encrypted cumulative balances.
-                </p>
-              </div>
-            </Card>
-          </section>
+          <div className="tab-stage">
+            <div className="section-heading">
+              <div><p className="eyebrow">Prize operations</p><h2>Confidential rounds</h2></div>
+              <p>Only the pool owner can execute a draw. Prize capacity is read directly from reserved on-chain yield.</p>
+            </div>
+            <section className="workspace" aria-label="Prize round">
+              <LotteryDrawCard
+                availableYield={poolStats.availableYield}
+                totalDraws={poolStats.totalDraws}
+                onExecuteDraw={(amount) =>
+                  runAction(
+                    "Confidential prize draw",
+                    () => drawLottery(amount, transactionCallbacks),
+                    "Prize round confirmed on Ethereum Sepolia."
+                  )
+                }
+                isLoading={isLoading}
+                isOwner={isOwner && !poolStats.isPaused}
+                tokenSymbol={asset.symbol}
+                tokenDecimals={asset.decimals}
+                writesEnabled={writesEnabled}
+              />
+              <Card className="panel--ink" eyebrow="Draw invariant" title="The winner is never exposed">
+                <div className="balance-display">
+                  <strong className="balance-display__value">{poolStats.totalDraws}</strong>
+                  <p className="balance-display__hint">
+                    Encrypted rounds completed. Winner selection uses bounded fhEVM randomness against encrypted cumulative balances.
+                  </p>
+                </div>
+              </Card>
+            </section>
+          </div>
         )}
 
         {activeTab === "docs" && (
-          <section className="security-grid" aria-label="Protocol guarantees">
-            <article className="panel security-card">
-              <span className="security-card__number">01 / INPUT</span>
-              <h3>Encrypted before submission</h3>
-              <p>The Zama relayer creates a contract- and user-bound proof. Plaintext never becomes transaction calldata.</p>
-            </article>
-            <article className="panel security-card">
-              <span className="security-card__number">02 / STORAGE</span>
-              <h3>Proof handles stay anchored</h3>
-              <p>Withdrawal verification reads the ciphertext handle from contract storage, preventing calldata substitution.</p>
-            </article>
-            <article className="panel security-card">
-              <span className="security-card__number">03 / EXIT</span>
-              <h3>Stale requests remain recoverable</h3>
-              <p>After the configured delay, the requesting wallet can cancel an unsettled withdrawal without relayer permission.</p>
-            </article>
-          </section>
+          <div className="tab-stage">
+            <div className="section-heading">
+              <div><p className="eyebrow">Security model</p><h2>Privacy you can inspect</h2></div>
+              <p>These guarantees describe the deployed interaction model; source specifications remain available for independent review.</p>
+            </div>
+            <section className="security-grid" aria-label="Protocol guarantees">
+              <article className="panel security-card">
+                <span className="security-card__number">01 / INPUT</span>
+                <h3>Encrypted before submission</h3>
+                <p>The Zama relayer creates a contract- and user-bound proof. Plaintext never becomes transaction calldata.</p>
+              </article>
+              <article className="panel security-card">
+                <span className="security-card__number">02 / STORAGE</span>
+                <h3>Proof handles stay anchored</h3>
+                <p>Withdrawal verification reads the ciphertext handle from contract storage, preventing calldata substitution.</p>
+              </article>
+              <article className="panel security-card">
+                <span className="security-card__number">03 / EXIT</span>
+                <h3>Stale requests remain recoverable</h3>
+                <p>After the configured delay, the requesting wallet can cancel an unsettled withdrawal without relayer permission.</p>
+              </article>
+            </section>
+          </div>
         )}
       </div>
     </Layout>
