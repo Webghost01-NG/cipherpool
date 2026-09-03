@@ -31,6 +31,9 @@ contract ConfidentialPool is
     /// @notice Plaintext aggregate deposits tracked for modulo arithmetic and custody solvency.
     uint64 internal _totalDepositsPlain;
 
+    /// @notice Aggregate custody yield allocated to encrypted prize balances.
+    uint256 internal _reservedPrizesPlain;
+
     /// @notice Sequential identifier for executed prize draws.
     uint256 public override currentDrawId;
 
@@ -215,6 +218,14 @@ contract ConfidentialPool is
             revert EmptyPool();
         }
 
+        uint256 availableYield = availableYieldPlain();
+        if (prizeAmount > availableYield) {
+            revert InsufficientPrizeYield(prizeAmount, availableYield);
+        }
+
+        // Reserve custody before awarding so subsequent draws cannot reuse it.
+        _reservedPrizesPlain += prizeAmount;
+
         // 1. Generate homomorphic random winning ticket bounded by total deposits
         euint64 winningTicket = FHE.randEuint64(_totalDepositsPlain);
 
@@ -324,6 +335,23 @@ contract ConfidentialPool is
      */
     function totalDepositsPlain() external view override returns (uint64) {
         return _totalDepositsPlain;
+    }
+
+    /**
+     * @notice Returns custody yield that has been allocated to encrypted prize balances.
+     */
+    function reservedPrizesPlain() external view override returns (uint256) {
+        return _reservedPrizesPlain;
+    }
+
+    /**
+     * @notice Returns unallocated custody yield available for future draws.
+     * @dev Principal and already-awarded prizes are both treated as liabilities.
+     */
+    function availableYieldPlain() public view override returns (uint256) {
+        uint256 liabilities = uint256(_totalDepositsPlain) + _reservedPrizesPlain;
+        uint256 custodyBalance = IERC20(custodyAsset).balanceOf(address(this));
+        return custodyBalance > liabilities ? custodyBalance - liabilities : 0;
     }
 
     /**

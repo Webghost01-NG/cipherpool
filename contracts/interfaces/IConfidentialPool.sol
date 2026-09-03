@@ -92,6 +92,18 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function totalDepositsPlain() external view returns (uint64);
 
     /**
+     * @notice Returns custody yield already allocated to encrypted prize balances.
+     * @return The aggregate reserved prize liability.
+     */
+    function reservedPrizesPlain() external view returns (uint256);
+
+    /**
+     * @notice Returns custody yield not allocated to principal or prizes.
+     * @return The amount available for future draws.
+     */
+    function availableYieldPlain() external view returns (uint256);
+
+    /**
      * @notice Returns the total count of registered depositors in the pool.
      * @return The total number of participants.
      */

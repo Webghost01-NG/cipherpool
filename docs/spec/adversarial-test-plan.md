@@ -21,7 +21,7 @@ The plan validates that the protocol adheres to its fundamental security promise
 
 ## 2. Adversarial Test Vector Matrix
 
-The matrix below establishes 13 primary exploit test vectors spanning all core contract interactions:
+The matrix below establishes 14 primary exploit test vectors spanning all core contract interactions:
 
 | Vector ID | Category | Target Method | Exploit Hypothesis | Expected Failure / Mitigation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -38,6 +38,7 @@ The matrix below establishes 13 primary exploit test vectors spanning all core c
 | **ADV-11** | Circuit Breaker Ingress | `deposit`, `requestWithdrawal` | User attempts to deposit or request withdrawal while contract is paused. | Reverts with `EnforcedPause()`. |
 | **ADV-12** | Paused Escape Valve | `finalizeWithdrawal`, `cancelWithdrawal` | User attempts to finalize pending KMS proof or cancel stale request while paused. | **ALLOWED (BY DESIGN)** to preserve non-custodial asset escape rights. |
 | **ADV-13** | Deposit Credit Inflation | `deposit` | Attacker invokes the removed three-argument selector with an encrypted value larger than the custody amount. | Rejected at the ABI boundary; the sole `amount` now drives custody, plaintext accounting, and encrypted credit. |
+| **ADV-14** | Repeated Prize Allocation | `draw` | Owner executes multiple draws against the same custody yield. | Each draw increments `reservedPrizesPlain`; requests above `availableYieldPlain` revert with `InsufficientPrizeYield`. |
 
 ---
 
@@ -68,6 +69,12 @@ $$\text{nonce}_{k+1} = \text{nonce}_k + 1 \quad \forall k \ge 0$$
 Harvested yield transfers to the pool MUST strictly satisfy:
 
 $$\text{vault.harvestYield}() \le \text{vault.totalManagedAssets}() - \text{vault.principalDeposited}()$$
+
+### Invariant 5: Prize Liability Solvency
+
+At every successful draw boundary, principal and allocated prizes cannot exceed pool custody:
+
+$$\text{totalDepositsPlain} + \text{reservedPrizesPlain} \le \text{custodyAsset.balanceOf(pool)}$$
 
 ---
 

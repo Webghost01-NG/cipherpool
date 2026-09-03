@@ -172,7 +172,13 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         token.balanceOf(contractAddress) as Promise<bigint>,
         address ? token.balanceOf(address) as Promise<bigint> : Promise.resolve(0n),
       ]);
-      const availableYield = custodyBalance > totalDeposits ? custodyBalance - totalDeposits : 0n;
+      let availableYield: bigint;
+      try {
+        availableYield = await pool.availableYieldPlain() as bigint;
+      } catch {
+        // Compatibility for the read-only legacy deployment; writes remain disabled there.
+        availableYield = custodyBalance > totalDeposits ? custodyBalance - totalDeposits : 0n;
+      }
 
       setPoolStats({
         totalDeposits: totalDeposits.toString(),

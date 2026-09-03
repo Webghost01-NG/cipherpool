@@ -24,6 +24,7 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
     uint256 public constant USER_COUNT = 10;
     address[USER_COUNT] public users;
     uint64 public constant DEPOSIT_AMOUNT = 10_000;
+    uint64 public constant TOTAL_PRIZE_YIELD = 4_000;
 
     function setUp() public {
         setUpMockFHEVM();
@@ -60,6 +61,7 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
         uint64 prize1 = 1_000;
         uint64 prize2 = 2_500;
         uint64 prize3 = 500;
+        usdc.mint(address(pool), TOTAL_PRIZE_YIELD);
 
         pool.draw(prize1);
         assertEq(pool.currentDrawId(), 1);
@@ -69,6 +71,8 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
 
         pool.draw(prize3);
         assertEq(pool.currentDrawId(), 3);
+        assertEq(pool.reservedPrizesPlain(), TOTAL_PRIZE_YIELD);
+        assertEq(pool.availableYieldPlain(), 0);
 
         // Verify each participant has valid balance and prize handles in state
         for (uint256 i = 0; i < USER_COUNT; i++) {
@@ -155,6 +159,6 @@ contract EndToEndPoolTest is Test, FHEVMMockHarness, IPoolErrors, IPoolEvents, I
         // Verify pool custody consistency
         uint64 remainingExpected = (uint64(USER_COUNT) * DEPOSIT_AMOUNT) - withdrawAmount0 - withdrawAmount1;
         assertEq(pool.totalDepositsPlain(), remainingExpected);
-        assertEq(usdc.balanceOf(address(pool)), remainingExpected);
+        assertEq(usdc.balanceOf(address(pool)), remainingExpected + TOTAL_PRIZE_YIELD);
     }
 }
