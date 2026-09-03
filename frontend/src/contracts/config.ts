@@ -12,4 +12,4 @@ export const DEFAULT_USDC_ADDRESS =
 
 export const DEFAULT_BACKEND_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_BACKEND_URL) ||
-  "http://localhost:3001";
+  "https://cipherpool-backend.onrender.com";
