@@ -3,6 +3,8 @@
 **Project Name:** CipherPool  
 **Tagline:** A no-loss confidential prize savings protocol on Zama fhEVM where balances, tickets, and lottery draws remain fully encrypted on-chain.  
 **Track:** Zama fhEVM Bounty Track / Confidential Financial Applications  
+**Live Application (Vercel):** [https://cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)  
+**Live Relayer & Indexer (Render):** [https://cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com) (`/health` verified)  
 **Live Sepolia Testnet Contracts:**
 - **ConfidentialPool:** [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) (Deploy Tx: [`0x93276d...`](https://sepolia.etherscan.io/tx/0x93276d8a857582f24169bc37550a38d7f1bf1e4cd6a94df7f1d95dbf3efb3253))
 - **ConfidentialVault:** [`0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7`](https://sepolia.etherscan.io/address/0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7) (Deploy Tx: [`0x1f4b0b...`](https://sepolia.etherscan.io/tx/0x1f4b0bcc4e4436095a7d7412987ef4ec11c1cc72725066d131278d26bc88c9d4))

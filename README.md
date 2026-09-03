@@ -52,8 +52,14 @@ CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to enable co
 
 ---
 
-## 4. Verified Sepolia Deployments
+## 4. Live Protocol & Sepolia Deployments
 
+### Live Application Endpoints
+- **Live Web Application (Vercel):** [https://cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
+- **Live Relayer & Indexer (Render):** [https://cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
+- **Relayer Health Check:** [https://cipherpool-backend.onrender.com/health](https://cipherpool-backend.onrender.com/health)
+
+### Verified Smart Contracts (Ethereum Sepolia)
 | Component | Sepolia Contract Address | Network | Etherscan Verification |
 | :--- | :--- | :--- | :--- |
 | **ConfidentialPool** | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) | Ethereum Sepolia (11155111) | [Deploy Tx: `0x93276d...`](https://sepolia.etherscan.io/tx/0x93276d8a857582f24169bc37550a38d7f1bf1e4cd6a94df7f1d95dbf3efb3253) |
