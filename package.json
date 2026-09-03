@@ -11,7 +11,8 @@
     "build:backend": "tsc",
     "test:backend": "tsx --test backend/test/*.test.ts",
     "test:client": "tsx --test client/test/*.test.ts",
-    "build:frontend": "vite build",
+    "build:frontend": "vite build && npm run verify:frontend-bundle",
+    "verify:frontend-bundle": "node scripts/verify-frontend-bundle.mjs",
     "test:frontend": "tsx --test frontend/test/*.test.ts"
   },
   "repository": {
@@ -48,6 +49,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
     "forge-std": "^1.1.2",
+    "terser": "5.51.2",
     "vite": "^5.4.21"
   }
 }
