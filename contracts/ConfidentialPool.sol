@@ -211,7 +211,7 @@ contract ConfidentialPool is
      * @dev Uses homomorphic randomness with bounded reduction and cumulative interval evaluation.
      * @param prizeAmount The plaintext prize amount to award to the winner.
      */
-    function draw(uint64 prizeAmount) external override nonReentrant whenNotPaused {
+    function draw(uint64 prizeAmount) external override nonReentrant whenNotPaused onlyOwner {
         if (prizeAmount == 0) {
             revert ZeroPrizeAmount();
         }
@@ -250,6 +250,20 @@ contract ConfidentialPool is
 
         currentDrawId++;
         emit DrawExecuted(currentDrawId, prizeAmount, block.timestamp, len);
+    }
+
+    /**
+     * @notice Merges caller's accumulated confidential prizes into their active principal balance.
+     * @dev Homomorphically adds _prizes[msg.sender] into _balances[msg.sender] and resets _prizes[msg.sender].
+     */
+    function compoundPrizes() external override nonReentrant whenNotPaused {
+        _balances[msg.sender] = FHE.add(_balances[msg.sender], _prizes[msg.sender]);
+        _prizes[msg.sender] = FHE.asEuint64(0);
+
+        _balances[msg.sender] = FHE.allowThis(_balances[msg.sender]);
+        _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
+        _prizes[msg.sender] = FHE.allowThis(_prizes[msg.sender]);
+        _prizes[msg.sender] = FHE.allow(_prizes[msg.sender], msg.sender);
     }
 
     /**

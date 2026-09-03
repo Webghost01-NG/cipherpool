@@ -26,4 +26,11 @@ contract DrawLotteryTest is Test, IPoolErrors {
         vm.expectRevert(EmptyPool.selector);
         pool.draw(1_000);
     }
+
+    function test_RevertWhen_NonOwnerCallsDraw() public {
+        address nonOwner = address(0x9999);
+        vm.prank(nonOwner);
+        vm.expectRevert();
+        pool.draw(1_000);
+    }
 }

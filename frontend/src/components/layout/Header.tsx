@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Shield, Copy, Check } from "lucide-react";
 import { Badge } from "../common/UIPrimitives.js";
 import { WalletButton } from "../wallet/WalletButton.js";
+import { DEFAULT_POOL_ADDRESS } from "../../contracts/config.js";
 
 export interface HeaderProps {
   activeTab?: string;
@@ -12,7 +13,7 @@ export interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeTab = "pool",
   onTabChange,
-  contractAddress = "0x1111111111111111111111111111111111111111",
+  contractAddress = DEFAULT_POOL_ADDRESS,
 }) => {
   const [copied, setCopied] = useState(false);
 

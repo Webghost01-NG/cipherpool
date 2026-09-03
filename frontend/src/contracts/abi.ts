@@ -1,0 +1,30 @@
+export const POOL_ABI = [
+  "function deposit(bytes32 inputHandle, bytes calldata inputProof, uint64 plainCustodyAmount) external",
+  "function requestWithdrawal(uint64 amount) external",
+  "function finalizeWithdrawal(uint64 cleartextAmount, bytes calldata decryptionProof) external",
+  "function cancelWithdrawal() external",
+  "function draw(uint64 prizeAmount) external",
+  "function compoundPrizes() external",
+  "function getPendingWithdrawal(address user) external view returns (tuple(bool active, bytes32 requestHash, uint64 requestedAmount, bytes32 handle, uint256 timestamp))",
+  "function getUserWithdrawalNonce(address user) external view returns (uint256)",
+  "function getBalanceHandle(address user) external view returns (bytes32)",
+  "function getPrizeHandle(address user) external view returns (bytes32)",
+  "function totalDepositsPlain() external view returns (uint64)",
+  "function getParticipantCount() external view returns (uint256)",
+  "function currentDrawId() external view returns (uint256)",
+  "function custodyAsset() external view returns (address)",
+  "function cancellationDelay() external view returns (uint64)",
+  "function owner() external view returns (address)",
+  "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
+  "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
+  "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
+  "event WithdrawalCancelled(address indexed user, bytes32 indexed requestHash)",
+  "event DrawExecuted(uint256 indexed drawId, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
+];
+
+export const ERC20_ABI = [
+  "function allowance(address owner, address spender) external view returns (uint256)",
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function balanceOf(address account) external view returns (uint256)",
+  "function decimals() external view returns (uint8)",
+];

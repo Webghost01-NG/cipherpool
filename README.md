@@ -54,14 +54,14 @@ CipherPool uses **Zama fhEVM v0.13.3** Fully Homomorphic Encryption to enable co
 
 ## 4. Verified Sepolia Deployments
 
-| Component | Sepolia Contract Address | Network |
-| :--- | :--- | :--- |
-| **ConfidentialPool** | `0x5FbDB2315678afecb367f032d93F642f64180aa3` | Ethereum Sepolia (11155111) |
-| **ConfidentialVault** | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` | Ethereum Sepolia (11155111) |
-| **Custody Asset (USDC)** | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | Ethereum Sepolia (11155111) |
-| **Zama ACL** | `0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D` | Canonical Sepolia |
-| **Zama Coprocessor** | `0x92C920834Ec8941d2C77D188936E1f7A6f49c127` | Canonical Sepolia |
-| **Zama KMSVerifier** | `0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A` | Canonical Sepolia |
+| Component | Sepolia Contract Address | Network | Etherscan Verification |
+| :--- | :--- | :--- | :--- |
+| **ConfidentialPool** | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) | Ethereum Sepolia (11155111) | [Deploy Tx: `0x93276d...`](https://sepolia.etherscan.io/tx/0x93276d8a857582f24169bc37550a38d7f1bf1e4cd6a94df7f1d95dbf3efb3253) |
+| **ConfidentialVault** | [`0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7`](https://sepolia.etherscan.io/address/0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7) | Ethereum Sepolia (11155111) | [Deploy Tx: `0x1f4b0b...`](https://sepolia.etherscan.io/tx/0x1f4b0bcc4e4436095a7d7412987ef4ec11c1cc72725066d131278d26bc88c9d4) |
+| **Custody Asset (USDC)** | [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) | Ethereum Sepolia (11155111) | [Circle Proxy](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) |
+| **Zama ACL** | [`0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D`](https://sepolia.etherscan.io/address/0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D) | Canonical Sepolia | [Verified Coprocessor ACL](https://sepolia.etherscan.io/address/0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D) |
+| **Zama Coprocessor** | [`0x92C920834Ec8941d2C77D188936E1f7A6f49c127`](https://sepolia.etherscan.io/address/0x92C920834Ec8941d2C77D188936E1f7A6f49c127) | Canonical Sepolia | [Verified fhEVM Executor](https://sepolia.etherscan.io/address/0x92C920834Ec8941d2C77D188936E1f7A6f49c127) |
+| **Zama KMSVerifier** | [`0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A`](https://sepolia.etherscan.io/address/0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A) | Canonical Sepolia | [Threshold KMS Verifier](https://sepolia.etherscan.io/address/0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A) |
 
 ---
 
