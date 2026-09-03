@@ -13,11 +13,23 @@ describe("Frontend Foundation & Design System Tests", () => {
     const cssPath = path.join(process.cwd(), "frontend/src/styles/theme.css");
     const content = fs.readFileSync(cssPath, "utf-8");
 
-    assert.ok(content.includes("--bg-primary: #f3f1ea"), "Primary background defined");
-    assert.ok(content.includes("--accent-cyan: #3157f6"), "Primary interaction accent defined");
-    assert.ok(content.includes("--accent-emerald: #0b7a53"), "Success accent defined");
+    assert.ok(content.includes("--bg-primary: #07110f"), "Primary background defined");
+    assert.ok(content.includes("--accent-cyan: #66d9ff"), "Primary information accent defined");
+    assert.ok(content.includes("--accent-emerald: #69e6ad"), "Success accent defined");
+    assert.ok(content.includes("--accent-lime: #cafa63"), "Primary interaction accent defined");
     assert.ok(content.includes("prefers-reduced-motion: reduce"), "Accessibility reduced-motion query present");
     assert.ok(content.includes(":focus-visible"), "Visible focus ring defined");
+  });
+
+  test("App presents live state and primary savings actions in an app-first layout", () => {
+    const appPath = path.join(process.cwd(), "frontend/src/App.tsx");
+    const content = fs.readFileSync(appPath, "utf-8");
+
+    assert.ok(content.includes('className="console-intro"'), "Compact console introduction is present");
+    assert.ok(content.includes('className="protocol-frame"'), "Live protocol overview is present");
+    assert.ok(content.includes('className="operations-grid"'), "Primary actions share the operations grid");
+    assert.ok(content.indexOf("<BalanceRevealCard") < content.indexOf("<DepositCard"), "Private balance appears before funding");
+    assert.ok(content.indexOf("<DepositCard") < content.indexOf("<WithdrawalCard"), "Funding appears before withdrawal");
   });
 
   test("Layout components export properly as valid React elements", () => {
