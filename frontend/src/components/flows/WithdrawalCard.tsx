@@ -100,7 +100,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
             <span>The contract reveals neither your balance nor whether it covered the request. A zero settlement means the encrypted sufficiency check failed.</span>
           </div>
           <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !amount} isLoading={isLoading}>
-            <ArrowUpRight size={17} /> {!writesEnabled ? "New requests paused for upgrade" : walletConnected ? "Request private withdrawal" : "Connect wallet to withdraw"}
+            <ArrowUpRight size={17} /> {!writesEnabled ? "New requests safety-locked" : walletConnected ? "Request private withdrawal" : "Connect wallet to withdraw"}
           </Button>
         </form>
       )}

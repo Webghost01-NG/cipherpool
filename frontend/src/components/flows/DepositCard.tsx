@@ -90,7 +90,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({
           <span>One wallet approval may be required before the deposit transaction. Wait for both transactions to confirm.</span>
         </div>
         <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !amount} isLoading={isLoading}>
-          <ArrowDown size={17} /> {!writesEnabled ? "Deposits paused for upgrade" : walletConnected ? "Deposit" : "Connect wallet to deposit"}
+          <ArrowDown size={17} /> {!writesEnabled ? "Deposits safety-locked" : walletConnected ? "Deposit" : "Connect wallet to deposit"}
         </Button>
         <a className="helper-link" href="https://faucet.circle.com/" target="_blank" rel="noreferrer">
           Get Sepolia test USDC <ExternalLink size={12} />

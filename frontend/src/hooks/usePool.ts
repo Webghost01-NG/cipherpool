@@ -9,6 +9,7 @@ import {
   DEFAULT_USDC_ADDRESS,
   runtimeConfig,
 } from "../contracts/config.js";
+import { validateDeploymentEvidence } from "../contracts/deployment.js";
 
 export interface PoolStats {
   totalDeposits: string;
@@ -39,6 +40,11 @@ export interface PendingWithdrawal {
 
 export interface TransactionCallbacks {
   onBroadcast?: (hash: string) => void;
+}
+
+export interface DeploymentVerification {
+  status: "pending" | "verified" | "failed";
+  message: string;
 }
 
 const emptyWithdrawal: PendingWithdrawal = {
@@ -81,11 +87,19 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
   const [dataError, setDataError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [deploymentVerification, setDeploymentVerification] = useState<DeploymentVerification>({
+    status: "pending",
+    message: "Connect a Sepolia wallet to verify the active deployment.",
+  });
+
+  const withdrawalStorageKey = useCallback((userAddress: string) => (
+    "cipherpool_withdrawal_" + contractAddress.toLowerCase() + "_" + userAddress.toLowerCase()
+  ), [contractAddress]);
 
   const persistWithdrawal = useCallback((withdrawal: PendingWithdrawal) => {
     setPendingWithdrawal(withdrawal);
     if (!address) return;
-    const key = "cipherpool_withdrawal_" + address.toLowerCase();
+    const key = withdrawalStorageKey(address);
     try {
       if (withdrawal.hasPending && withdrawal.status === "PENDING") {
         localStorage.setItem(key, JSON.stringify(withdrawal));
@@ -95,7 +109,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     } catch {
       // Local storage is an optional cache; chain state remains authoritative.
     }
-  }, [address]);
+  }, [address, withdrawalStorageKey]);
 
   useEffect(() => {
     if (!address) {
@@ -105,7 +119,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       return;
     }
     try {
-      const saved = localStorage.getItem("cipherpool_withdrawal_" + address.toLowerCase());
+      const saved = localStorage.getItem(withdrawalStorageKey(address));
       if (saved) {
         const parsed = JSON.parse(saved) as PendingWithdrawal;
         if (parsed.status === "PENDING") setPendingWithdrawal(parsed);
@@ -113,12 +127,13 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     } catch {
       setPendingWithdrawal(emptyWithdrawal);
     }
-  }, [address]);
+  }, [address, withdrawalStorageKey]);
 
   const refreshPoolData = useCallback(async () => {
     if (!contractAddress || !DEFAULT_BACKEND_URL) {
       setDataError("Protocol environment variables are incomplete.");
       setBackendStatus("offline");
+      setDeploymentVerification({ status: "failed", message: "Deployment configuration is incomplete." });
       return;
     }
 
@@ -144,6 +159,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
 
     if (!window.ethereum || status === "wrong_network") {
       setDataError(backendRequestFailed ? "Live protocol data is temporarily unavailable." : null);
+      setDeploymentVerification({
+        status: "pending",
+        message: status === "wrong_network"
+          ? "Switch the connected wallet to Ethereum Sepolia."
+          : "Connect a Sepolia wallet to verify the active deployment.",
+      });
       setLastUpdatedAt(Date.now());
       return;
     }
@@ -152,7 +173,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
       const [
-        totalDeposits,
+        network,
+        poolCode,
+        totalAccountedBalance,
         totalDraws,
         participantCount,
         paused,
@@ -160,7 +183,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         custodyAddress,
         cancellationDelay,
       ] = await Promise.all([
-        pool.totalDepositsPlain() as Promise<bigint>,
+        provider.getNetwork(),
+        provider.getCode(contractAddress),
+        pool.totalAccountedBalancePlain() as Promise<bigint>,
         pool.currentDrawId() as Promise<bigint>,
         pool.getParticipantCount() as Promise<bigint>,
         pool.paused() as Promise<boolean>,
@@ -176,19 +201,33 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         token.balanceOf(contractAddress) as Promise<bigint>,
         address ? token.balanceOf(address) as Promise<bigint> : Promise.resolve(0n),
       ]);
-      let totalAccountedBalance = totalDeposits;
-      try {
-        totalAccountedBalance = await pool.totalAccountedBalancePlain() as bigint;
-      } catch {
-        // Compatibility for the read-only legacy deployment; writes remain disabled there.
+      const availableYield = await pool.availableYieldPlain() as bigint;
+      const verificationErrors = validateDeploymentEvidence(
+        {
+          chainId: runtimeConfig.chainId,
+          poolAddress: runtimeConfig.poolAddress,
+          poolRuntimeCodeHash: runtimeConfig.poolRuntimeCodeHash,
+          custodyAssetAddress: runtimeConfig.custodyAssetAddress,
+          tokenSymbol: runtimeConfig.tokenSymbol,
+          tokenDecimals: runtimeConfig.tokenDecimals,
+        },
+        {
+          chainId: Number(network.chainId),
+          poolAddress: contractAddress,
+          poolRuntimeCodeHash: poolCode === "0x" ? "" : ethers.keccak256(poolCode),
+          custodyAssetAddress: custodyAddress,
+          tokenSymbol: symbol,
+          tokenDecimals: Number(decimals),
+          supportsCorrectedAccounting: typeof totalAccountedBalance === "bigint",
+        }
+      );
+      if (verificationErrors.length > 0) {
+        throw new Error("Deployment verification failed: " + verificationErrors.join("; ") + ".");
       }
-      let availableYield: bigint;
-      try {
-        availableYield = await pool.availableYieldPlain() as bigint;
-      } catch {
-        // Compatibility for the read-only legacy deployment; writes remain disabled there.
-        availableYield = custodyBalance > totalAccountedBalance ? custodyBalance - totalAccountedBalance : 0n;
-      }
+      setDeploymentVerification({
+        status: "verified",
+        message: "Active Sepolia bytecode and custody metadata verified.",
+      });
 
       setPoolStats({
         totalDeposits: totalAccountedBalance.toString(),
@@ -227,7 +266,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setDataError(null);
       setLastUpdatedAt(Date.now());
     } catch (error) {
-      setDataError(error instanceof Error ? error.message : "Unable to read the pool contract.");
+      const message = error instanceof Error ? error.message : "Unable to read the pool contract.";
+      setDeploymentVerification({ status: "failed", message });
+      setDataError(message);
       setLastUpdatedAt(Date.now());
     }
   }, [address, contractAddress, persistWithdrawal, status]);
@@ -238,9 +279,17 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     return () => window.clearInterval(interval);
   }, [refreshPoolData]);
 
+  const requireVerifiedWrites = useCallback(() => {
+    if (!runtimeConfig.protocolWritesEnabled) throw new Error("Protocol writes are disabled by the safety switch.");
+    if (deploymentVerification.status !== "verified") {
+      throw new Error("Protocol writes require verified Sepolia bytecode and custody metadata.");
+    }
+  }, [deploymentVerification.status]);
+
   const deposit = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
     if (!asset.isLoaded) throw new Error("Custody asset metadata is still loading.");
+    requireVerifiedWrites();
     setIsLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -263,10 +312,11 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     } finally {
       setIsLoading(false);
     }
-  }, [address, asset, contractAddress, refreshPoolData, status]);
+  }, [address, asset, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
 
   const requestWithdrawal = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
+    requireVerifiedWrites();
     setIsLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -289,7 +339,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     } finally {
       setIsLoading(false);
     }
-  }, [address, contractAddress, persistWithdrawal, status]);
+  }, [address, contractAddress, persistWithdrawal, requireVerifiedWrites, status]);
 
   const finalizeWithdrawal = useCallback(async (callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the requesting wallet first.");
@@ -389,6 +439,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
 
   const drawLottery = useCallback(async (prizeAmount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the owner wallet first.");
+    requireVerifiedWrites();
     if (address.toLowerCase() !== poolStats.owner.toLowerCase()) throw new Error("Only the pool owner can execute a draw.");
     if (prizeAmount > BigInt(poolStats.availableYield)) throw new Error("Prize exceeds verified available yield.");
     setIsLoading(true);
@@ -404,12 +455,13 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     } finally {
       setIsLoading(false);
     }
-  }, [address, contractAddress, poolStats.availableYield, poolStats.owner, refreshPoolData, status]);
+  }, [address, contractAddress, poolStats.availableYield, poolStats.owner, refreshPoolData, requireVerifiedWrites, status]);
 
   const isOwner = useMemo(
     () => Boolean(address && poolStats.owner && address.toLowerCase() === poolStats.owner.toLowerCase()),
     [address, poolStats.owner]
   );
+  const writesEnabled = runtimeConfig.protocolWritesEnabled && deploymentVerification.status === "verified";
 
   return {
     poolStats,
@@ -422,6 +474,8 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     backendStatus,
     dataError,
     lastUpdatedAt,
+    deploymentVerification,
+    writesEnabled,
     isOwner,
     deposit,
     requestWithdrawal,

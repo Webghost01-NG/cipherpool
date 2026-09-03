@@ -5,6 +5,7 @@ import { BalanceRevealCard } from "../src/components/flows/BalanceRevealCard.js"
 import { DepositCard } from "../src/components/flows/DepositCard.js";
 import { WithdrawalCard } from "../src/components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "../src/components/flows/LotteryDrawCard.js";
+import { LegacyExitCard } from "../src/components/flows/LegacyExitCard.js";
 
 describe("Core Product Flows & Interactive Cards Tests", () => {
   test("BalanceRevealCard instantiates in concealed state by default", () => {
@@ -73,5 +74,32 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     });
     assert.ok(card);
     assert.equal(card.props.availableYield, "25000");
+  });
+
+  test("LegacyExitCard exposes settlement without enabling new legacy requests", () => {
+    const card = React.createElement(LegacyExitCard, {
+      legacyPoolAddress: "0x1111111111111111111111111111111111111111",
+      explorerUrl: "https://sepolia.etherscan.io",
+      pendingWithdrawal: {
+        hasPending: false,
+        requestHash: "",
+        requestedAmount: "0",
+        handle: "",
+        timestamp: 0,
+        status: "FINALIZED",
+      },
+      cancellationDelaySeconds: 86400,
+      walletConnected: true,
+      isLoading: false,
+      isChecking: false,
+      error: null,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
+      onFinalizeWithdrawal: async () => {},
+      onCancelWithdrawal: async () => {},
+    });
+    assert.ok(card);
+    assert.equal(card.props.legacyPoolAddress, "0x1111111111111111111111111111111111111111");
+    assert.equal("onRequestWithdrawal" in card.props, false);
   });
 });

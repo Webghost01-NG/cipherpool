@@ -11,6 +11,12 @@ const envSchema = z.object({
   POOL_CONTRACT_ADDRESS: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Must be a valid 20-byte EVM address"),
+  CUSTODY_ASSET_ADDRESS: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{40}$/, "Must be a valid 20-byte EVM address"),
+  POOL_RUNTIME_CODE_HASH: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/, "Must be a valid bytes32 code hash"),
   RELAYER_URL: z.string().url().optional(),
   INDEXER_START_BLOCK: z.coerce.number().int().nonnegative(),
   INDEXER_BLOCK_BATCH_SIZE: z.coerce.number().int().positive().max(5000).default(500),
