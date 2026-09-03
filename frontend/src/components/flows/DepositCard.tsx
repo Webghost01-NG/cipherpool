@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, Button, Badge } from "../common/UIPrimitives.js";
-import { Shield, ArrowDownRight, Info } from "lucide-react";
+import { Shield, ArrowDownRight, Info, ExternalLink } from "lucide-react";
 
 export interface DepositCardProps {
   onDeposit: (amount: bigint) => Promise<void>;
@@ -130,6 +130,25 @@ export const DepositCard: React.FC<DepositCardProps> = ({
         >
           <ArrowDownRight size={16} /> {walletConnected ? "Confirm Encrypted Deposit" : "Connect Wallet to Deposit"}
         </Button>
+
+        <div style={{ marginTop: "12px", textAlign: "center" }}>
+          <a
+            href="https://faucet.circle.com/"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: "0.8125rem",
+              color: "var(--accent-cyan)",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span>Need Sepolia USDC? Claim free tokens from Circle Faucet</span>
+            <ExternalLink size={13} />
+          </a>
+        </div>
       </form>
     </Card>
   );
