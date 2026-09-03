@@ -15,6 +15,7 @@ export const POOL_ABI = [
   "function custodyAsset() external view returns (address)",
   "function cancellationDelay() external view returns (uint64)",
   "function owner() external view returns (address)",
+  "function paused() external view returns (bool)",
   "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
   "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
   "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
@@ -27,4 +28,5 @@ export const ERC20_ABI = [
   "function approve(address spender, uint256 amount) external returns (bool)",
   "function balanceOf(address account) external view returns (uint256)",
   "function decimals() external view returns (uint8)",
+  "function symbol() external view returns (string)",
 ];

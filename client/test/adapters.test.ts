@@ -5,14 +5,24 @@ import { InputEncryptionAdapter } from "../src/adapters/InputEncryption.js";
 import { KmsRelayerAdapter } from "../src/adapters/KmsRelayerAdapter.js";
 
 describe("Client-Side Encryption & Relayer Adapters", () => {
-  const dummyPool = "0x1111111111111111111111111111111111111111";
-  const dummyUser = "0x2222222222222222222222222222222222222222";
+  const poolAddress = "0x1111111111111111111111111111111111111111";
+  const userAddress = "0x2222222222222222222222222222222222222222";
 
   test("InputEncryptionAdapter validates addresses and bounds", async () => {
-    assert.throws(() => new InputEncryptionAdapter("invalid", dummyUser), /Invalid contract address/);
-    assert.throws(() => new InputEncryptionAdapter(dummyPool, "invalid"), /Invalid user address/);
+    assert.throws(() => new InputEncryptionAdapter("invalid", userAddress), /Pool contract address/);
+    assert.throws(() => new InputEncryptionAdapter(poolAddress, "invalid"), /wallet address/);
 
-    const adapter = new InputEncryptionAdapter(dummyPool, dummyUser);
+    const instanceFactory = async () => ({
+      createEncryptedInput: () => ({
+        add64: () => ({
+          encrypt: async () => ({
+            handles: [new Uint8Array(32).fill(7)],
+            inputProof: new Uint8Array([1, 2, 3]),
+          }),
+        }),
+      }),
+    });
+    const adapter = new InputEncryptionAdapter(poolAddress, userAddress, instanceFactory as never);
 
     await assert.rejects(async () => {
       await adapter.encryptUint64(0n);
@@ -20,7 +30,7 @@ describe("Client-Side Encryption & Relayer Adapters", () => {
 
     await assert.rejects(async () => {
       await adapter.encryptUint64(2n ** 64n);
-    }, /Amount exceeds 64-bit unsigned integer maximum/);
+    }, /uint64 protocol limit/);
 
     const payload = await adapter.encryptUint64(500n);
     assert.ok(payload.handle.startsWith("0x") && payload.handle.length === 66);
@@ -32,13 +42,13 @@ describe("Client-Side Encryption & Relayer Adapters", () => {
 
     // Start a lightweight mock HTTP server simulating the backend API
     const server = http.createServer((req, res) => {
-      if (req.url === `/api/v1/users/${dummyUser}/withdrawal`) {
+      if (req.url === `/api/v1/users/${userAddress}/withdrawal`) {
         pollCount++;
         res.writeHead(200, { "Content-Type": "application/json" });
         if (pollCount < 2) {
           res.end(
             JSON.stringify({
-              user: dummyUser,
+              user: userAddress,
               hasPendingWithdrawal: true,
               withdrawal: {
                 requestHash: "0xhash",
@@ -53,7 +63,7 @@ describe("Client-Side Encryption & Relayer Adapters", () => {
         } else {
           res.end(
             JSON.stringify({
-              user: dummyUser,
+              user: userAddress,
               hasPendingWithdrawal: true,
               withdrawal: {
                 requestHash: "0xhash",
@@ -68,7 +78,12 @@ describe("Client-Side Encryption & Relayer Adapters", () => {
         }
       } else if (req.url === "/api/v1/relayer/process") {
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ status: "success", requestHash: "0xhash" }));
+        res.end(JSON.stringify({
+          status: "proof_ready",
+          requestHash: "0xhash",
+          cleartextAmount: "500",
+          decryptionProof: `0x${"ab".repeat(32)}`,
+        }));
       } else {
         res.writeHead(404);
         res.end();
@@ -84,10 +99,11 @@ describe("Client-Side Encryption & Relayer Adapters", () => {
       maxPollAttempts: 5,
     });
 
-    const triggerRes = await relayerAdapter.triggerRelayerSettlement("0xhash");
-    assert.equal(triggerRes.status, "success");
+    const proof = await relayerAdapter.requestWithdrawalProof("0xhash");
+    assert.equal(proof.status, "proof_ready");
+    assert.equal(proof.cleartextAmount, "500");
 
-    const settled = await relayerAdapter.pollUntilSettled(dummyUser);
+    const settled = await relayerAdapter.pollUntilSettled(userAddress);
     assert.equal(settled.withdrawal?.status, "FINALIZED");
 
     server.close();

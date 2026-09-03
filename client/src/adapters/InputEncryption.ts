@@ -1,56 +1,75 @@
 import { ethers } from "ethers";
+import type { FhevmInstance } from "@zama-fhe/relayer-sdk/web";
 
 export interface EncryptedInputPayload {
   handle: string;
   inputProof: string;
 }
 
-export class InputEncryptionAdapter {
-  private contractAddress: string;
-  private userAddress: string;
+export type FhevmInstanceFactory = () => Promise<
+  Pick<FhevmInstance, "createEncryptedInput">
+>;
 
-  constructor(contractAddress: string, userAddress: string) {
+let browserInstancePromise: Promise<FhevmInstance> | null = null;
+
+export async function getBrowserFhevmInstance(): Promise<FhevmInstance> {
+  if (typeof window === "undefined" || !window.ethereum) {
+    throw new Error("An EIP-1193 browser wallet is required for FHE operations.");
+  }
+
+  if (!browserInstancePromise) {
+    browserInstancePromise = import("@zama-fhe/relayer-sdk/web")
+      .then(async ({ createInstance, initSDK, SepoliaConfig }) => {
+        await initSDK();
+        return createInstance({ ...SepoliaConfig, network: window.ethereum! });
+      })
+      .catch((error) => {
+        browserInstancePromise = null;
+        throw error;
+      });
+  }
+
+  return browserInstancePromise;
+}
+
+export class InputEncryptionAdapter {
+  private readonly contractAddress: string;
+  private readonly userAddress: string;
+  private readonly instanceFactory: FhevmInstanceFactory;
+
+  constructor(
+    contractAddress: string,
+    userAddress: string,
+    instanceFactory: FhevmInstanceFactory = getBrowserFhevmInstance
+  ) {
     if (!ethers.isAddress(contractAddress)) {
-      throw new Error(`Invalid contract address: ${contractAddress}`);
+      throw new Error("Pool contract address is not configured correctly.");
     }
     if (!ethers.isAddress(userAddress)) {
-      throw new Error(`Invalid user address: ${userAddress}`);
+      throw new Error("Connected wallet address is invalid.");
     }
     this.contractAddress = ethers.getAddress(contractAddress);
     this.userAddress = ethers.getAddress(userAddress);
+    this.instanceFactory = instanceFactory;
   }
 
-  /**
-   * Encrypts a 64-bit plaintext integer for submission to ConfidentialPool.deposit
-   * @param amountPlain uint64 amount
-   * @returns EncryptedInputPayload with handle and zero-knowledge input proof
-   */
   public async encryptUint64(amountPlain: bigint): Promise<EncryptedInputPayload> {
-    if (amountPlain <= 0n) {
-      throw new Error("Amount must be strictly greater than zero");
-    }
-    if (amountPlain >= 2n ** 64n) {
-      throw new Error("Amount exceeds 64-bit unsigned integer maximum");
-    }
+    if (amountPlain <= 0n) throw new Error("Amount must be strictly greater than zero.");
+    if (amountPlain >= 2n ** 64n) throw new Error("Amount exceeds the uint64 protocol limit.");
 
-    // Deterministic cryptographic handle generation for client binding
-    const salt = ethers.hexlify(ethers.randomBytes(16));
-    const handle = ethers.keccak256(
-      ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "address", "uint64", "bytes16"],
-        [this.contractAddress, this.userAddress, amountPlain, salt]
-      )
-    );
+    const instance = await this.instanceFactory();
+    const encryptedInput = instance
+      .createEncryptedInput(this.contractAddress, this.userAddress)
+      .add64(amountPlain);
+    const encrypted = await encryptedInput.encrypt();
 
-    // ZK input proof mock simulating the Zama InputVerifier coprocessor proof
-    const inputProof = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["bytes32", "address", "address", "uint256"],
-      [handle, this.contractAddress, this.userAddress, Date.now()]
-    );
+    if (!encrypted.handles[0] || !encrypted.inputProof) {
+      throw new Error("The Zama relayer did not return a valid encrypted input proof.");
+    }
 
     return {
-      handle,
-      inputProof,
+      handle: ethers.hexlify(encrypted.handles[0]),
+      inputProof: ethers.hexlify(encrypted.inputProof),
     };
   }
 }

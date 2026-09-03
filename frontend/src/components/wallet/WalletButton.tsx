@@ -1,11 +1,12 @@
 import React, { useState } from "react";
+import { AlertTriangle, Check, ChevronDown, Copy, LogOut, Wallet } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet.js";
 import { Button } from "../common/UIPrimitives.js";
 import { WalletModal } from "./WalletModal.js";
-import { Wallet, AlertTriangle, LogOut, ChevronDown, Check, Copy } from "lucide-react";
+import { shortenHex } from "../../utils/format.js";
 
 export const WalletButton: React.FC = () => {
-  const { status, address, isCorrectNetwork, disconnect, switchNetwork } = useWallet();
+  const { status, address, isCorrectNetwork, disconnect } = useWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -13,9 +14,7 @@ export const WalletButton: React.FC = () => {
   if (status === "disconnected" || !address) {
     return (
       <>
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          <Wallet size={16} /> Connect Wallet
-        </Button>
+        <Button onClick={() => setIsModalOpen(true)}><Wallet size={16} /> Connect wallet</Button>
         <WalletModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </>
     );
@@ -24,117 +23,47 @@ export const WalletButton: React.FC = () => {
   if (status === "wrong_network" || !isCorrectNetwork) {
     return (
       <>
-        <Button
-          variant="danger"
-          style={{ backgroundColor: "var(--accent-amber)", color: "var(--text-inverse)" }}
-          onClick={() => setIsModalOpen(true)}
-        >
-          <AlertTriangle size={16} /> Wrong Network
+        <Button variant="secondary" onClick={() => setIsModalOpen(true)}>
+          <AlertTriangle size={16} /> Switch network
         </Button>
         <WalletModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </>
     );
   }
 
-  const truncated = `${address.slice(0, 6)}...${address.slice(-4)}`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(address);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(address);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    window.setTimeout(() => setCopied(false), 1600);
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="wallet-wrap">
       <button
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          padding: "8px 14px",
-          borderRadius: "8px",
-          backgroundColor: "var(--bg-tertiary)",
-          border: "1px solid var(--border-medium)",
-          color: "var(--text-primary)",
-          fontSize: "0.875rem",
-          fontWeight: 600,
-          cursor: "pointer",
-          transition: "all var(--transition-fast)",
-        }}
+        className="wallet-chip"
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={isDropdownOpen}
+        onClick={() => setIsDropdownOpen((open) => !open)}
       >
-        <span className="pulsing-dot" style={{ width: "6px", height: "6px" }} />
-        <span className="mono">{truncated}</span>
-        <ChevronDown size={14} color="var(--text-muted)" />
+        <span className="status-dot status-dot--ok" />
+        <span className="mono">{shortenHex(address)}</span>
+        <ChevronDown size={13} aria-hidden="true" />
       </button>
-
       {isDropdownOpen && (
-        <div
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 8px)",
-            backgroundColor: "var(--bg-secondary)",
-            border: "1px solid var(--border-medium)",
-            borderRadius: "10px",
-            padding: "8px",
-            width: "200px",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.4)",
-            zIndex: 60,
-          }}
-        >
-          <div
-            style={{
-              padding: "8px",
-              fontSize: "0.75rem",
-              color: "var(--text-muted)",
-              borderBottom: "1px solid var(--border-subtle)",
-              marginBottom: "4px",
-            }}
-          >
-            Connected to Sepolia (11155111)
-          </div>
-
-          <button
-            onClick={handleCopy}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px 10px",
-              borderRadius: "6px",
-              backgroundColor: "transparent",
-              border: "none",
-              color: "var(--text-primary)",
-              fontSize: "0.8125rem",
-              cursor: "pointer",
-              textAlign: "left",
-            }}
-          >
-            {copied ? <Check size={14} color="var(--accent-emerald)" /> : <Copy size={14} />}
-            <span>{copied ? "Copied!" : "Copy Address"}</span>
+        <div className="wallet-menu" role="menu">
+          <div className="wallet-menu__meta">Connected to Ethereum Sepolia</div>
+          <button className="menu-button" type="button" role="menuitem" onClick={handleCopy}>
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+            {copied ? "Address copied" : "Copy address"}
           </button>
-
           <button
+            className="menu-button menu-button--danger"
+            type="button"
+            role="menuitem"
             onClick={() => { disconnect(); setIsDropdownOpen(false); }}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px 10px",
-              borderRadius: "6px",
-              backgroundColor: "transparent",
-              border: "none",
-              color: "var(--accent-rose)",
-              fontSize: "0.8125rem",
-              cursor: "pointer",
-              textAlign: "left",
-            }}
           >
-            <LogOut size={14} />
-            <span>Disconnect</span>
+            <LogOut size={15} /> Disconnect
           </button>
         </div>
       )}

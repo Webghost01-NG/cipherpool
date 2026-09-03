@@ -84,15 +84,20 @@ export function createApiRouter(store: IndexerStore, relayer?: KMSRelayerService
       return res.status(503).json({ error: "RelayerNotConfigured", message: "Relayer service is offline" });
     }
 
-    const success = await relayer.processRequest(body.data.requestHash);
-    if (!success) {
+    const result = await relayer.processRequest(body.data.requestHash);
+    if (!result) {
       return res.status(422).json({
         error: "ProcessingFailed",
-        message: "Failed to finalize withdrawal or request already in-flight",
+        message: "Failed to prepare a withdrawal proof or request already in-flight",
       });
     }
 
-    res.status(200).json({ status: "success", requestHash: body.data.requestHash });
+    res.status(200).json({
+      status: "proof_ready",
+      requestHash: body.data.requestHash,
+      cleartextAmount: result.cleartext.toString(),
+      decryptionProof: result.proof,
+    });
   });
 
   return router;

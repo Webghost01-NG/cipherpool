@@ -1,8 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { IndexerStore } from "../src/indexer/store.js";
-import { MockKMSClient } from "../src/relayer/kms.js";
-import { KMSRelayerService, IContractSubmitter } from "../src/relayer/relayer.js";
+import { KMSRelayerService } from "../src/relayer/relayer.js";
+import { TestKMSClient } from "./helpers/test-kms.js";
 
 describe("KMS Relayer Service & Retry Logic Tests", () => {
   const dummyRequest = {
@@ -21,24 +21,12 @@ describe("KMS Relayer Service & Retry Logic Tests", () => {
     const store = new IndexerStore();
     store.addWithdrawalRequest(dummyRequest);
 
-    const kmsClient = new MockKMSClient(1000n, 0);
-    let submittedCleartext: bigint | undefined;
-    let submittedProof: string | undefined;
+    const kmsClient = new TestKMSClient(1000n);
+    const relayer = new KMSRelayerService(store, kmsClient);
+    const result = await relayer.processRequest(dummyRequest.requestHash);
 
-    const submitter: IContractSubmitter = {
-      async finalizeWithdrawal(cleartext, proof) {
-        submittedCleartext = cleartext;
-        submittedProof = proof;
-        return "0xfinalizetxhash";
-      },
-    };
-
-    const relayer = new KMSRelayerService(store, kmsClient, submitter);
-    const success = await relayer.processRequest(dummyRequest.requestHash);
-
-    assert.equal(success, true);
-    assert.equal(submittedCleartext, 1000n);
-    assert.ok(submittedProof);
+    assert.equal(result?.cleartext, 1000n);
+    assert.ok(result?.proof);
   });
 
   test("should suppress duplicate execution when request is already in-flight", async () => {
@@ -55,25 +43,19 @@ describe("KMS Relayer Service & Retry Logic Tests", () => {
       },
     };
 
-    const submitter: IContractSubmitter = {
-      async finalizeWithdrawal() {
-        return "0xtx";
-      },
-    };
-
-    const relayer = new KMSRelayerService(store, slowKmsClient, submitter);
+    const relayer = new KMSRelayerService(store, slowKmsClient);
 
     const promise1 = relayer.processRequest(dummyRequest.requestHash);
     assert.equal(relayer.isInFlight(dummyRequest.requestHash), true);
 
     // Second call while in-flight should immediately return false (suppressed)
     const duplicateSuccess = await relayer.processRequest(dummyRequest.requestHash);
-    assert.equal(duplicateSuccess, false);
+    assert.equal(duplicateSuccess, null);
 
     // Complete the first call
     resolveKms!();
     const firstSuccess = await promise1;
-    assert.equal(firstSuccess, true);
+    assert.equal(firstSuccess?.cleartext, 1000n);
     assert.equal(relayer.isInFlight(dummyRequest.requestHash), false);
   });
 
@@ -82,21 +64,15 @@ describe("KMS Relayer Service & Retry Logic Tests", () => {
     store.addWithdrawalRequest(dummyRequest);
 
     // Fails 2 times, succeeds on 3rd attempt
-    const retryKmsClient = new MockKMSClient(1000n, 2);
+    const retryKmsClient = new TestKMSClient(1000n, 2);
 
-    const submitter: IContractSubmitter = {
-      async finalizeWithdrawal() {
-        return "0xrecoveredtx";
-      },
-    };
-
-    const relayer = new KMSRelayerService(store, retryKmsClient, submitter, {
+    const relayer = new KMSRelayerService(store, retryKmsClient, {
       maxRetries: 4,
       baseBackoffMs: 10,
     });
 
     const success = await relayer.processRequest(dummyRequest.requestHash);
-    assert.equal(success, true);
+    assert.equal(success?.cleartext, 1000n);
   });
 
   test("should handle terminal failure when retries are exhausted", async () => {
@@ -104,21 +80,15 @@ describe("KMS Relayer Service & Retry Logic Tests", () => {
     store.addWithdrawalRequest(dummyRequest);
 
     // Fails 5 times, but maxRetries is 3
-    const persistentFailKmsClient = new MockKMSClient(1000n, 5);
+    const persistentFailKmsClient = new TestKMSClient(1000n, 5);
 
-    const submitter: IContractSubmitter = {
-      async finalizeWithdrawal() {
-        return "0xnever";
-      },
-    };
-
-    const relayer = new KMSRelayerService(store, persistentFailKmsClient, submitter, {
+    const relayer = new KMSRelayerService(store, persistentFailKmsClient, {
       maxRetries: 3,
       baseBackoffMs: 5,
     });
 
     const success = await relayer.processRequest(dummyRequest.requestHash);
-    assert.equal(success, false);
+    assert.equal(success, null);
     assert.equal(relayer.isInFlight(dummyRequest.requestHash), false);
   });
 });

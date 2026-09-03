@@ -6,17 +6,14 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  RPC_URL: z.string().url().default("http://127.0.0.1:8545"),
+  RPC_URL: z.string().url(),
   CHAIN_ID: z.coerce.number().default(11155111),
   POOL_CONTRACT_ADDRESS: z
     .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, "Must be a valid 20-byte EVM address")
-    .default("0x1111111111111111111111111111111111111111"),
-  RELAYER_PRIVATE_KEY: z
-    .string()
-    .regex(/^(0x)?[a-fA-F0-9]{64}$/, "Must be a valid 32-byte private key")
-    .default("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"),
-  KMS_GATEWAY_URL: z.string().url().default("https://gateway.sepolia.zama.ai"),
+    .regex(/^0x[a-fA-F0-9]{40}$/, "Must be a valid 20-byte EVM address"),
+  RELAYER_URL: z.string().url().optional(),
+  INDEXER_START_BLOCK: z.coerce.number().int().nonnegative(),
+  INDEXER_BLOCK_BATCH_SIZE: z.coerce.number().int().positive().max(5000).default(500),
   POLL_INTERVAL_MS: z.coerce.number().default(3000),
   MAX_RETRIES: z.coerce.number().default(5),
 });
@@ -34,5 +31,3 @@ export function loadConfig(overrides: Partial<Record<string, string>> = {}): App
 
   return parsed.data;
 }
-
-export const config = loadConfig();

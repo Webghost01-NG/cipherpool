@@ -6,7 +6,7 @@ import { createApp } from "../src/app.js";
 import { BlockchainIndexer } from "../src/indexer/indexer.js";
 import { IndexerStore } from "../src/indexer/store.js";
 import { KMSRelayerService } from "../src/relayer/relayer.js";
-import { MockKMSClient } from "../src/relayer/kms.js";
+import { TestKMSClient } from "./helpers/test-kms.js";
 
 const POOL_EVENTS_ABI = [
   "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
@@ -106,30 +106,24 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
     let executionCount = 0;
     const slowKmsClient = {
       async fetchDecryptionProof() {
+        executionCount++;
         await new Promise((resolve) => setTimeout(resolve, 30));
         return { cleartext: 50_000n, proof: "0xvalidproof" };
       },
     };
 
-    const submitter = {
-      async finalizeWithdrawal() {
-        executionCount++;
-        return "0xsubmittx";
-      },
-    };
-
-    const relayer = new KMSRelayerService(store, slowKmsClient, submitter);
+    const relayer = new KMSRelayerService(store, slowKmsClient);
 
     // Fire 20 concurrent process requests
     const promises = Array.from({ length: 20 }, () => relayer.processRequest(rHash));
     const results = await Promise.all(promises);
 
-    const successful = results.filter((r) => r === true).length;
-    const suppressed = results.filter((r) => r === false).length;
+    const successful = results.filter((r) => r !== null).length;
+    const suppressed = results.filter((r) => r === null).length;
 
     assert.equal(successful, 1, "Exactly one execution should succeed");
     assert.equal(suppressed, 19, "All 19 concurrent duplicate calls must be suppressed");
-    assert.equal(executionCount, 1, "Submitter should be invoked exactly once");
+    assert.equal(executionCount, 1, "Proof generation should be invoked exactly once");
   });
 
   test("KMS Gateway Outage: relayer gracefully fails and recovers when KMS returns online", async () => {
@@ -148,28 +142,23 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
       status: "PENDING",
     });
 
-    const mockKms = new MockKMSClient(10_000n, 10); // Offline for 10 attempts
-    const submitter = {
-      async finalizeWithdrawal() {
-        return "0xtx";
-      },
-    };
+    const mockKms = new TestKMSClient(10_000n, 10); // Offline for 10 attempts
 
-    const relayer = new KMSRelayerService(store, mockKms, submitter, {
+    const relayer = new KMSRelayerService(store, mockKms, {
       maxRetries: 2,
       baseBackoffMs: 5,
     });
 
     // Step 1: Outage fails cleanly without unhandled rejection
     const failResult = await relayer.processRequest(rHash);
-    assert.equal(failResult, false);
+    assert.equal(failResult, null);
 
     // Step 2: KMS recovers (offline attempts reset)
     mockKms.failAttempts = 0;
 
     // Step 3: Subsequent dispatch succeeds immediately
     const recoverResult = await relayer.processRequest(rHash);
-    assert.equal(recoverResult, true);
+    assert.equal(recoverResult?.cleartext, 10_000n);
   });
 
   test("API Exception Isolation: unhandled exceptions in routes return 500 without crashing app", async () => {

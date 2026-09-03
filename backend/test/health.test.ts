@@ -33,6 +33,8 @@ describe("Backend Core & Health Tests", () => {
       PORT: "4000",
       NODE_ENV: "test",
       RPC_URL: "http://localhost:8545",
+      POOL_CONTRACT_ADDRESS: "0x2222222222222222222222222222222222222222",
+      INDEXER_START_BLOCK: "123",
     });
     assert.equal(customConfig.PORT, 4000);
     assert.equal(customConfig.NODE_ENV, "test");

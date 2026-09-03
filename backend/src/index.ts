@@ -1,19 +1,19 @@
 import { createApp } from "./app.js";
-import { config } from "./config/env.js";
+import { loadConfig } from "./config/env.js";
 import { defaultLogger } from "./utils/logger.js";
 import { IndexerStore } from "./indexer/store.js";
 import { BlockchainIndexer } from "./indexer/indexer.js";
 import { KMSClient } from "./relayer/kms.js";
-import { KMSRelayerService, IContractSubmitter } from "./relayer/relayer.js";
+import { KMSRelayerService } from "./relayer/relayer.js";
 import { ethers } from "ethers";
 
+const config = loadConfig();
 const store = new IndexerStore();
 const indexer = new BlockchainIndexer(store);
-const kmsClient = new KMSClient(config.KMS_GATEWAY_URL);
+const kmsClient = new KMSClient(config.RPC_URL, config.RELAYER_URL);
 
-// Contract ABI for finalization
+// Contract events consumed by the indexer
 const POOL_ABI = [
-  "function finalizeWithdrawal(uint64 cleartextAmount, bytes calldata decryptionProof) external",
   "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
   "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
   "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
@@ -21,62 +21,37 @@ const POOL_ABI = [
   "event DrawExecuted(uint256 indexed drawId, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
 ];
 
-// Initialize Contract Submitter
+// Initialize the read-only Sepolia provider
 let provider: ethers.JsonRpcProvider | null = null;
-let relayerWallet: ethers.Wallet | null = null;
-let poolContract: ethers.Contract | null = null;
 
 try {
   provider = new ethers.JsonRpcProvider(config.RPC_URL);
-  if (config.RELAYER_PRIVATE_KEY) {
-    relayerWallet = new ethers.Wallet(config.RELAYER_PRIVATE_KEY, provider);
-    poolContract = new ethers.Contract(config.POOL_CONTRACT_ADDRESS, POOL_ABI, relayerWallet);
-  }
 } catch (err: unknown) {
-  defaultLogger.warn("Failed to initialize blockchain provider or relayer wallet", {
+  defaultLogger.warn("Failed to initialize blockchain provider", {
     error: err instanceof Error ? err.message : String(err),
   });
 }
 
-const submitter: IContractSubmitter = {
-  async finalizeWithdrawal(cleartext: bigint, proof: string): Promise<string> {
-    if (!poolContract || !relayerWallet) {
-      throw new Error("Relayer wallet or contract not initialized");
-    }
-    const tx = await poolContract.finalizeWithdrawal(cleartext, proof);
-    const receipt = await tx.wait();
-    return receipt.hash;
-  },
-};
-
-const relayer = new KMSRelayerService(store, kmsClient, submitter, {
+const relayer = new KMSRelayerService(store, kmsClient, {
   maxRetries: config.MAX_RETRIES,
   baseBackoffMs: 1000,
-});
-
-// Automatically trigger relayer when withdrawal is requested
-indexer.setOnWithdrawalRequested((hash) => {
-  relayer.processRequest(hash).catch((err) => {
-    defaultLogger.error("Error auto-processing withdrawal request", { hash, error: String(err) });
-  });
 });
 
 // Setup event listener if provider is reachable
 let pollInterval: NodeJS.Timeout | null = null;
 if (provider && ethers.isAddress(config.POOL_CONTRACT_ADDRESS) && config.POOL_CONTRACT_ADDRESS !== ethers.ZeroAddress) {
   const readContract = new ethers.Contract(config.POOL_CONTRACT_ADDRESS, POOL_ABI, provider);
-  let lastPolledBlock = 0;
+  let lastPolledBlock = config.INDEXER_START_BLOCK;
 
   const pollLogs = async () => {
     try {
       if (!provider) return;
       const currentBlock = await provider.getBlockNumber();
-      if (lastPolledBlock === 0) {
-        lastPolledBlock = Math.max(0, currentBlock - 5);
-      }
       if (currentBlock >= lastPolledBlock) {
-        // Enforce max 5 blocks per query to respect RPC free-tier limits
-        const queryToBlock = Math.min(currentBlock, lastPolledBlock + 5);
+        const queryToBlock = Math.min(
+          currentBlock,
+          lastPolledBlock + config.INDEXER_BLOCK_BATCH_SIZE - 1
+        );
         const events = await readContract.queryFilter("*", lastPolledBlock, queryToBlock);
         for (const ev of events) {
           if ("topics" in ev && "data" in ev) {
@@ -109,7 +84,7 @@ const server = app.listen(config.PORT, () => {
     nodeEnv: config.NODE_ENV,
     chainId: config.CHAIN_ID,
     poolAddress: config.POOL_CONTRACT_ADDRESS,
-    hasRelayerWallet: !!relayerWallet,
+    withdrawalProofService: true,
   });
 });
 

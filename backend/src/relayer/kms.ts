@@ -10,62 +10,57 @@ export interface IKMSClient {
 }
 
 export class KMSClient implements IKMSClient {
-  private gatewayUrl: string;
+  private rpcUrl: string;
+  private relayerUrl?: string;
   private logger: Logger;
+  private instancePromise?: ReturnType<typeof this.createInstance>;
 
-  constructor(gatewayUrl: string = "https://gateway.sepolia.zama.ai") {
-    this.gatewayUrl = gatewayUrl;
+  constructor(rpcUrl: string, relayerUrl?: string) {
+    this.rpcUrl = rpcUrl;
+    this.relayerUrl = relayerUrl;
     this.logger = new Logger("KMSClient");
+  }
+
+  private async createInstance() {
+    const { createInstance, SepoliaConfig } = await import("@zama-fhe/relayer-sdk/node");
+    return createInstance({
+      ...SepoliaConfig,
+      network: this.rpcUrl,
+      ...(this.relayerUrl ? { relayerUrl: this.relayerUrl } : {}),
+    });
+  }
+
+  private getInstance() {
+    this.instancePromise ??= this.createInstance();
+    return this.instancePromise;
   }
 
   async fetchDecryptionProof(handle: string): Promise<DecryptionResult> {
     try {
-      this.logger.info("Requesting threshold decryption from KMS gateway", { handle });
-      
-      const response = await fetch(`${this.gatewayUrl}/v1/decrypt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`KMS gateway returned HTTP ${response.status}`);
+      if (!/^0x[a-fA-F0-9]{64}$/.test(handle)) {
+        throw new Error("Decryption handle must be a 32-byte hex value");
       }
 
-      const data = (await response.json()) as { cleartext: string | number; proof: string };
+      this.logger.info("Requesting public decryption from the Zama relayer", { handle });
+      const instance = await this.getInstance();
+      const result = await instance.publicDecrypt([handle]);
+      const entry = Object.entries(result.clearValues).find(
+        ([key]) => key.toLowerCase() === handle.toLowerCase()
+      );
+      if (!entry || typeof entry[1] !== "bigint") {
+        throw new Error("Zama relayer did not return an integer clear value for the handle");
+      }
+
       return {
-        cleartext: BigInt(data.cleartext),
-        proof: data.proof,
+        cleartext: entry[1],
+        proof: result.decryptionProof,
       };
     } catch (err: unknown) {
-      this.logger.error("Failed to query KMS gateway", {
+      this.logger.error("Failed to query the Zama relayer", {
         handle,
         error: err instanceof Error ? err.message : String(err),
       });
       throw err;
     }
-  }
-}
-
-export class MockKMSClient implements IKMSClient {
-  public failAttempts: number = 0;
-  private attempts: number = 0;
-  public defaultCleartext: bigint = 1000n;
-
-  constructor(defaultCleartext: bigint = 1000n, failAttempts: number = 0) {
-    this.defaultCleartext = defaultCleartext;
-    this.failAttempts = failAttempts;
-  }
-
-  async fetchDecryptionProof(handle: string): Promise<DecryptionResult> {
-    this.attempts++;
-    if (this.attempts <= this.failAttempts) {
-      throw new Error(`Simulated transient KMS network failure (attempt ${this.attempts})`);
-    }
-
-    return {
-      cleartext: this.defaultCleartext,
-      proof: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    };
   }
 }

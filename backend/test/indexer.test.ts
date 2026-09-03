@@ -77,6 +77,15 @@ describe("Blockchain Indexer & State Store Tests", () => {
     const store = new IndexerStore();
     const indexer = new BlockchainIndexer(store);
 
+    store.addDeposit({
+      user: alice,
+      nonce: 0n,
+      plainAmount: 20_000n,
+      inputHandle: ethers.id("initial-balance"),
+      blockNumber: 101,
+      transactionHash: "0xdeposit",
+    });
+
     const rHash = ethers.id("request-finalize");
     const rHandle = ethers.id("handle-finalize");
 
@@ -111,6 +120,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
     assert.equal(store.getPendingWithdrawalByUser(alice), undefined);
     const recorded = store.getPendingWithdrawalByHash(rHash);
     assert.equal(recorded?.status, "FINALIZED");
+    assert.equal(store.getUserDeposit(alice), 10_000n);
   });
 
   test("should handle WithdrawalCancelled and transition state to CANCELLED", () => {

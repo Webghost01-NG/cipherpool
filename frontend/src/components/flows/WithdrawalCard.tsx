@@ -1,160 +1,106 @@
 import React, { useState } from "react";
-import { Card, Button, Badge } from "../common/UIPrimitives.js";
+import { ArrowUpRight, Clock3, Info, RotateCcw } from "lucide-react";
+import { parseUnits } from "ethers";
+import { Badge, Button, Card } from "../common/UIPrimitives.js";
 import { PendingWithdrawal } from "../../hooks/usePool.js";
-import { ArrowUpRight, Clock, ShieldAlert, CheckCircle2, AlertCircle } from "lucide-react";
+import { formatTokenAmount, shortenHex } from "../../utils/format.js";
 
 export interface WithdrawalCardProps {
   pendingWithdrawal: PendingWithdrawal;
   onRequestWithdrawal: (amount: bigint) => Promise<void>;
+  onFinalizeWithdrawal: () => Promise<void>;
   onCancelWithdrawal: () => Promise<void>;
   isLoading: boolean;
   walletConnected: boolean;
+  tokenSymbol: string;
+  tokenDecimals: number;
+  cancellationDelaySeconds: number;
+  writesEnabled: boolean;
 }
 
 export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
   pendingWithdrawal,
   onRequestWithdrawal,
+  onFinalizeWithdrawal,
   onCancelWithdrawal,
   isLoading,
   walletConnected,
+  tokenSymbol,
+  tokenDecimals,
+  cancellationDelaySeconds,
+  writesEnabled,
 }) => {
-  const [amount, setAmount] = useState<string>("500");
+  const [amount, setAmount] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const cancellableAt = pendingWithdrawal.timestamp + cancellationDelaySeconds * 1000;
+  const canCancel = pendingWithdrawal.hasPending && Date.now() > cancellableAt;
 
-  const handleRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const val = BigInt(amount);
-    if (val > 0n) {
-      await onRequestWithdrawal(val);
+  const handleRequest = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      const value = parseUnits(amount, tokenDecimals);
+      if (value <= 0n) throw new Error("Enter an amount greater than zero.");
+      if (value >= 2n ** 64n) throw new Error("Amount exceeds the protocol limit.");
+      setValidationError(null);
+      await onRequestWithdrawal(value);
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : "Enter a valid amount.");
     }
   };
 
   return (
     <Card
-      title="2-Step Async Withdrawal"
-      subtitle="KMS Threshold Decryption Pipeline"
-      headerAction={
-        pendingWithdrawal.hasPending ? (
-          <Badge variant="warning">In-Flight Decryption</Badge>
-        ) : (
-          <Badge variant="neutral">Ready</Badge>
-        )
-      }
+      eyebrow="Step 02"
+      title="Withdraw without exposing your balance"
+      subtitle="A public KMS proof settles the request after on-chain sufficiency is evaluated."
+      headerAction={<Badge variant={pendingWithdrawal.hasPending ? "warning" : "neutral"}>{pendingWithdrawal.hasPending ? "Pending" : "Ready"}</Badge>}
     >
       {pendingWithdrawal.hasPending ? (
-        <div>
-          <div
-            style={{
-              backgroundColor: "var(--accent-amber-subtle)",
-              border: "1px solid var(--accent-amber)",
-              borderRadius: "10px",
-              padding: "var(--space-md)",
-              marginBottom: "var(--space-md)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <Clock size={16} color="var(--accent-amber)" />
-              <span style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "0.875rem" }}>
-                Step 2/2: Threshold Decryption in Progress
-              </span>
-            </div>
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              Your withdrawal request of <strong>{Number(pendingWithdrawal.requestedAmount).toLocaleString()} USDC</strong> is anchored in contract storage. The Zama KMS is aggregating EIP-712 threshold signatures.
+        <>
+          <div className="pending-box">
+            <div className="pending-box__title"><Clock3 size={16} /> Settlement in progress</div>
+            <p>
+              {formatTokenAmount(pendingWithdrawal.requestedAmount, tokenDecimals, tokenDecimals)} {tokenSymbol}
+              {" "}is anchored to an on-chain request. The interface will refresh from the contract and indexer.
             </p>
-
-            <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                Request Hash:{" "}
-                <span className="mono" style={{ color: "var(--accent-cyan)" }}>
-                  {pendingWithdrawal.requestHash.slice(0, 16)}...
-                </span>
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                Ephemeral Handle:{" "}
-                <span className="mono" style={{ color: "var(--accent-amber)" }}>
-                  {pendingWithdrawal.handle.slice(0, 16)}...
-                </span>
-              </div>
+            <div className="evidence-list">
+              <div className="evidence-row"><span>Request</span><code>{shortenHex(pendingWithdrawal.requestHash, 12, 8)}</code></div>
+              <div className="evidence-row"><span>Ciphertext</span><code>{shortenHex(pendingWithdrawal.handle, 12, 8)}</code></div>
             </div>
           </div>
-
-          <div style={{ display: "flex", gap: "10px" }}>
-            <Button variant="secondary" style={{ flex: 1 }} disabled={true}>
-              Awaiting Automated Relayer...
+          <div className="action-row">
+            <Button variant="primary" onClick={onFinalizeWithdrawal} isLoading={isLoading}>
+              <Clock3 size={16} /> Generate proof &amp; finalize
             </Button>
-            <Button
-              variant="danger"
-              onClick={onCancelWithdrawal}
-              isLoading={isLoading}
-              title="Available if KMS does not settle within 24h"
-            >
-              Cancel (Escape Valve)
+            <Button variant="danger" onClick={onCancelWithdrawal} disabled={!canCancel} isLoading={isLoading}>
+              <RotateCcw size={16} /> {canCancel ? "Cancel stale request" : "Cancellation locked"}
             </Button>
           </div>
-        </div>
+        </>
       ) : (
-        <form onSubmit={handleRequest}>
-          <div style={{ marginBottom: "var(--space-md)" }}>
-            <label
-              htmlFor="withdrawal-amount-input"
-              style={{
-                display: "block",
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                color: "var(--text-secondary)",
-                marginBottom: "8px",
-              }}
-            >
-              Requested Withdrawal Amount (USDC)
-            </label>
-            <div style={{ position: "relative" }}>
+        <form className="form-stack" onSubmit={handleRequest}>
+          <label className="field" htmlFor="withdrawal-amount-input">
+            <span className="field__label"><span>Requested amount</span><span>Private sufficiency check</span></span>
+            <span className="input-shell">
               <input
                 id="withdrawal-amount-input"
-                type="number"
-                min="1"
-                step="1"
+                inputMode="decimal"
+                autoComplete="off"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={isLoading || !walletConnected}
-                className="mono"
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--bg-primary)",
-                  border: "1px solid var(--border-medium)",
-                  color: "var(--text-primary)",
-                  fontSize: "1.125rem",
-                }}
-                placeholder="0"
+                onChange={(event) => { setAmount(event.target.value); setValidationError(null); }}
+                disabled={isLoading || !walletConnected || !writesEnabled}
+                placeholder="0.00"
               />
-              <span
-                style={{
-                  position: "absolute",
-                  right: "16px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontWeight: 600,
-                  color: "var(--text-muted)",
-                  fontSize: "0.875rem",
-                }}
-              >
-                USDC
-              </span>
-            </div>
+              <span>{tokenSymbol}</span>
+            </span>
+          </label>
+          {validationError && <p role="alert" className="badge badge--error">{validationError}</p>}
+          <div className="callout">
+            <Info size={17} aria-hidden="true" />
+            <span>The contract reveals neither your balance nor whether it covered the request. A zero settlement means the encrypted sufficiency check failed.</span>
           </div>
-
-          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "var(--space-md)", lineHeight: 1.5 }}>
-            Withdrawal evaluates sufficiency homomorphically without revealing whether you have enough funds. If sufficient, the requested amount is unlocked after KMS signing.
-          </p>
-
-          <Button
-            type="submit"
-            variant="primary"
-            style={{ width: "100%" }}
-            disabled={!walletConnected || !amount || BigInt(amount) <= 0n}
-            isLoading={isLoading}
-          >
-            <ArrowUpRight size={16} /> {walletConnected ? "Request 2-Step Withdrawal" : "Connect Wallet to Withdraw"}
+          <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !amount} isLoading={isLoading}>
+            <ArrowUpRight size={17} /> {!writesEnabled ? "New requests paused for upgrade" : walletConnected ? "Request private withdrawal" : "Connect wallet to withdraw"}
           </Button>
         </form>
       )}

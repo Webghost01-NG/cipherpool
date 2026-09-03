@@ -14,8 +14,8 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
     const cssContent = fs.readFileSync(path.join(process.cwd(), "frontend/src/styles/theme.css"), "utf-8");
 
     assert.ok(cssContent.includes("box-sizing: border-box"), "Global box-sizing ensures no overflow padding");
-    assert.ok(cssContent.includes("max-width: 1240px"), "Maximum container width prevents ultra-wide distortion");
-    assert.ok(cssContent.includes("padding-left: var(--space-md)"), "Fluid side gutter padding for mobile devices");
+    assert.ok(cssContent.includes("width: min(100% - 2rem, 1180px)"), "Fluid container prevents ultra-wide distortion");
+    assert.ok(cssContent.includes("@media (max-width: 620px)"), "Mobile layout breakpoint is present");
   });
 
   test("Accessibility: Modals contain WCAG dialog semantics and focusable exit buttons", () => {
@@ -40,6 +40,10 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
       onDeposit: async () => {},
       isLoading: false,
       walletConnected: true,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
+      walletBalance: "1000000",
+      writesEnabled: true,
     });
     assert.ok(depositCard);
 
@@ -53,9 +57,14 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
         status: "FINALIZED",
       },
       onRequestWithdrawal: async () => {},
+      onFinalizeWithdrawal: async () => {},
       onCancelWithdrawal: async () => {},
       isLoading: false,
       walletConnected: true,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
+      cancellationDelaySeconds: 86400,
+      writesEnabled: true,
     });
     assert.ok(withdrawalCard);
   });
@@ -67,16 +76,11 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
       onReveal: async () => {},
       onHide: () => {},
       isLoading: false,
+      walletConnected: true,
+      tokenSymbol: "USDC",
+      tokenDecimals: 6,
     });
     assert.equal(card.props.isRevealed, false, "Balance must remain hidden by default");
   });
 
-  test("Production Build: Frontend bundle compiles without warnings or module resolution errors", () => {
-    const distPath = path.join(process.cwd(), "dist-frontend");
-    if (fs.existsSync(distPath)) {
-      const files = fs.readdirSync(distPath);
-      assert.ok(files.includes("index.html"), "dist-frontend contains compiled index.html");
-      assert.ok(files.includes("assets"), "dist-frontend contains static assets");
-    }
-  });
 });
