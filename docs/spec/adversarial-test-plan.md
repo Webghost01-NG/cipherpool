@@ -21,7 +21,7 @@ The plan validates that the protocol adheres to its fundamental security promise
 
 ## 2. Adversarial Test Vector Matrix
 
-The matrix below establishes 14 primary exploit test vectors spanning all core contract interactions:
+The matrix below establishes 15 primary exploit test vectors spanning all core contract interactions:
 
 | Vector ID | Category | Target Method | Exploit Hypothesis | Expected Failure / Mitigation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -33,12 +33,13 @@ The matrix below establishes 14 primary exploit test vectors spanning all core c
 | **ADV-06** | Cleartext Inflation | `finalizeWithdrawal` | User receives KMS proof for $1,000$ USDC but submits $M^* = 10,000$ in calldata. | Reverts with `InvalidDecryptedAmount(10000, 1000)` before KMS verification. |
 | **ADV-07** | Sufficiency Bit Flip | `finalizeWithdrawal` | User with insufficient balance receives KMS proof for $0$ but submits $M = \text{requested}$. | Reverts in `FHE.checkSignatures` because digest encodes tampered cleartext. |
 | **ADV-08** | Callback Re-Entrancy | `finalizeWithdrawal` | Malicious ERC-777 custody token attempts to re-enter `finalizeWithdrawal` during payout. | Reverts via `nonReentrant` lock and `!req.active` CEI state deletion. |
-| **ADV-09** | Empty Pool Draw | `draw` | Attacker triggers `draw(1000)` when `totalDepositsPlain == 0`. | Reverts with `EmptyPool()`. |
+| **ADV-09** | Empty Pool Draw | `draw` | Attacker triggers `draw(1000)` when `totalAccountedBalancePlain() == 0`. | Reverts with `EmptyPool()`. |
 | **ADV-10** | Vault Principal Overdraw | `withdrawFromStrategy` | Pool or owner attempts to withdraw more assets than `principalDeposited`. | Reverts with `InsufficientCustodyBalance(requested, principal)`. |
 | **ADV-11** | Circuit Breaker Ingress | `deposit`, `requestWithdrawal` | User attempts to deposit or request withdrawal while contract is paused. | Reverts with `EnforcedPause()`. |
 | **ADV-12** | Paused Escape Valve | `finalizeWithdrawal`, `cancelWithdrawal` | User attempts to finalize pending KMS proof or cancel stale request while paused. | **ALLOWED (BY DESIGN)** to preserve non-custodial asset escape rights. |
 | **ADV-13** | Deposit Credit Inflation | `deposit` | Attacker invokes the removed three-argument selector with an encrypted value larger than the custody amount. | Rejected at the ABI boundary; the sole `amount` now drives custody, plaintext accounting, and encrypted credit. |
 | **ADV-14** | Repeated Prize Allocation | `draw` | Owner executes multiple draws against the same custody yield. | Each draw increments `reservedPrizesPlain`; requests above `availableYieldPlain` revert with `InsufficientPrizeYield`. |
+| **ADV-15** | Compounded Prize Underflow | `compoundPrizes`, `finalizeWithdrawal` | A winner compounds and withdraws more than the remaining base-deposit tranche. | Aggregate prize liabilities are consumed first, preventing base-counter underflow without revealing the winner. |
 
 ---
 
@@ -49,7 +50,7 @@ The following invariants MUST be modeled as stateful property tests in Foundry:
 ### Invariant 1: Total Custody Solvency
 At all times across arbitrary sequences of deposits, withdrawals, cancellations, and draws:
 
-$$\text{custodyAsset.balanceOf}(\text{pool}) + \text{vault.principalDeposited}() \ge \text{pool.totalDepositsPlain}()$$
+$$\text{custodyAsset.balanceOf}(\text{pool}) + \text{vault.principalDeposited}() \ge \text{pool.totalAccountedBalancePlain}()$$
 
 ### Invariant 2: Mutually Exclusive Terminal States
 For any user address $U$:
@@ -75,6 +76,10 @@ $$\text{vault.harvestYield}() \le \text{vault.totalManagedAssets}() - \text{vaul
 At every successful draw boundary, principal and allocated prizes cannot exceed pool custody:
 
 $$\text{totalDepositsPlain} + \text{reservedPrizesPlain} \le \text{custodyAsset.balanceOf(pool)}$$
+
+Compounding preserves the aggregate liability exactly:
+
+$$\Delta\text{totalAccountedBalancePlain}(\text{compoundPrizes}) = 0$$
 
 ---
 

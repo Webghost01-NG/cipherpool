@@ -26,6 +26,7 @@ describe("Typed REST API Integration Tests", () => {
 
     assert.equal(res.status, 200);
     assert.equal(res.body.totalDeposits, "100000");
+    assert.equal(res.body.totalAccountedBalance, "100000");
     assert.equal(res.body.totalDraws, 0);
   });
 

@@ -28,7 +28,7 @@ contract ConfidentialPool is
     /// @notice Address of the underlying ERC-20 asset held in custody.
     address public immutable override custodyAsset;
 
-    /// @notice Plaintext aggregate deposits tracked for modulo arithmetic and custody solvency.
+    /// @notice Remaining base-deposit liability after aggregate withdrawal settlement.
     uint64 internal _totalDepositsPlain;
 
     /// @notice Aggregate custody yield allocated to encrypted prize balances.
@@ -89,6 +89,10 @@ contract ConfidentialPool is
     function deposit(uint64 amount) external override nonReentrant whenNotPaused {
         if (amount == 0) {
             revert ZeroDepositAmount();
+        }
+        uint256 attemptedLiability = totalAccountedBalancePlain() + amount;
+        if (attemptedLiability > type(uint64).max) {
+            revert AccountingCapacityExceeded(attemptedLiability, type(uint64).max);
         }
 
         // 1. Derive the encrypted credit from the sole custody amount.
@@ -175,7 +179,7 @@ contract ConfidentialPool is
             euint64 newBalance = FHE.sub(_balances[msg.sender], cleartextAmount);
             _balances[msg.sender] = FHE.allowThis(newBalance);
             _balances[msg.sender] = FHE.allow(newBalance, msg.sender);
-            _totalDepositsPlain -= cleartextAmount;
+            _consumeAccountedLiabilities(cleartextAmount);
 
             emit WithdrawalFinalized(msg.sender, consumedHash, cleartextAmount);
 
@@ -214,7 +218,8 @@ contract ConfidentialPool is
         if (prizeAmount == 0) {
             revert ZeroPrizeAmount();
         }
-        if (_totalDepositsPlain == 0 || participants.length == 0) {
+        uint256 totalWeight = totalAccountedBalancePlain();
+        if (totalWeight == 0 || participants.length == 0) {
             revert EmptyPool();
         }
 
@@ -222,12 +227,16 @@ contract ConfidentialPool is
         if (prizeAmount > availableYield) {
             revert InsufficientPrizeYield(prizeAmount, availableYield);
         }
+        uint256 attemptedLiability = totalWeight + prizeAmount;
+        if (attemptedLiability > type(uint64).max) {
+            revert AccountingCapacityExceeded(attemptedLiability, type(uint64).max);
+        }
 
         // Reserve custody before awarding so subsequent draws cannot reuse it.
         _reservedPrizesPlain += prizeAmount;
 
-        // 1. Generate homomorphic random winning ticket bounded by total deposits
-        euint64 winningTicket = FHE.randEuint64(_totalDepositsPlain);
+        // 1. Generate a homomorphic winning ticket bounded by all accounted balances.
+        euint64 winningTicket = FHE.randEuint64(uint64(totalWeight));
 
         // 2. Cumulative interval search across participants
         euint64 cumEnd = FHE.asEuint64(0);
@@ -236,7 +245,8 @@ contract ConfidentialPool is
         uint256 len = participants.length;
         for (uint256 i = 0; i < len; i++) {
             address p = participants[i];
-            euint64 bal = _balances[p];
+            // Uncompounded prizes remain eligible without revealing who won.
+            euint64 bal = FHE.add(_balances[p], _prizes[p]);
 
             euint64 cumStart = cumEnd;
             cumEnd = FHE.add(cumEnd, bal);
@@ -261,7 +271,7 @@ contract ConfidentialPool is
 
     /**
      * @notice Merges caller's accumulated confidential prizes into their active principal balance.
-     * @dev Homomorphically adds _prizes[msg.sender] into _balances[msg.sender] and resets _prizes[msg.sender].
+     * @dev Moves ciphertext between accounting buckets without changing the aggregate public liability.
      */
     function compoundPrizes() external override nonReentrant whenNotPaused {
         _balances[msg.sender] = FHE.add(_balances[msg.sender], _prizes[msg.sender]);
@@ -331,7 +341,7 @@ contract ConfidentialPool is
     }
 
     /**
-     * @notice Returns the aggregate plaintext custody balance held in the pool.
+     * @notice Returns the remaining base-deposit liability after the aggregate payout waterfall.
      */
     function totalDepositsPlain() external view override returns (uint64) {
         return _totalDepositsPlain;
@@ -345,13 +355,30 @@ contract ConfidentialPool is
     }
 
     /**
+     * @notice Returns the aggregate encrypted-balance liability used for draw bounds and solvency.
+     */
+    function totalAccountedBalancePlain() public view override returns (uint256) {
+        return uint256(_totalDepositsPlain) + _reservedPrizesPlain;
+    }
+
+    /**
      * @notice Returns unallocated custody yield available for future draws.
      * @dev Principal and already-awarded prizes are both treated as liabilities.
      */
     function availableYieldPlain() public view override returns (uint256) {
-        uint256 liabilities = uint256(_totalDepositsPlain) + _reservedPrizesPlain;
+        uint256 liabilities = totalAccountedBalancePlain();
         uint256 custodyBalance = IERC20(custodyAsset).balanceOf(address(this));
         return custodyBalance > liabilities ? custodyBalance - liabilities : 0;
+    }
+
+    /**
+     * @dev Settles fungible prize liabilities before base-deposit liabilities. This preserves
+     *      aggregate solvency without revealing whether a specific withdrawal included prizes.
+     */
+    function _consumeAccountedLiabilities(uint64 amount) internal {
+        uint256 prizePortion = amount < _reservedPrizesPlain ? amount : _reservedPrizesPlain;
+        _reservedPrizesPlain -= prizePortion;
+        _totalDepositsPlain -= uint64(uint256(amount) - prizePortion);
     }
 
     /**

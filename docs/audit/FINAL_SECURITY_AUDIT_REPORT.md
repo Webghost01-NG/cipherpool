@@ -68,7 +68,7 @@ This report consolidates formal proofs, forensic codebase examinations, adversar
 
 1. **Zama Coprocessor & KMS Threshold Honesty:** The protocol relies on the threshold security of the Zama KMS signers (`IKMSVerifier`) to not forge public decryption signatures.
 2. **fhEVM Host Infrastructure:** Host chains must execute Zama's `IFHEVMExecutor` coprocessor correctly.
-3. **Custody Solvency Invariant:** Plaintext tracking (`_totalDepositsPlain`) must mirror aggregated ciphertext quantities.
+3. **Custody Solvency Invariant:** `totalAccountedBalancePlain()` must mirror aggregate encrypted base and prize liabilities.
 
 ---
 

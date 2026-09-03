@@ -24,6 +24,7 @@ export function createApiRouter(store: IndexerStore, relayer?: KMSRelayerService
     const latest = store.getLatestDraw();
     res.status(200).json({
       totalDeposits: store.getTotalDeposits().toString(),
+      totalAccountedBalance: store.getTotalAccountedBalance().toString(),
       totalDraws: store.getDrawCount(),
       latestDraw: latest
         ? {

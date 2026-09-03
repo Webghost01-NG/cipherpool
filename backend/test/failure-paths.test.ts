@@ -42,11 +42,13 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
     indexer.processLog(logPayload);
     assert.equal(store.getUserDeposit(alice), 100_000n);
     assert.equal(store.getTotalDeposits(), 100_000n);
+    assert.equal(store.getTotalAccountedBalance(), 100_000n);
 
     // Simulated crash & replay of the exact same event
     indexer.processLog(logPayload);
     assert.equal(store.getUserDeposit(alice), 100_000n);
     assert.equal(store.getTotalDeposits(), 100_000n);
+    assert.equal(store.getTotalAccountedBalance(), 100_000n);
   });
 
   test("Malformed Log Resilience: unparseable or corrupted logs do not crash indexer", () => {

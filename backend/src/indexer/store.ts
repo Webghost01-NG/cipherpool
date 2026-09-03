@@ -9,6 +9,7 @@ import {
 export class IndexerStore {
   public lastIndexedBlock: number = 0;
   private deposits: Map<string, bigint> = new Map();
+  private totalAccountedBalance: bigint = 0n;
   private pendingWithdrawalsByUser: Map<string, WithdrawalRequestedEvent> = new Map();
   private pendingWithdrawalsByHash: Map<string, WithdrawalRequestedEvent> = new Map();
   private finalizedWithdrawals: Map<string, WithdrawalFinalizedEvent> = new Map();
@@ -23,6 +24,7 @@ export class IndexerStore {
 
     const current = this.deposits.get(event.user.toLowerCase()) || 0n;
     this.deposits.set(event.user.toLowerCase(), current + event.plainAmount);
+    this.totalAccountedBalance += event.plainAmount;
   }
 
   public addWithdrawalRequest(event: WithdrawalRequestedEvent) {
@@ -33,6 +35,8 @@ export class IndexerStore {
   }
 
   public finalizeWithdrawal(event: WithdrawalFinalizedEvent) {
+    if (this.finalizedWithdrawals.has(event.requestHash)) return;
+
     const pending = this.pendingWithdrawalsByHash.get(event.requestHash);
     if (pending) {
       pending.status = "FINALIZED";
@@ -45,6 +49,10 @@ export class IndexerStore {
         userKey,
         event.cleartextAmount >= currentDeposit ? 0n : currentDeposit - event.cleartextAmount
       );
+      this.totalAccountedBalance =
+        event.cleartextAmount >= this.totalAccountedBalance
+          ? 0n
+          : this.totalAccountedBalance - event.cleartextAmount;
     }
     this.finalizedWithdrawals.set(event.requestHash, event);
   }
@@ -59,7 +67,12 @@ export class IndexerStore {
   }
 
   public addDraw(event: DrawExecutedEvent) {
+    const key = `${event.transactionHash}-draw-${event.drawId}`;
+    if (this.seenTxHashes.has(key)) return;
+    this.seenTxHashes.add(key);
+
     this.draws.push(event);
+    this.totalAccountedBalance += event.prizeAmount;
   }
 
   public getPendingWithdrawalByUser(user: string): WithdrawalRequestedEvent | undefined {
@@ -86,6 +99,10 @@ export class IndexerStore {
       total += val;
     }
     return total;
+  }
+
+  public getTotalAccountedBalance(): bigint {
+    return this.totalAccountedBalance;
   }
 
   public getDrawCount(): number {

@@ -114,7 +114,7 @@ function finalizeWithdrawal(
         euint64 newBalance = FHE.sub(_balances[msg.sender], payout);
         _balances[msg.sender] = FHE.allowThis(newBalance);
         _balances[msg.sender] = FHE.allow(newBalance, msg.sender);
-        totalDepositsPlain -= payout;
+        _consumeAccountedLiabilities(payout);
     }
 
     emit WithdrawalFinalized(msg.sender, consumedHash, payout);

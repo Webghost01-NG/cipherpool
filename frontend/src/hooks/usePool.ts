@@ -126,11 +126,15 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     try {
       const response = await fetch(DEFAULT_BACKEND_URL + "/api/v1/pool/state");
       if (!response.ok) throw new Error("Backend returned HTTP " + response.status);
-      const data = await response.json() as { totalDeposits?: string; totalDraws?: number };
+      const data = await response.json() as {
+        totalDeposits?: string;
+        totalAccountedBalance?: string;
+        totalDraws?: number;
+      };
       setBackendStatus("online");
       setPoolStats((current) => ({
         ...current,
-        totalDeposits: data.totalDeposits ?? current.totalDeposits,
+        totalDeposits: data.totalAccountedBalance ?? data.totalDeposits ?? current.totalDeposits,
         totalDraws: data.totalDraws ?? current.totalDraws,
       }));
     } catch {
@@ -172,16 +176,22 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         token.balanceOf(contractAddress) as Promise<bigint>,
         address ? token.balanceOf(address) as Promise<bigint> : Promise.resolve(0n),
       ]);
+      let totalAccountedBalance = totalDeposits;
+      try {
+        totalAccountedBalance = await pool.totalAccountedBalancePlain() as bigint;
+      } catch {
+        // Compatibility for the read-only legacy deployment; writes remain disabled there.
+      }
       let availableYield: bigint;
       try {
         availableYield = await pool.availableYieldPlain() as bigint;
       } catch {
         // Compatibility for the read-only legacy deployment; writes remain disabled there.
-        availableYield = custodyBalance > totalDeposits ? custodyBalance - totalDeposits : 0n;
+        availableYield = custodyBalance > totalAccountedBalance ? custodyBalance - totalAccountedBalance : 0n;
       }
 
       setPoolStats({
-        totalDeposits: totalDeposits.toString(),
+        totalDeposits: totalAccountedBalance.toString(),
         availableYield: availableYield.toString(),
         custodyBalance: custodyBalance.toString(),
         totalDraws: Number(totalDraws),

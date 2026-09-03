@@ -50,8 +50,8 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function draw(uint64 prizeAmount) external;
 
     /**
-     * @notice Merges caller's accumulated confidential prizes into their active principal balance.
-     * @dev Homomorphically adds _prizes[msg.sender] into _balances[msg.sender] and resets _prizes[msg.sender].
+     * @notice Moves caller's accumulated confidential prizes into their withdrawable balance.
+     * @dev The ciphertext move does not change aggregate plaintext liability accounting.
      */
     function compoundPrizes() external;
 
@@ -86,8 +86,8 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function getPrizeHandle(address user) external view returns (bytes32);
 
     /**
-     * @notice Returns the aggregate plaintext custody balance held in the pool.
-     * @return The total plaintext deposits.
+     * @notice Returns the remaining base-deposit liability after aggregate withdrawal settlement.
+     * @return The base liability tranche.
      */
     function totalDepositsPlain() external view returns (uint64);
 
@@ -96,6 +96,12 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
      * @return The aggregate reserved prize liability.
      */
     function reservedPrizesPlain() external view returns (uint256);
+
+    /**
+     * @notice Returns total outstanding encrypted balances across base and prize tranches.
+     * @return The aggregate liability used for draw bounds and custody solvency.
+     */
+    function totalAccountedBalancePlain() external view returns (uint256);
 
     /**
      * @notice Returns custody yield not allocated to principal or prizes.

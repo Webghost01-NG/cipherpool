@@ -52,6 +52,11 @@ interface IPoolErrors {
     /// @param available The unallocated custody yield available for prizes.
     error InsufficientPrizeYield(uint256 requested, uint256 available);
 
+    /// @notice Thrown when aggregate encrypted balances would exceed the euint64 domain.
+    /// @param attempted The resulting aggregate liability.
+    /// @param maximum The maximum supported aggregate liability.
+    error AccountingCapacityExceeded(uint256 attempted, uint256 maximum);
+
     /// @notice Thrown when an unauthorized caller attempts an administrative or restricted function.
     /// @param caller The address of the unauthorized caller.
     error UnauthorizedCaller(address caller);
