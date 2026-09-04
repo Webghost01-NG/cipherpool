@@ -32,7 +32,7 @@ The contracts bind encrypted credit to the token-returned transfer, consume spon
 
 ## Slide 8 — Verified transaction evidence
 
-This is not a simulated transaction. A real one-cUSDC deposit and direct withdrawal completed on Sepolia, restoring the test wallet to 10 cUSDC. A later encrypted one-cUSDC sponsor contribution funded the reserve. The receipts and authorized KMS evidence are linked in the repository.
+This is not a simulated transaction. On the corrected active deployment, a real encrypted 0.5 cUSDC deposit entered draw one. Zama KMS finalized the encrypted winner selection, the winner privately detected and claimed the prize through an ordinary withdrawal, and the remaining principal was withdrawn. Every receipt and the authorized post-settlement KMS verification are linked in the repository.
 
 ## Slide 9 — Engineering proof
 

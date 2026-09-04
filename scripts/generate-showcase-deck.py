@@ -292,11 +292,11 @@ def slide_7(prs):
 def slide_8(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6]); slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
     add_brand(slide, 8)
-    add_title(slide, "Verified evidence", "A real 1 cUSDC Sepolia lifecycle—not a simulated receipt", "Each transaction below links directly to its confirmed block-explorer record.")
+    add_title(slide, "Verified evidence", "A complete live prize round—not a simulated receipt", "Each transaction below links directly to its confirmed block-explorer record.")
     txs = [
-        ("01", "cUSDC deposit", "0x36f81f…fa87", "Encrypted position", "https://sepolia.etherscan.io/tx/0x36f81f06a30a600ed67e70e19a0d6239beb1d31fceb3822decfc88f7e7cdfa87"),
-        ("02", "Direct withdrawal", "0x8ee0e4…8429", "Wallet restored", "https://sepolia.etherscan.io/tx/0x8ee0e488e23620b567ac8b105a0b5d43d3bde2c72f84113889f8f48784738429"),
-        ("03", "Sponsor reserve", "0x07b797…7eaa", "Encrypted prize funds", "https://sepolia.etherscan.io/tx/0x07b797674aa730eea1b851d5ed78352741d7029ef0b1168521244c81e1057eaa"),
+        ("01", "cUSDC deposit", "0xe36db7…b39f", "Encrypted position", "https://sepolia.etherscan.io/tx/0xe36db7ad47a927811971b56166ced5dd5ffa388d368f54623d09d7124ca8b39f"),
+        ("02", "KMS draw", "0x504862…ce6c", "Draw 1 finalized", "https://sepolia.etherscan.io/tx/0x504862de2aa5ad002f2314ea834b5336d394e9bf111c5652bb16c8700a1ece6c"),
+        ("03", "Private claim", "0x5763be…c969", "Ordinary withdrawal", "https://sepolia.etherscan.io/tx/0x5763bef70ffc5954c640cb1b5c39cad4bf8a56e45b37caa09e55b861184bc969"),
     ]
     for i, (number, title, short_hash, result, url) in enumerate(txs):
         x = 0.72 + i * 4.05
@@ -306,7 +306,7 @@ def slide_8(prs):
         add_link(slide, short_hash, url, x + 0.25, 4.22, 3.0, 0.3, size=12)
         add_text(slide, result, x + 0.25, 4.82, 3.0, 0.3, size=11, color=GREEN, bold=True)
     add_box(slide, 2.2, 5.85, 8.95, 0.55, fill=GREEN_PALE, line=GREEN_PALE)
-    add_text(slide, "Round trip restored 10 cUSDC · later sponsor funding moved 1 cUSDC into reserve", 2.35, 6.0, 8.65, 0.28,
+    add_text(slide, "Deposit → KMS draw → private claim → principal withdrawal · all confirmed", 2.35, 6.0, 8.65, 0.28,
              size=12, color=GREEN, bold=True, align=PP_ALIGN.CENTER)
     add_footer(slide, "Full hashes and runtime evidence: docs/operations/sepolia-deployment.md")
 

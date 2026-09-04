@@ -49,7 +49,7 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 - Application: [cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
 - Indexer: [cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
-- Deployment and real encrypted round-trip evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
+- Deployment and complete encrypted prize-lifecycle evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
 - Official Zama wrapper registry: [Sepolia confidential-token addresses](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md)
 
 ## Demo and First Use
@@ -84,6 +84,8 @@ npm run build:frontend
 ```
 
 To make a real encrypted testnet prize contribution, load credentials from an external keystore and run `npm run fund:sponsor-reserve`. Required variables and receipt checks are documented in [the reserve funding guide](docs/operations/reserve-funding.md).
+
+For a fail-closed deposit, draw, private claim, and withdrawal demonstration, use the phase-by-phase [live Sepolia lifecycle guide](docs/operations/live-prize-lifecycle.md). The runner defaults to read-only preflight and requires an exact state-bound confirmation phrase for every write.
 
 Set `RPC_URL` and `DATABASE_URL` in `.env`. Frontend writes remain disabled unless `VITE_ENABLE_PROTOCOL_WRITES=true` and runtime verification confirms the configured chain, pool bytecode hash, cUSDC address, symbol, and decimals.
 
