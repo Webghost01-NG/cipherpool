@@ -1,6 +1,7 @@
 import React from "react";
 import { AlertTriangle, ArrowRight, ShieldCheck, Wallet, X } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet.js";
+import { useModalFocus } from "../../hooks/useModalFocus.js";
 import { Badge, Button } from "../common/UIPrimitives.js";
 
 export interface WalletModalProps {
@@ -10,6 +11,7 @@ export interface WalletModalProps {
 
 export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   const { status, connect, switchNetwork, errorMessage } = useWallet();
+  const dialogRef = useModalFocus({ isOpen, onDismiss: onClose });
   if (!isOpen) return null;
 
   const hasInjectedWallet =
@@ -17,8 +19,20 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
     Boolean((window as Window & { ethereum?: unknown }).ethereum);
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
-      <div className="modal">
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wallet-modal-title"
+        tabIndex={-1}
+      >
         <div className="modal__top">
           <div>
             <p className="eyebrow">Wallet access</p>

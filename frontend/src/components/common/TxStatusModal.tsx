@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { TxState } from "../../hooks/useTxLifecycle.js";
 import { runtimeConfig } from "../../contracts/config.js";
+import { useModalFocus } from "../../hooks/useModalFocus.js";
 import { shortenHex } from "../../utils/format.js";
 import { Button } from "./UIPrimitives.js";
 
@@ -28,17 +29,32 @@ const phaseCopy: Record<TxState["phase"], string> = {
 };
 
 export const TxStatusModal: React.FC<TxStatusModalProps> = ({ state, onClose }) => {
-  if (state.phase === "IDLE") return null;
+  const isOpen = state.phase !== "IDLE";
   const isPending = ["PROMPTED", "BROADCASTING", "MINING", "WAITING_KMS"].includes(state.phase);
   const isSuccess = state.phase === "CONFIRMED";
+  const dialogRef = useModalFocus({ isOpen, onDismiss: onClose, canDismiss: !isPending });
+  if (!isOpen) return null;
   const explorerHref =
     state.txHash && runtimeConfig.explorerUrl
       ? runtimeConfig.explorerUrl + "/tx/" + state.txHash
       : "";
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="tx-modal-title">
-      <div className="modal tx-modal">
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (!isPending && event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        className="modal tx-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tx-modal-title"
+        aria-describedby="tx-modal-description"
+        tabIndex={-1}
+      >
         <div className="modal__top">
           <span className="eyebrow">Transaction evidence</span>
           {!isPending && (
@@ -59,7 +75,7 @@ export const TxStatusModal: React.FC<TxStatusModalProps> = ({ state, onClose }) 
           )}
         </div>
         <h2 id="tx-modal-title">{state.actionTitle || "Transaction status"}</h2>
-        <p>{state.details || state.errorMessage || phaseCopy[state.phase]}</p>
+        <p id="tx-modal-description">{state.details || state.errorMessage || phaseCopy[state.phase]}</p>
         {state.txHash && (
           <div className="tx-evidence">
             <span className="mono">{shortenHex(state.txHash, 10, 8)}</span>
