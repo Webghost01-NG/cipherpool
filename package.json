@@ -39,6 +39,7 @@
     "ethers": "^6.17.0",
     "express": "^5.2.1",
     "lucide-react": "^1.39.0",
+    "pg": "^8.16.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "supertest": "^7.2.2",
@@ -47,6 +48,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@types/pg": "^8.15.5",
     "@vitejs/plugin-react": "^4.7.0",
     "forge-std": "^1.1.2",
     "terser": "5.51.2",

@@ -27,14 +27,15 @@ The official KMS returned a 456-byte proof. After finalization, the wallet held 
 
 ## Runtime Activation
 
-Render must index the active pool from block `11628822` and must pass startup verification for chain ID, runtime code hash, custody address, and `totalAccountedBalancePlain()`. Vercel receives the matching public metadata plus `VITE_LEGACY_POOL_ADDRESS=0x602AE8011F478EBbe87Da760C054B5C25911612a`.
+Render must index the active pool from block `11628822`, connect through `DATABASE_URL` to the Frankfurt Neon PostgreSQL project, and pass startup verification for chain ID, runtime code hash, custody address, and `totalAccountedBalancePlain()`. The indexer stores one versioned checkpoint under `<chain-id>:<lowercase-pool-address>` after each complete block batch. Vercel receives the matching public metadata plus `VITE_LEGACY_POOL_ADDRESS=0x602AE8011F478EBbe87Da760C054B5C25911612a`.
 
 Activate in this order:
 
-1. Deploy Render with the active address, deployment block, custody address, and runtime hash.
-2. Confirm `/health` and `/api/v1/pool/state` return successfully.
-3. Deploy Vercel with `VITE_ENABLE_PROTOCOL_WRITES=false` and verify the active and archived reads.
-4. Set `VITE_ENABLE_PROTOCOL_WRITES=true`, redeploy, and confirm the UI reports `Deployment verified` before testing a write.
+1. Provision PostgreSQL in Neon’s Frankfurt region and set the backend's `DATABASE_URL` to its pooled TLS connection URL.
+2. Deploy Render with the active address, deployment block, custody address, and runtime hash.
+3. Confirm the logs report either a restored checkpoint or a first replay, then verify `/health` and `/api/v1/pool/state`.
+4. Deploy Vercel with `VITE_ENABLE_PROTOCOL_WRITES=false` and verify the active and archived reads.
+5. Set `VITE_ENABLE_PROTOCOL_WRITES=true`, redeploy, and confirm the UI reports `Deployment verified` before testing a write.
 
 ## Rollback
 
@@ -43,5 +44,7 @@ Activate in this order:
 3. Keep Render pointed at the active deployment for incident reconstruction; do not substitute the archived vulnerable pool.
 4. Keep the archived exit card available so pre-migration requests can still be finalized or cancelled.
 5. Record the incident, affected deployment hash, and recovery verification before re-enabling writes.
+
+If the checkpoint is unavailable, leave writes disabled while restoring PostgreSQL. Deleting a checkpoint intentionally causes a full replay from `INDEXER_START_BLOCK`; never manually advance `next_block_number` without matching state from the same completed batch.
 
 Never commit RPC credentials, deployment-wallet secrets, Vercel tokens, or Render API keys. Rotate any credential exposed outside the operating-system secret store.
