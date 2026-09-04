@@ -53,4 +53,4 @@ The reproducible validation covers Foundry contract invariants, backend API and 
 
 ## 10. Confidential savings, without blind trust
 
-Try the research app at `https://veylott.vercel.app`. Inspect the active pool on Sepolia at `0x54FdC46D0EA722EfA4853192678b35fCABFad99C`. Review the source and evidence at `github.com/Webghost01-NG/veylott`.
+Try the research app at `https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/`. Inspect the active pool on Sepolia at `0x54FdC46D0EA722EfA4853192678b35fCABFad99C`. Review the source and evidence at `github.com/Webghost01-NG/veylott`.

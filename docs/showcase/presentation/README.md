@@ -34,4 +34,4 @@ The video generator requires `espeak-ng`, `ffmpeg`, and `ffprobe`. It uses deter
 
 ## Live demo handoff
 
-Open [veylott.vercel.app](https://veylott.vercel.app) on Sepolia. Connect the intended wallet, confirm the address shown in the header, and verify runtime assurance before signing. Do not claim a transaction succeeded until its receipt is confirmed. The deck’s transaction evidence is the completed predecessor-deployment lifecycle documented in [`../SUBMISSION_OVERVIEW.md`](../SUBMISSION_OVERVIEW.md).
+Open the [Veylott live demo](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/) on Sepolia. Connect the intended wallet, confirm the address shown in the header, and verify runtime assurance before signing. Do not claim a transaction succeeded until its receipt is confirmed. The deck’s transaction evidence is the completed predecessor-deployment lifecycle documented in [`../SUBMISSION_OVERVIEW.md`](../SUBMISSION_OVERVIEW.md).
