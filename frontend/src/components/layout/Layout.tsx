@@ -6,12 +6,11 @@ export interface LayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  contractAddress?: string;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, contractAddress }) => (
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => (
   <div className="app-shell">
-    <Header activeTab={activeTab} onTabChange={onTabChange} contractAddress={contractAddress} />
+    <Header activeTab={activeTab} onTabChange={onTabChange} />
     <main className="app-main">{children}</main>
     <Footer />
   </div>

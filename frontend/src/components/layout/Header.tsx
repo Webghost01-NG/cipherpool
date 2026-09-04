@@ -1,12 +1,10 @@
-import React, { useState } from "react";
-import { Check, Copy, Fingerprint } from "lucide-react";
+import React from "react";
+import { Fingerprint } from "lucide-react";
 import { WalletButton } from "../wallet/WalletButton.js";
-import { shortenHex } from "../../utils/format.js";
 
 export interface HeaderProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  contractAddress?: string;
 }
 
 const tabs = [
@@ -18,18 +16,7 @@ const tabs = [
 export const Header: React.FC<HeaderProps> = ({
   activeTab = "pool",
   onTabChange,
-  contractAddress,
-}) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    if (!contractAddress) return;
-    await navigator.clipboard.writeText(contractAddress);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  };
-
-  return (
+}) => (
     <header className="site-header">
       <div className="container header-inner">
         <button className="brand" type="button" onClick={() => onTabChange?.("pool")} aria-label="CipherPool home">
@@ -54,15 +41,8 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         <div className="header-actions">
-          {contractAddress && (
-            <button className="contract-chip" type="button" onClick={handleCopy} title="Copy pool contract address">
-              {shortenHex(contractAddress)}
-              {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
-            </button>
-          )}
           <WalletButton />
         </div>
       </div>
     </header>
-  );
-};
+);
