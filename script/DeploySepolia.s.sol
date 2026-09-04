@@ -21,6 +21,8 @@ contract DeploySepolia is Script {
     // Official Zama ERC-7984 confidential USDC mock on Ethereum Sepolia.
     address public constant SEPOLIA_CUSDC = 0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639;
     uint64 public constant CANCELLATION_DELAY = 1 days;
+    uint64 public constant DRAW_INTERVAL = 7 days;
+    uint64 public constant DRAW_PRIZE_AMOUNT = 500_000; // 0.5 cUSDC at 6 decimals
 
     function run() external returns (address poolAddress) {
         console.log("=== CipherPool Sepolia Deployment ===");
@@ -42,7 +44,12 @@ contract DeploySepolia is Script {
         vm.startBroadcast();
 
         // 2. Deploy ConfidentialPool
-        ConfidentialPool pool = new ConfidentialPool(SEPOLIA_CUSDC, CANCELLATION_DELAY);
+        ConfidentialPool pool = new ConfidentialPool(
+            SEPOLIA_CUSDC,
+            CANCELLATION_DELAY,
+            DRAW_INTERVAL,
+            DRAW_PRIZE_AMOUNT
+        );
         poolAddress = address(pool);
         console.log("ConfidentialPool deployed at:", poolAddress);
 

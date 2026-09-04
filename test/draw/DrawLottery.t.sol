@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import {FHE, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPoolErrors} from "../../contracts/interfaces/IPoolErrors.sol";
 import {IPoolTypes} from "../../contracts/interfaces/IPoolTypes.sol";
 import {ConfidentialPoolTestBase} from "../utils/ConfidentialPoolTestBase.sol";
@@ -14,28 +13,58 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
 
     function setUp() public { setUpPool(); }
 
-    function test_RevertWhen_RequestHasZeroPrize() public {
-        vm.expectRevert(ZeroPrizeAmount.selector);
-        pool.requestDraw(0);
+    function test_RevertWhen_RequestPrizeDiffersFromPolicy() public {
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidDrawPrizeAmount.selector,
+            uint256(DRAW_PRIZE - 1),
+            uint256(DRAW_PRIZE)
+        ));
+        pool.requestDraw(DRAW_PRIZE - 1);
     }
 
     function test_RevertWhen_RequestHasEmptyPool() public {
         vm.expectRevert(EmptyPool.selector);
-        pool.requestDraw(1_000);
+        pool.requestDraw(DRAW_PRIZE);
     }
 
-    function test_RevertWhen_NonOwnerRequestsDraw() public {
+    function test_NonOwnerCanRequestPolicyBoundDraw() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 1_000);
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
-        pool.requestDraw(1_000);
+        uint64 requestedAt = uint64(block.timestamp);
+
+        vm.prank(keeper);
+        pool.requestDraw(DRAW_PRIZE);
+
+        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
+        assertTrue(request.active);
+        assertEq(request.prizeAmount, DRAW_PRIZE);
+        assertEq(pool.nextDrawRequestTimestamp(), requestedAt + DRAW_INTERVAL);
+    }
+
+    function test_RevertWhen_RequestBeforeNextCadenceWindow() public {
+        _deposit(alice, 10_000);
+        _fundReserve(sponsor, 2_000);
+        _requestAndFinalizeDraw(10_000, 2_000);
+        uint64 eligibleAt = pool.nextDrawRequestTimestamp();
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(
+            DrawRequestTooEarly.selector,
+            block.timestamp,
+            uint256(eligibleAt)
+        ));
+        pool.requestDraw(DRAW_PRIZE);
+
+        vm.warp(eligibleAt);
+        vm.prank(keeper);
+        pool.requestDraw(DRAW_PRIZE);
+        assertTrue(pool.getPendingDraw().active);
     }
 
     function test_RequestAnchorsBothAggregateHandlesAndLocksBalanceChanges() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
-        pool.requestDraw(1_000);
+        pool.requestDraw(DRAW_PRIZE);
 
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         assertTrue(request.active);
@@ -51,11 +80,11 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     function test_FinalizeDrawConsumesReserveAndRecordsVerifiedSnapshot() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
-        _requestAndFinalizeDraw(1_500, 10_000, 2_000);
+        _requestAndFinalizeDraw(10_000, 2_000);
 
         assertEq(pool.currentDrawId(), 1);
-        assertEq(pool.lastVerifiedTotalAccountedBalance(), 11_500);
-        assertEq(pool.lastVerifiedPrizeReserve(), 500);
+        assertEq(pool.lastVerifiedTotalAccountedBalance(), 10_500);
+        assertEq(pool.lastVerifiedPrizeReserve(), 1_500);
         assertTrue(pool.getPrizeHandle(alice) != bytes32(0));
         assertFalse(pool.getPendingDraw().active);
     }
@@ -63,7 +92,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     function test_NonOwnerCanFinalizeProofBoundDraw() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
-        pool.requestDraw(1_500);
+        pool.requestDraw(DRAW_PRIZE);
 
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         bytes32[] memory handles = new bytes32[](2);
@@ -78,7 +107,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         pool.finalizeDraw(10_000, 2_000, proof);
 
         assertEq(pool.currentDrawId(), 1);
-        assertEq(pool.lastVerifiedPrizeReserve(), 500);
+        assertEq(pool.lastVerifiedPrizeReserve(), 1_500);
         assertFalse(pool.getPendingDraw().active);
     }
 
@@ -86,31 +115,40 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _deposit(alice, 8_000_000);
         _fundReserve(sponsor, 1_000_000);
 
-        _requestAndFinalizeDraw(500_000, 8_000_000, 1_000_000);
+        _requestAndFinalizeDraw(8_000_000, 1_000_000);
 
         assertEq(pool.currentDrawId(), 1);
         assertEq(mockExecutor.randomCalls(), 1);
         assertEq(mockExecutor.boundedRandomCalls(), 0);
     }
 
-    function test_RevertWhen_VerifiedReserveCannotCoverPrize() public {
+    function test_VerifiedInsufficientReserveSkipsDrawAndReleasesLock() public {
         _deposit(alice, 10_000);
-        _fundReserve(sponsor, 500);
-        pool.requestDraw(1_000);
+        _fundReserve(sponsor, DRAW_PRIZE - 1);
+        pool.requestDraw(DRAW_PRIZE);
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(request.totalHandle);
         handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(500)));
+        bytes memory proof = generateMockKMSProof(
+            handles,
+            abi.encode(uint64(10_000), uint64(DRAW_PRIZE - 1))
+        );
 
-        vm.expectRevert(abi.encodeWithSelector(InsufficientPrizeYield.selector, uint256(1_000), uint256(500)));
-        pool.finalizeDraw(10_000, 500, proof);
+        vm.prank(keeper);
+        pool.finalizeDraw(10_000, DRAW_PRIZE - 1, proof);
+
+        assertFalse(pool.getPendingDraw().active);
+        assertEq(pool.currentDrawId(), 0);
+        assertEq(pool.lastVerifiedTotalAccountedBalance(), 10_000);
+        assertEq(pool.lastVerifiedPrizeReserve(), DRAW_PRIZE - 1);
+        assertEq(mockExecutor.randomCalls(), 0);
     }
 
     function test_RevertWhen_DrawProofUsesSubstitutedHandle() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
-        pool.requestDraw(1_000);
+        pool.requestDraw(DRAW_PRIZE);
 
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         bytes32[] memory substitutedHandles = new bytes32[](2);
@@ -131,7 +169,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     function test_RevertWhen_DrawProofCleartextIsModified() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
-        pool.requestDraw(1_000);
+        pool.requestDraw(DRAW_PRIZE);
 
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         bytes32[] memory handles = new bytes32[](2);
@@ -152,7 +190,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     function test_RevertWhen_ReplayingFinalizedDrawProof() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
-        pool.requestDraw(1_000);
+        pool.requestDraw(DRAW_PRIZE);
 
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         bytes32[] memory handles = new bytes32[](2);
@@ -173,7 +211,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     function test_AnyoneCanCancelStaleDrawLock() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 1_000);
-        pool.requestDraw(500);
+        pool.requestDraw(DRAW_PRIZE);
         vm.warp(block.timestamp + DELAY + 1);
         vm.prank(alice);
         pool.cancelDraw();
@@ -183,8 +221,36 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     function test_RevertWhen_CancellingFreshDrawLock() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 1_000);
-        pool.requestDraw(500);
+        pool.requestDraw(DRAW_PRIZE);
         vm.expectRevert(abi.encodeWithSelector(DrawRequestNotStale.selector, uint256(0), uint256(DELAY)));
         pool.cancelDraw();
+    }
+
+    function test_TimeoutLeavesUnlockedRecoveryWindowBeforeNextRequest() public {
+        _deposit(alice, 10_000);
+        _fundReserve(sponsor, 1_000);
+        uint64 requestedAt = uint64(block.timestamp);
+        pool.requestDraw(DRAW_PRIZE);
+
+        vm.warp(requestedAt + DELAY + 1);
+        vm.prank(keeper);
+        pool.cancelDraw();
+
+        _deposit(alice, 100);
+        assertEq(pool.userDepositNonces(alice), 2);
+
+        uint64 eligibleAt = requestedAt + DRAW_INTERVAL;
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(
+            DrawRequestTooEarly.selector,
+            block.timestamp,
+            uint256(eligibleAt)
+        ));
+        pool.requestDraw(DRAW_PRIZE);
+
+        vm.warp(eligibleAt);
+        vm.prank(keeper);
+        pool.requestDraw(DRAW_PRIZE);
+        assertTrue(pool.getPendingDraw().active);
     }
 }

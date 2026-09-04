@@ -30,6 +30,8 @@ contract ConfidentialPool is
 
     address public immutable override custodyAsset;
     uint64 internal immutable _drawCancellationDelay;
+    uint64 public immutable override drawInterval;
+    uint64 public immutable override drawPrizeAmount;
 
     mapping(address => euint64) internal _balances;
     mapping(address => euint64) internal _prizes;
@@ -47,16 +49,30 @@ contract ConfidentialPool is
 
     DrawRequest internal _pendingDraw;
     uint256 public drawRequestNonce;
+    uint64 public override nextDrawRequestTimestamp;
     uint256 public override currentDrawId;
     uint64 public override lastVerifiedTotalAccountedBalance;
     uint64 public override lastVerifiedPrizeReserve;
     uint64 public override lastDrawVerificationTimestamp;
 
-    constructor(address confidentialAsset, uint64 cancellationDelay) Ownable(msg.sender) {
+    constructor(
+        address confidentialAsset,
+        uint64 cancellationDelay,
+        uint64 minimumDrawInterval,
+        uint64 fixedPrizeAmount
+    ) Ownable(msg.sender) {
         if (confidentialAsset == address(0)) revert InvalidAssetAddress();
         if (cancellationDelay == 0) revert InvalidCancellationDelay();
+        uint256 minimumSafeInterval = uint256(cancellationDelay) * 2;
+        if (minimumDrawInterval < minimumSafeInterval) {
+            revert InvalidDrawInterval(minimumDrawInterval, minimumSafeInterval);
+        }
+        if (fixedPrizeAmount == 0) revert ZeroPrizeAmount();
         custodyAsset = confidentialAsset;
         _drawCancellationDelay = cancellationDelay;
+        drawInterval = minimumDrawInterval;
+        drawPrizeAmount = fixedPrizeAmount;
+        nextDrawRequestTimestamp = uint64(block.timestamp);
     }
 
     modifier whenBalanceUpdatesUnlocked() {
@@ -128,12 +144,19 @@ contract ConfidentialPool is
     }
 
     /**
-     * @notice Anchors aggregate encrypted state for a verifiable weighted prize draw.
-     * @dev Balance-changing operations remain locked until the proof is finalized or cancelled.
+     * @notice Permissionlessly anchors aggregate encrypted state for a policy-sized prize draw.
+     * @dev The immutable prize and cadence remove caller discretion. The cadence is at least twice
+     *      the cancellation delay, guaranteeing an unlocked recovery window after a timeout.
      */
-    function requestDraw(uint64 prizeAmount) external override onlyOwner whenNotPaused nonReentrant {
+    function requestDraw(uint64 prizeAmount) external override whenNotPaused nonReentrant {
         if (_pendingDraw.active) revert ActiveDrawRequestExists(_pendingDraw.requestHash);
-        if (prizeAmount == 0) revert ZeroPrizeAmount();
+        if (prizeAmount != drawPrizeAmount) {
+            revert InvalidDrawPrizeAmount(prizeAmount, drawPrizeAmount);
+        }
+        uint64 eligibleTimestamp = nextDrawRequestTimestamp;
+        if (block.timestamp < eligibleTimestamp) {
+            revert DrawRequestTooEarly(block.timestamp, eligibleTimestamp);
+        }
         if (!_totalInitialized || participants.length == 0) revert EmptyPool();
         if (!_reserveInitialized) revert EmptyPrizeReserve();
 
@@ -142,6 +165,7 @@ contract ConfidentialPool is
 
         uint256 nonce = drawRequestNonce++;
         uint64 timestamp = uint64(block.timestamp);
+        nextDrawRequestTimestamp = timestamp + drawInterval;
         bytes32 totalHandle = FHE.toBytes32(_totalAccountedBalance);
         bytes32 reserveHandle = FHE.toBytes32(_prizeReserve);
         bytes32 requestHash = keccak256(abi.encode(
@@ -177,10 +201,6 @@ contract ConfidentialPool is
     ) external override nonReentrant {
         DrawRequest memory request = _pendingDraw;
         if (!request.active) revert NoActiveDrawRequest();
-        if (totalAccountedBalance == 0) revert EmptyPool();
-        if (request.prizeAmount > prizeReserve) {
-            revert InsufficientPrizeYield(request.prizeAmount, prizeReserve);
-        }
 
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(request.totalHandle);
@@ -188,6 +208,20 @@ contract ConfidentialPool is
         FHE.checkSignatures(handles, abi.encode(totalAccountedBalance, prizeReserve), decryptionProof);
 
         delete _pendingDraw;
+        if (totalAccountedBalance == 0 || request.prizeAmount > prizeReserve) {
+            lastVerifiedTotalAccountedBalance = totalAccountedBalance;
+            lastVerifiedPrizeReserve = prizeReserve;
+            lastDrawVerificationTimestamp = uint64(block.timestamp);
+            emit DrawSkipped(
+                request.requestHash,
+                totalAccountedBalance,
+                prizeReserve,
+                request.prizeAmount,
+                block.timestamp
+            );
+            return;
+        }
+
         euint64 winningTicket = _sampleWeightedTicket(totalAccountedBalance);
         euint64 cumulativeEnd = FHE.asEuint64(0);
         euint64 prize = FHE.asEuint64(request.prizeAmount);

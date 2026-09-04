@@ -10,11 +10,13 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
     ConfidentialPool internal pool;
     MockERC7984 internal token;
     uint64 internal constant DELAY = 1 days;
+    uint64 internal constant DRAW_INTERVAL = 7 days;
+    uint64 internal constant DRAW_PRIZE = 500;
 
     function setUpPool() internal {
         setUpMockFHEVM();
         token = new MockERC7984();
-        pool = new ConfidentialPool(address(token), DELAY);
+        pool = new ConfidentialPool(address(token), DELAY, DRAW_INTERVAL, DRAW_PRIZE);
         initContractCoprocessor(address(token));
         initContractCoprocessor(address(pool));
     }
@@ -57,8 +59,10 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
         pool.withdraw(encryptedAmount, "");
     }
 
-    function _requestAndFinalizeDraw(uint64 prizeAmount, uint64 total, uint64 reserve) internal {
-        pool.requestDraw(prizeAmount);
+    function _requestAndFinalizeDraw(uint64 total, uint64 reserve) internal {
+        uint64 eligibleTimestamp = pool.nextDrawRequestTimestamp();
+        if (block.timestamp < eligibleTimestamp) vm.warp(eligibleTimestamp);
+        pool.requestDraw(DRAW_PRIZE);
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(pool.getPendingDraw().totalHandle);
         handles[1] = FHE.toBytes32(pool.getPendingDraw().reserveHandle);

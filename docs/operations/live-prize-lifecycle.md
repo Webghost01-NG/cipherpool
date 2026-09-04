@@ -18,10 +18,10 @@ Every write also requires:
 
 - `LIFECYCLE_EXPECTED_PARTICIPANTS` — comma-separated full addresses, or `none` for a new empty deployment.
 - `LIFECYCLE_EXPECTED_DRAW_ID` — the exact current draw counter.
-- `LIFECYCLE_AMOUNT` — human token units for deposits, draws, and withdrawals.
+- `LIFECYCLE_AMOUNT` — human token units for deposits and withdrawals; draws read the immutable amount from `drawPrizeAmount()`.
 - `LIFECYCLE_CONFIRM` — the exact phrase printed by a failed dry attempt, binding action, amount, draw ID, pool, and wallet.
 
-Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The runner's draw phase keeps request and KMS finalization together for operator convenience. Any keeper may present the valid proof bound to an active request. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path.
+Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The runner's draw phase reads the immutable prize/cadence policy and keeps request and KMS finalization together for keeper convenience. Any wallet may request an eligible round, and any keeper may present the valid proof bound to it. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path. A valid proof with an empty pool or insufficient reserve records `DrawSkipped` and releases the lock.
 
 `claim-prize` privately decrypts the caller’s prize, rejects zero, re-encrypts the positive amount, and submits the ordinary `withdraw` operation. Public calldata and events therefore do not label the payment as prize rather than principal.
 

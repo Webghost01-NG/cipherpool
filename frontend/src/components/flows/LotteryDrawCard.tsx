@@ -9,12 +9,14 @@ import { parseTokenAmount } from "../../utils/tokenAmount.js";
 export interface LotteryDrawCardProps {
   prizeReserve: string;
   totalDraws: number;
+  drawPrizeAmount: string;
+  drawIntervalSeconds: number;
+  nextDrawRequestTimestamp: number;
   prizeReserveStatus: "loading" | "fresh" | "stale" | "unavailable";
   totalDrawsStatus: "loading" | "fresh" | "stale" | "unavailable";
   onFundReserve: (amount: bigint) => Promise<void>;
-  onExecuteDraw: (prize: bigint) => Promise<void>;
+  onExecuteDraw: () => Promise<void>;
   isLoading: boolean;
-  isOwner: boolean;
   walletConnected: boolean;
   walletStatus: WalletStatus;
   onWalletAction: () => void;
@@ -27,12 +29,14 @@ export interface LotteryDrawCardProps {
 export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   prizeReserve,
   totalDraws,
+  drawPrizeAmount,
+  drawIntervalSeconds,
+  nextDrawRequestTimestamp,
   prizeReserveStatus,
   totalDrawsStatus,
   onFundReserve,
   onExecuteDraw,
   isLoading,
-  isOwner,
   walletConnected,
   walletStatus,
   onWalletAction,
@@ -42,9 +46,16 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   writesEnabled,
 }) => {
   const [sponsorAmount, setSponsorAmount] = useState("");
-  const [drawPrize, setDrawPrize] = useState("");
   const [sponsorError, setSponsorError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const cadenceOpen = nextDrawRequestTimestamp > 0 && Math.floor(Date.now() / 1000) >= nextDrawRequestTimestamp;
+  const fixedPrizeLabel = `${formatTokenAmount(drawPrizeAmount, tokenDecimals)} ${tokenSymbol}`;
+  const drawIntervalDays = drawIntervalSeconds > 0 ? drawIntervalSeconds / 86_400 : 0;
+  const nextWindowLabel = nextDrawRequestTimestamp > 0
+    ? cadenceOpen
+      ? "Open now"
+      : new Date(nextDrawRequestTimestamp * 1000).toLocaleString()
+    : "Loading on-chain policy…";
   const hasPrizeReserve = prizeReserveStatus === "fresh" || prizeReserveStatus === "stale";
   const hasTotalDraws = totalDrawsStatus === "fresh" || totalDrawsStatus === "stale";
   const prizeReserveLabel = hasPrizeReserve
@@ -72,12 +83,10 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   const handleDraw = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      const value = parseTokenAmount(drawPrize, tokenDecimals);
-      if (value <= 0n) throw new Error("Enter a prize greater than zero.");
       setValidationError(null);
-      await onExecuteDraw(value);
+      await onExecuteDraw();
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : "Enter a valid prize.");
+      setValidationError(error instanceof Error ? error.message : "Unable to request the draw.");
     }
   };
 
@@ -86,7 +95,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
       eyebrow="Keeper action"
       title="Run a confidential prize round"
       subtitle="A winning ticket is selected inside the encrypted domain."
-      headerAction={<Badge variant={isOwner ? "success" : "neutral"}>{isOwner ? "Owner enabled" : "Read only"}</Badge>}
+      headerAction={<Badge variant="success">Permissionless</Badge>}
     >
       <div className="callout">
         <Dices size={18} aria-hidden="true" />
@@ -130,41 +139,29 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
         </WalletGateButton>
       </form>
       <form className="form-stack" onSubmit={handleDraw} style={{ marginTop: "1rem" }}>
-        <label className="field" htmlFor="draw-prize-input">
-          <span className="field__label">
-            <span>Prize amount</span>
-            <span>Verified reserve: {prizeReserveLabel}</span>
+        <div className="callout">
+          <Info size={17} aria-hidden="true" />
+          <span>
+            On-chain policy: {fixedPrizeLabel} every {drawIntervalDays || "—"} days. Next request: {nextWindowLabel}. Last verified reserve: {prizeReserveLabel}.
           </span>
-          <span className="input-shell">
-            <input
-              id="draw-prize-input"
-              inputMode="decimal"
-              autoComplete="off"
-              value={drawPrize}
-              onChange={(event) => { setDrawPrize(event.target.value); setValidationError(null); }}
-              disabled={!isOwner || !writesEnabled || isLoading}
-              placeholder="0.00"
-            />
-            <span>{tokenSymbol}</span>
-          </span>
-        </label>
+        </div>
         {validationError && <p role="alert" className="badge badge--error">{validationError}</p>}
-        {(!isOwner || !writesEnabled) && (
-          <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked by runtime verification, the safety switch, a pool pause, or an unsettled draw." : "Only the verified pool owner can execute a draw. Connected savers can monitor confirmed rounds here."}</span></div>
+        {(!writesEnabled || !cadenceOpen) && (
+          <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked by runtime verification, the safety switch, a pool pause, or an unsettled draw." : "The fixed-cadence draw window has not opened yet."}</span></div>
         )}
         <WalletGateButton
           className="button--wide"
           type="submit"
-          disabled={!isOwner || !writesEnabled || !drawPrize}
+          disabled={!walletConnected || !writesEnabled || !cadenceOpen}
           isLoading={isLoading}
           walletStatus={walletStatus}
           onWalletAction={onWalletAction}
           walletActionEnabled={walletActionEnabled}
-          connectLabel="Connect wallet to check draw access"
-          switchNetworkLabel="Switch to Sepolia to check draw access"
+          connectLabel="Connect wallet to request draw"
+          switchNetworkLabel="Switch to Sepolia to request draw"
           lockedLabel="Draws safety-locked"
         >
-          <Sparkles size={17} /> {writesEnabled ? "Execute encrypted draw" : "Draws safety-locked"}
+          <Sparkles size={17} /> {writesEnabled && cadenceOpen ? "Request encrypted draw" : "Draws safety-locked"}
         </WalletGateButton>
       </form>
     </Card>

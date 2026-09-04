@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./useWallet.js";
 import { ERC7984_ABI, POOL_ABI } from "../contracts/abi.js";
 import {
@@ -16,6 +16,9 @@ export interface PoolStats {
   custodyBalance: string;
   totalDraws: number;
   participantCount: number;
+  drawPrizeAmount: string;
+  drawInterval: number;
+  nextDrawRequestTimestamp: number;
   isPaused: boolean;
   owner: string;
   pendingDraw: {
@@ -90,6 +93,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     custodyBalance: "0",
     totalDraws: 0,
     participantCount: 0,
+    drawPrizeAmount: "0",
+    drawInterval: 0,
+    nextDrawRequestTimestamp: 0,
     isPaused: false,
     owner: "",
     pendingDraw: {
@@ -194,12 +200,28 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         throw new Error("The configured CipherPool bytecode does not match the reviewed Sepolia deployment.");
       }
 
-      const [total, reserve, verifiedAt, totalDraws, participantCount, paused, owner, custodyAddress, pendingDraw] = await Promise.all([
+      const [
+        total,
+        reserve,
+        verifiedAt,
+        totalDraws,
+        participantCount,
+        drawPrizeAmount,
+        drawInterval,
+        nextDrawRequestTimestamp,
+        paused,
+        owner,
+        custodyAddress,
+        pendingDraw,
+      ] = await Promise.all([
         pool.lastVerifiedTotalAccountedBalance() as Promise<bigint>,
         pool.lastVerifiedPrizeReserve() as Promise<bigint>,
         pool.lastDrawVerificationTimestamp() as Promise<bigint>,
         pool.currentDrawId() as Promise<bigint>,
         pool.getParticipantCount() as Promise<bigint>,
+        pool.drawPrizeAmount() as Promise<bigint>,
+        pool.drawInterval() as Promise<bigint>,
+        pool.nextDrawRequestTimestamp() as Promise<bigint>,
         pool.paused() as Promise<boolean>,
         pool.owner() as Promise<string>,
         pool.custodyAsset() as Promise<string>,
@@ -245,6 +267,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         custodyBalance: "0",
         totalDraws: Number(totalDraws),
         participantCount: Number(participantCount),
+        drawPrizeAmount: drawPrizeAmount.toString(),
+        drawInterval: Number(drawInterval),
+        nextDrawRequestTimestamp: Number(nextDrawRequestTimestamp),
         isPaused: paused,
         owner,
         pendingDraw: {
@@ -449,10 +474,14 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     return result;
   }, [revealedPrize, withdraw]);
 
-  const drawLottery = useCallback(async (prizeAmount: bigint, callbacks: TransactionCallbacks = {}) => {
-    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the owner wallet first.");
+  const drawLottery = useCallback(async (callbacks: TransactionCallbacks = {}) => {
+    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
     requireVerifiedWrites();
-    if (address.toLowerCase() !== poolStats.owner.toLowerCase()) throw new Error("Only the pool owner can execute a draw.");
+    const prizeAmount = BigInt(poolStats.drawPrizeAmount);
+    if (prizeAmount <= 0n) throw new Error("The on-chain draw policy is unavailable.");
+    if (Math.floor(Date.now() / 1000) < poolStats.nextDrawRequestTimestamp) {
+      throw new Error("The next permissionless draw window is not open yet.");
+    }
     setIsLoading(true);
     try {
       const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
@@ -469,21 +498,27 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const result = await (await getBrowserFhevmInstance()).publicDecrypt([pending.totalHandle, pending.reserveHandle]);
       const total = readClearValue(result.clearValues, pending.totalHandle);
       const reserve = readClearValue(result.clearValues, pending.reserveHandle);
-      if (prizeAmount > reserve) throw new Error("Prize exceeds the KMS-verified confidential reserve.");
       const finalizeTx = await pool.finalizeDraw(total, reserve, result.decryptionProof);
       callbacks.onBroadcast?.(finalizeTx.hash);
       const receipt = ensureReceipt(await finalizeTx.wait());
-      return { txHash: receipt.hash };
+      const drawSkipped = receipt.logs.some((log) => {
+        try {
+          return pool.interface.parseLog({ topics: [...log.topics], data: log.data })?.name === "DrawSkipped";
+        } catch {
+          return false;
+        }
+      });
+      return {
+        txHash: receipt.hash,
+        successMessage: drawSkipped
+          ? "The KMS-verified pool or reserve could not fund this round. No prize was awarded and the lock was released."
+          : undefined,
+      };
     } finally {
       await refreshPoolData();
       setIsLoading(false);
     }
-  }, [address, contractAddress, poolStats.owner, refreshPoolData, requireVerifiedWrites, status]);
-
-  const isOwner = useMemo(
-    () => Boolean(address && poolStats.owner && address.toLowerCase() === poolStats.owner.toLowerCase()),
-    [address, poolStats.owner]
-  );
+  }, [address, contractAddress, poolStats.drawPrizeAmount, poolStats.nextDrawRequestTimestamp, refreshPoolData, requireVerifiedWrites, status]);
 
   return {
     poolStats,
@@ -503,7 +538,6 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       deploymentVerification.status === "verified" &&
       !poolStats.isPaused &&
       !poolStats.pendingDraw.active,
-    isOwner,
     deposit,
     withdraw,
     fundPrizeReserve,

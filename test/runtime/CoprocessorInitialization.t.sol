@@ -15,7 +15,7 @@ contract CoprocessorInitializationTest is Test {
     function test_ConstructorInitializesSepoliaCoprocessorConfiguration() public {
         vm.chainId(11155111);
         MockERC20 custodyAsset = new MockERC20("USD Coin", "USDC");
-        ConfidentialPool pool = new ConfidentialPool(address(custodyAsset), 1 days);
+        ConfidentialPool pool = new ConfidentialPool(address(custodyAsset), 1 days, 7 days, 500_000);
         CoprocessorConfig memory expected = ZamaConfig.getEthereumCoprocessorConfig();
 
         assertEq(

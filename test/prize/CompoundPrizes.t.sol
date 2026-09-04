@@ -11,7 +11,7 @@ contract CompoundPrizesTest is ConfidentialPoolTestBase {
     function test_CompoundClearsPrizeCounterWithoutChangingPositionOrAggregate() public {
         _deposit(alice, 10_000);
         _fundReserve(address(0xBEEF), 2_000);
-        _requestAndFinalizeDraw(2_000, 10_000, 2_000);
+        _requestAndFinalizeDraw(10_000, 2_000);
         bytes32 positionBefore = pool.getBalanceHandle(alice);
         bytes32 aggregateBefore = pool.getTotalAccountedBalanceHandle();
 

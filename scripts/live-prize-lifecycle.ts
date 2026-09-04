@@ -12,6 +12,9 @@ const POOL_ABI = [
   "function paused() view returns (bool)",
   "function currentDrawId() view returns (uint256)",
   "function getParticipantCount() view returns (uint256)",
+  "function drawInterval() view returns (uint64)",
+  "function drawPrizeAmount() view returns (uint64)",
+  "function nextDrawRequestTimestamp() view returns (uint64)",
   "function participants(uint256) view returns (address)",
   "function getPendingDraw() view returns (tuple(bytes32 totalHandle,bytes32 reserveHandle,uint64 prizeAmount,uint64 timestamp,bool active,bytes32 requestHash))",
   "function getBalanceHandle(address) view returns (bytes32)",
@@ -24,6 +27,7 @@ const POOL_ABI = [
   "event Deposited(address indexed user,uint256 indexed nonce,bytes32 indexed encryptedAmountHandle)",
   "event Withdrawn(address indexed user,uint256 indexed nonce,bytes32 indexed encryptedAmountHandle)",
   "event DrawRequested(uint256 indexed nonce,bytes32 indexed requestHash,uint64 prizeAmount,bytes32 totalHandle,bytes32 reserveHandle)",
+  "event DrawSkipped(bytes32 indexed requestHash,uint64 totalWeight,uint64 prizeReserve,uint64 requiredPrizeAmount,uint256 timestamp)",
   "event DrawExecuted(uint256 indexed drawId,bytes32 indexed requestHash,uint64 prizeAmount,uint64 totalWeight,uint64 remainingPrizeReserve,uint256 timestamp,uint256 participantCount)",
 ];
 
@@ -255,6 +259,9 @@ async function main(): Promise<void> {
   const paused = await readPublic("pause status", () => pool.paused() as Promise<boolean>);
   const currentDrawId = await readPublic("current draw ID", () => pool.currentDrawId() as Promise<bigint>);
   const participantCount = await readPublic("participant count", () => pool.getParticipantCount() as Promise<bigint>);
+  const drawInterval = await readPublic("draw interval", () => pool.drawInterval() as Promise<bigint>);
+  const drawPrizeAmount = await readPublic("draw prize amount", () => pool.drawPrizeAmount() as Promise<bigint>);
+  const nextDrawRequestTimestamp = await readPublic("next draw request timestamp", () => pool.nextDrawRequestTimestamp() as Promise<bigint>);
   const pendingDraw = await readPublic("pending draw", () => pool.getPendingDraw() as Promise<{
       totalHandle: string;
       reserveHandle: string;
@@ -298,6 +305,9 @@ async function main(): Promise<void> {
     if (currentDrawId !== expectedDrawId) {
       throw new Error(`Draw ID mismatch. Expected ${expectedDrawId}; observed ${currentDrawId}.`);
     }
+    if (action === "draw" && BigInt(Math.floor(Date.now() / 1000)) < nextDrawRequestTimestamp) {
+      throw new Error(`The next permissionless draw window opens at ${nextDrawRequestTimestamp}.`);
+    }
   }
 
 
@@ -316,6 +326,7 @@ async function main(): Promise<void> {
     token: { symbol, decimals },
     paused,
     currentDrawId,
+    drawPolicy: { prizeAmount: drawPrizeAmount, interval: drawInterval, nextRequestTimestamp: nextDrawRequestTimestamp },
     pendingDraw: { active: pendingDraw.active, requestHash: pendingDraw.requestHash, timestamp: pendingDraw.timestamp },
     participants,
     handles: {
@@ -371,7 +382,11 @@ async function main(): Promise<void> {
   if (action === "preflight" || action === "reveal-prize") return;
   if (!wallet || !instance) throw new Error("The signing context was not initialized.");
   const numericDecimals = Number(decimals);
-  const amountLabel = action === "claim-prize" ? "auto" : requiredEnvironment("LIFECYCLE_AMOUNT").trim();
+  const amountLabel = action === "claim-prize"
+    ? "auto"
+    : action === "draw"
+      ? ethers.formatUnits(drawPrizeAmount, numericDecimals)
+      : requiredEnvironment("LIFECYCLE_AMOUNT").trim();
   const expectedConfirmation = buildConfirmationPhrase(action, amountLabel, currentDrawId, poolAddress, actorAddress);
   if (requiredEnvironment("LIFECYCLE_CONFIRM") !== expectedConfirmation) {
     throw new Error(`Write confirmation mismatch. Set LIFECYCLE_CONFIRM exactly to: ${expectedConfirmation}`);
@@ -400,8 +415,7 @@ async function main(): Promise<void> {
   }
 
   if (action === "draw") {
-    if (actorAddress !== ethers.getAddress(owner)) throw new Error("Only the verified pool owner can execute the draw.");
-    const amount = parseLifecycleAmount(process.env.LIFECYCLE_AMOUNT, numericDecimals);
+    const amount = drawPrizeAmount;
     const requestTransaction = await signedPool.requestDraw(amount);
     const requestReceipt = requireConfirmedReceipt(await requestTransaction.wait());
     const requestedEvent = parseReceiptEvent(requestReceipt, pool, "DrawRequested");
@@ -424,15 +438,26 @@ async function main(): Promise<void> {
     const decrypted = await instance.publicDecrypt([request.totalHandle, request.reserveHandle]);
     const total = readClearValue(decrypted.clearValues, request.totalHandle);
     const reserve = readClearValue(decrypted.clearValues, request.reserveHandle);
-    if (total <= 0n) throw new Error("KMS verified an empty pool; the draw cannot be finalized.");
-    if (reserve < amount) throw new Error("KMS verified a reserve smaller than the requested prize.");
     if (total >= UINT64_LIMIT || reserve >= UINT64_LIMIT) throw new Error("KMS aggregate exceeds the uint64 protocol limit.");
 
     const finalizeTransaction = await signedPool.finalizeDraw(total, reserve, decrypted.decryptionProof);
     const finalizeReceipt = requireConfirmedReceipt(await finalizeTransaction.wait());
     const executedEvent = parseReceiptEvent(finalizeReceipt, pool, "DrawExecuted");
+    const skippedEvent = parseReceiptEvent(finalizeReceipt, pool, "DrawSkipped");
+    if (skippedEvent?.args.requestHash === request.requestHash) {
+      printEvidence({
+        phase: "draw-skipped",
+        requestTransactionHash: requestReceipt.hash,
+        finalizeTransactionHash: finalizeReceipt.hash,
+        blockNumber: finalizeReceipt.blockNumber,
+        totalWeight: skippedEvent.args.totalWeight,
+        prizeReserve: skippedEvent.args.prizeReserve,
+        requiredPrizeAmount: skippedEvent.args.requiredPrizeAmount,
+      });
+      return;
+    }
     if (!executedEvent || executedEvent.args.requestHash !== request.requestHash) {
-      throw new Error("Confirmed receipt is missing the expected DrawExecuted event.");
+      throw new Error("Confirmed receipt is missing the expected DrawExecuted or DrawSkipped event.");
     }
     printEvidence({
       phase: "draw-finalized",

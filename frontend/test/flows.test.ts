@@ -156,12 +156,14 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     const card = React.createElement(LotteryDrawCard, {
       prizeReserve: "25000",
       totalDraws: 5,
+      drawPrizeAmount: "500000",
+      drawIntervalSeconds: 604800,
+      nextDrawRequestTimestamp: 1,
       prizeReserveStatus: "fresh",
       totalDrawsStatus: "fresh",
       onFundReserve: async () => {},
       onExecuteDraw: async () => {},
       isLoading: false,
-      isOwner: true,
       walletConnected: true,
       walletStatus: "connected",
       onWalletAction: () => {},
@@ -177,6 +179,8 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     assert.match(markup, /Sepolia prizes are sponsor-funded, not protocol yield/);
     assert.match(markup, /Sponsor prize reserve/);
     assert.match(markup, /Fund encrypted reserve/);
+    assert.match(markup, /On-chain policy: 0.5 USDC every 7 days/);
+    assert.match(markup, /Permissionless/);
   });
 
   test("PrizeClaimCard keeps the prize private and gates claims on a positive reveal", () => {

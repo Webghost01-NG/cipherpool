@@ -4,8 +4,11 @@ pragma solidity ^0.8.24;
 interface IPoolErrors {
     error InvalidAssetAddress();
     error InvalidCancellationDelay();
+    error InvalidDrawInterval(uint256 provided, uint256 minimum);
     error ZeroDepositAmount();
     error ZeroPrizeAmount();
+    error InvalidDrawPrizeAmount(uint256 provided, uint256 required);
+    error DrawRequestTooEarly(uint256 currentTimestamp, uint256 eligibleTimestamp);
     error EmptyPool();
     error EmptyPrizeReserve();
     error NoBalancePosition(address user);
