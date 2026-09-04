@@ -12,6 +12,8 @@ The generated assets were refreshed against the active ERC-7984 deployment on 4 
 - `deck-content.md` — approved slide claims and evidence.
 - `demo-script.md` — presenter narration and manual demo guide.
 - `assets/live-dashboard.png` — production UI captured from the public Vercel deployment.
+- `assets/prize-claim-desktop.png` — desktop QA capture of the private prize flow.
+- `assets/prize-claim-mobile.png` — 390px mobile QA capture with no horizontal overflow.
 
 ## Reproduce the deck
 

@@ -17,7 +17,8 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 4. A sponsor contributes encrypted cUSDC to the Sepolia prize reserve; this is explicitly not presented as generated yield.
 5. The owner requests a draw, anchoring publicly decryptable aggregate weight and reserve handles while balance mutations are locked.
 6. A KMS proof verifies both aggregate handles. `FHE.randEuint64` and encrypted cumulative intervals award the prize without revealing the winning address.
-7. A saver withdraws directly with an encrypted amount; CipherPool and cUSDC update both sides using the actual encrypted transfer result.
+7. Each saver can privately reveal only their own prize counter; a winner claims through `compoundPrizes()` while the credited amount remains in the encrypted savings position.
+8. A saver withdraws directly with an encrypted amount; CipherPool and cUSDC update both sides using the actual encrypted transfer result.
 
 ## Evidence
 
