@@ -192,24 +192,37 @@ def slide_4(prs):
     add_brand(slide, 4)
     add_title(slide, "Architecture", "A verifiable path from wallet to confidential settlement")
     nodes = [
-        (0.7, "01", "React client", "Vercel\nWallet signatures"),
-        (3.25, "02", "ConfidentialPool", "Encrypted balances\nPrize liabilities"),
-        (5.8, "03", "Sponsor reserve", "Encrypted cUSDC\nNo false yield claim"),
-        (8.35, "04", "Zama relayer + KMS", "Threshold proof\nPublic decryption"),
-        (10.9, "05", "Indexer + PostgreSQL", "Public state\nDurable checkpoint"),
+        (0.7, 2.55, 2.0, "01", "React client", "Encrypts input\nRequests wallet signature", False),
+        (3.25, 2.55, 2.0, "02", "Official cUSDC", "Moves encrypted assets\nReturns actual transfer", False),
+        (5.8, 2.55, 2.2, "03", "ConfidentialPool", "Owns encrypted positions\nReserve + draw state", True),
+        (9.0, 2.55, 2.45, "04", "Zama relayer + KMS", "Prepares authorized proofs\nVerifies public snapshots", True),
+        (5.8, 5.25, 2.2, "05", "Indexer + PostgreSQL", "Observes public events\nPersists checkpoints", False),
+        (2.05, 5.25, 2.2, "IN", "Sponsor wallet", "Transfers encrypted cUSDC\ninto the prize reserve", False),
     ]
-    for index, (x, number, title, body) in enumerate(nodes):
-        add_box(slide, x, 2.55, 1.75, 2.85, fill=BLUE_PALE if index in (1, 3) else WHITE, line=LINE)
-        add_pill(slide, number, x + 0.2, 2.82, 0.55)
-        add_text(slide, title, x + 0.2, 3.4, 1.35, 0.62, size=14, bold=True)
-        add_text(slide, body, x + 0.2, 4.24, 1.35, 0.75, size=10, color=MUTED, line_spacing=1.15)
-        if index < len(nodes) - 1:
-            connector = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(x + 1.75), Inches(3.95), Inches(x + 2.55), Inches(3.95))
-            connector.line.color.rgb = BLUE; connector.line.width = Pt(2)
-            connector.line.end_arrowhead = True
-    add_box(slide, 2.1, 5.8, 9.1, 0.65, fill=GREEN_PALE, line=GREEN_PALE)
-    add_text(slide, "Every write is explicit · Every custody movement is public · Private state remains encrypted", 2.25, 5.97, 8.8, 0.3,
-             size=12, color=GREEN, bold=True, align=PP_ALIGN.CENTER)
+    for x, y, width, number, title, body, highlighted in nodes:
+        add_box(slide, x, y, width, 1.75, fill=BLUE_PALE if highlighted else WHITE, line=LINE)
+        add_pill(slide, number, x + 0.18, y + 0.2, 0.55)
+        add_text(slide, title, x + 0.18, y + 0.68, width - 0.36, 0.38, size=13, bold=True)
+        add_text(slide, body, x + 0.18, y + 1.12, width - 0.36, 0.48, size=9, color=MUTED, line_spacing=1.1)
+
+    connectors = [
+        (2.7, 3.42, 3.25, 3.42),
+        (5.25, 3.42, 5.8, 3.42),
+        (8.0, 3.42, 9.0, 3.42),
+        (6.9, 4.3, 6.9, 5.25),
+        (4.25, 6.12, 5.8, 4.05),
+    ]
+    for x1, y1, x2, y2 in connectors:
+        connector = slide.shapes.add_connector(
+            MSO_CONNECTOR.STRAIGHT, Inches(x1), Inches(y1), Inches(x2), Inches(y2)
+        )
+        connector.line.color.rgb = BLUE
+        connector.line.width = Pt(2)
+        connector.line.end_arrowhead = True
+
+    add_box(slide, 9.0, 5.25, 2.45, 1.0, fill=GREEN_PALE, line=GREEN_PALE)
+    add_text(slide, "Public: custody + receipts\nPrivate: positions + winner", 9.18, 5.5, 2.1, 0.5,
+             size=10, color=GREEN, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.1)
     add_footer(slide)
 
 
@@ -235,10 +248,10 @@ def slide_6(prs):
     add_brand(slide, 6)
     add_title(slide, "User journey", "Four explicit steps. No hidden signing.")
     steps = [
-        ("01", "Deposit", "Public testnet USDC moves into custody; equal encrypted credit is derived on-chain."),
-        ("02", "Prize round", "Encrypted ticket weights enter homomorphic weighted selection."),
-        ("03", "Request", "Encrypted sufficiency is evaluated and a request-bound handle is stored."),
-        ("04", "Finalize", "KMS proof is prepared; the requesting wallet signs the settlement transaction."),
+        ("01", "Shield", "Wrap test USDC into confidential cUSDC with Zama's official Sepolia wrapper."),
+        ("02", "Save", "Deposit an encrypted cUSDC amount; the pool credits only the token-returned result."),
+        ("03", "Prize round", "Fund or monitor the sponsor reserve, then run a KMS-verified encrypted draw."),
+        ("04", "Withdraw", "Submit an encrypted amount; accounting follows the token-returned transfer result."),
     ]
     x_positions = [0.7, 3.8, 6.9, 10.0]
     for i, ((number, title, body), x) in enumerate(zip(steps, x_positions)):
@@ -259,11 +272,11 @@ def slide_7(prs):
     add_brand(slide, 7)
     add_title(slide, "Security controls", "Solvency and settlement invariants are enforced in code")
     controls = [
-        ("Asset-bound credit", "Encrypted deposit credit is derived from the transferred public amount."),
+        ("Asset-bound credit", "Encrypted deposit credit is derived from the token-returned custody amount."),
         ("Reserved prizes", "Each draw consumes verified sponsor funds so assets cannot fund repeated awards."),
-        ("Complete liabilities", "Compounded prizes increase aggregate accounted obligations."),
-        ("Anchored requests", "The encrypted withdrawal handle is stored and bound to the requester."),
-        ("Verifiable exit", "KMS signatures are checked on-chain; stale requests can cancel after 24 hours."),
+        ("Complete liabilities", "Winner credit enters both the encrypted position and aggregate at finalization."),
+        ("Bound draw proofs", "KMS evidence must match the stored aggregate and reserve handles."),
+        ("Timeout recovery", "Anyone can release a stale draw lock after the 24-hour cancellation delay."),
     ]
     y = 2.35
     for i, (title, body) in enumerate(controls):
@@ -279,7 +292,7 @@ def slide_7(prs):
 def slide_8(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6]); slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
     add_brand(slide, 8)
-    add_title(slide, "Verified evidence", "A real 1 USDC Sepolia lifecycle—not a simulated receipt", "Each transaction below links directly to its confirmed block-explorer record.")
+    add_title(slide, "Verified evidence", "A real 1 cUSDC Sepolia lifecycle—not a simulated receipt", "Each transaction below links directly to its confirmed block-explorer record.")
     txs = [
         ("01", "cUSDC deposit", "0x36f81f…fa87", "Encrypted position", "https://sepolia.etherscan.io/tx/0x36f81f06a30a600ed67e70e19a0d6239beb1d31fceb3822decfc88f7e7cdfa87"),
         ("02", "Direct withdrawal", "0x8ee0e4…8429", "Wallet restored", "https://sepolia.etherscan.io/tx/0x8ee0e488e23620b567ac8b105a0b5d43d3bde2c72f84113889f8f48784738429"),
@@ -293,7 +306,7 @@ def slide_8(prs):
         add_link(slide, short_hash, url, x + 0.25, 4.22, 3.0, 0.3, size=12)
         add_text(slide, result, x + 0.25, 4.82, 3.0, 0.3, size=11, color=GREEN, bold=True)
     add_box(slide, 2.2, 5.85, 8.95, 0.55, fill=GREEN_PALE, line=GREEN_PALE)
-    add_text(slide, "Final state: wallet 20 USDC · pool custody 0 · accounted principal 0", 2.35, 6.0, 8.65, 0.28,
+    add_text(slide, "Round trip restored 10 cUSDC · later sponsor funding moved 1 cUSDC into reserve", 2.35, 6.0, 8.65, 0.28,
              size=12, color=GREEN, bold=True, align=PP_ALIGN.CENTER)
     add_footer(slide, "Full hashes and runtime evidence: docs/operations/sepolia-deployment.md")
 
@@ -301,14 +314,14 @@ def slide_8(prs):
 def slide_9(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6]); slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
     add_brand(slide, 9)
-    add_title(slide, "Engineering proof", "100 automated tests—and durable live infrastructure")
+    add_title(slide, "Engineering proof", "Reproducible tests—and durable live infrastructure")
     add_box(slide, 0.7, 2.35, 4.1, 3.85, fill=BLUE_DARK, line=BLUE_DARK)
-    add_text(slide, "100", 1.0, 2.8, 3.5, 1.0, size=52, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
-    add_text(slide, "PASSING TESTS", 1.0, 3.9, 3.5, 0.35, size=10, color=RGBColor(205, 218, 255), bold=True, font=MONO, align=PP_ALIGN.CENTER)
-    add_text(slide, "42 Foundry · 23 backend\n1 client · 34 frontend", 1.0, 4.65, 3.5, 0.8, size=14, color=WHITE, align=PP_ALIGN.CENTER, line_spacing=1.2)
+    add_text(slide, "FULL", 1.0, 2.8, 3.5, 1.0, size=48, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
+    add_text(slide, "VALIDATION SUITE", 1.0, 3.9, 3.5, 0.35, size=10, color=RGBColor(205, 218, 255), bold=True, font=MONO, align=PP_ALIGN.CENTER)
+    add_text(slide, "Foundry contracts · backend API/indexer\nclient encryption · frontend UX", 1.0, 4.58, 3.5, 1.0, size=13, color=WHITE, align=PP_ALIGN.CENTER, line_spacing=1.2)
     infra = [
         ("Vercel", "React frontend", "Production UI"),
-        ("Render", "Node relayer/indexer", "Public API"),
+        ("Render", "Node indexer/API", "Public API"),
         ("Neon", "PostgreSQL checkpoint", "Restart recovery"),
     ]
     for i, (name, role, proof) in enumerate(infra):

@@ -17,3 +17,6 @@ node_modules/
 .idea/
 dist/
 dist-frontend/
+
+# Generated presentation render intermediates
+docs/showcase/presentation/assets/slide-*.png

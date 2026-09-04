@@ -8,6 +8,10 @@ CipherPool is a confidential prize-savings prototype for Zama fhEVM. It uses the
 
 Public prize pools reveal each saver’s position and therefore their exact winning odds. CipherPool instead performs balance updates, sufficiency checks, and weighted winner selection over `euint64` ciphertexts. A wallet may reveal its own position with an EIP-712 authorization, but the application does not index plaintext user balances.
 
+![CipherPool production interface showing a disconnected, privacy-preserving dashboard](docs/showcase/presentation/assets/live-dashboard.png)
+
+The interface reports public protocol health without substituting sample balances when a wallet, deployment check, or verified source is unavailable.
+
 ## Architecture
 
 ```text
@@ -47,6 +51,14 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 - Indexer: [cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
 - Deployment and real encrypted round-trip evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
 - Official Zama wrapper registry: [Sepolia confidential-token addresses](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md)
+
+## Demo and First Use
+
+- [Captioned demo video](docs/showcase/presentation/CipherPool-Demo.mp4)
+- [Presentation PDF](docs/showcase/presentation/CipherPool-Presentation.pdf)
+- [Editable PowerPoint deck](docs/showcase/presentation/CipherPool-Presentation.pptx)
+
+To explore safely, open the application, connect the intended wallet on Ethereum Sepolia, and wait for runtime assurance to verify the chain, bytecode, and custody asset. Obtain test USDC, wrap it with the official cUSDC contract, then use CipherPool's encrypted deposit, prize-round, and direct-withdrawal actions. Review every wallet prompt before signing and treat only a confirmed receipt as success. The recorded transactions above are historical evidence, not a promise that a new transaction has completed.
 
 ## Repository Layout
 
@@ -93,7 +105,6 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
 - ERC-7984 can return an encrypted zero transfer; zero-value callbacks may add addresses to the participant list. This requires a positive-position activation proof before production use.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
-- The current presentation and demo assets predate the ERC-7984 migration and must be regenerated before submission.
 
 ## License
 

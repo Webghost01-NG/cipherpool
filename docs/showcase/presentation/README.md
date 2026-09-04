@@ -1,8 +1,8 @@
 # CipherPool Showcase Assets
 
-> **Stale assets:** The checked-in deck and video predate the ERC-7984 migration. Do not submit them as current evidence. They will be regenerated after the protocol work and UI audit; see the [current submission overview](../SUBMISSION_OVERVIEW.md).
-
 This directory contains the editable presentation, PDF export, captioned demo video, source copy, and the live-product screenshot used in the materials.
+
+The generated assets were refreshed against the active ERC-7984 deployment on 4 September 2026. Transaction claims link to previously confirmed Sepolia receipts; the video does not simulate a wallet, proof, or new transaction.
 
 ## Deliverables
 
