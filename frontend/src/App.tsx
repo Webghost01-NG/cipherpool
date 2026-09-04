@@ -64,6 +64,7 @@ export const App: React.FC = () => {
     backendStatus,
     dataError,
     lastUpdatedAt,
+    metricFreshness,
     deploymentVerification,
     writesEnabled,
     isOwner,
@@ -111,6 +112,13 @@ export const App: React.FC = () => {
 
   const totalDeposits = formatTokenAmount(poolStats.totalDeposits, asset.decimals);
   const availableYield = formatTokenAmount(poolStats.availableYield, asset.decimals);
+  const poolStateStatus = metricFreshness.availableYield;
+  const poolStatusLabel = poolStateStatus === "loading"
+    ? "Pool checking"
+    : poolStateStatus === "unavailable"
+      ? "Pool unavailable"
+      : `Pool ${poolStats.isPaused ? "paused" : "unpaused"}${poolStateStatus === "stale" ? " (stale)" : ""}`;
+  const hasDrawCount = metricFreshness.totalDraws === "fresh" || metricFreshness.totalDraws === "stale";
   const runBalanceReveal = () => revealBalanceWithFeedback(revealBalance, {
     start: startTx,
     confirm: setConfirmed,
@@ -208,8 +216,8 @@ export const App: React.FC = () => {
                 Indexer {backendStatus}
               </span>
               <span className="status-item">
-                <span className={"status-dot " + (!poolStats.isPaused ? "status-dot--ok" : "status-dot--warn")} />
-                Pool {poolStats.isPaused ? "paused" : "unpaused"}
+                <span className={"status-dot " + (poolStateStatus === "fresh" && !poolStats.isPaused ? "status-dot--ok" : "status-dot--warn")} />
+                {poolStatusLabel}
               </span>
               <span className="status-item"><LockKeyhole size={13} /> Ethereum Sepolia</span>
               <span className="status-item">
@@ -223,14 +231,15 @@ export const App: React.FC = () => {
           </div>
 
           <div className="metrics-grid" aria-label="Live pool metrics">
-            <StatBox label="Accounted balances" value={totalDeposits + " " + asset.symbol} subtext="Principal + awarded prizes" />
-            <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="After reserved liabilities" />
-            <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" />
+            <StatBox label="Accounted balances" value={totalDeposits + " " + asset.symbol} subtext="Principal + awarded prizes" status={metricFreshness.totalDeposits} />
+            <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="After reserved liabilities" status={metricFreshness.availableYield} />
+            <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" status={metricFreshness.participantCount} />
             <StatBox
               label="Confirmed rounds"
               value={poolStats.totalDraws}
               subtext="Recorded on Sepolia"
               badge={<Badge variant="info">Live</Badge>}
+              status={metricFreshness.totalDraws}
             />
           </div>
         </section>
@@ -356,6 +365,8 @@ export const App: React.FC = () => {
               <LotteryDrawCard
                 availableYield={poolStats.availableYield}
                 totalDraws={poolStats.totalDraws}
+                availableYieldStatus={metricFreshness.availableYield}
+                totalDrawsStatus={metricFreshness.totalDraws}
                 onExecuteDraw={(amount) =>
                   runAction(
                     "Confidential prize draw",
@@ -371,9 +382,21 @@ export const App: React.FC = () => {
               />
               <Card className="panel--ink" eyebrow="Draw invariant" title="The winner is never exposed">
                 <div className="balance-display">
-                  <strong className="balance-display__value">{poolStats.totalDraws}</strong>
+                  <strong
+                    className="balance-display__value"
+                    aria-label={hasDrawCount
+                      ? undefined
+                      : metricFreshness.totalDraws === "loading"
+                        ? "Confirmed rounds loading"
+                        : "Confirmed rounds unavailable"}
+                  >
+                    {hasDrawCount ? poolStats.totalDraws : "—"}
+                  </strong>
                   <p className="balance-display__hint">
-                    Encrypted rounds completed. Winner selection uses bounded fhEVM randomness against encrypted cumulative balances.
+                    {metricFreshness.totalDraws === "stale" && "Last confirmed value. "}
+                    {hasDrawCount
+                      ? "Encrypted rounds completed. Winner selection uses bounded fhEVM randomness against encrypted cumulative balances."
+                      : "Confirmed round data will appear after a verified source responds."}
                   </p>
                 </div>
               </Card>

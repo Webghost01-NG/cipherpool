@@ -7,6 +7,8 @@ import { formatTokenAmount } from "../../utils/format.js";
 export interface LotteryDrawCardProps {
   availableYield: string;
   totalDraws: number;
+  availableYieldStatus: "loading" | "fresh" | "stale" | "unavailable";
+  totalDrawsStatus: "loading" | "fresh" | "stale" | "unavailable";
   onExecuteDraw: (prize: bigint) => Promise<void>;
   isLoading: boolean;
   isOwner: boolean;
@@ -18,6 +20,8 @@ export interface LotteryDrawCardProps {
 export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   availableYield,
   totalDraws,
+  availableYieldStatus,
+  totalDrawsStatus,
   onExecuteDraw,
   isLoading,
   isOwner,
@@ -27,10 +31,21 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
 }) => {
   const [drawPrize, setDrawPrize] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const hasAvailableYield = availableYieldStatus === "fresh" || availableYieldStatus === "stale";
+  const hasTotalDraws = totalDrawsStatus === "fresh" || totalDrawsStatus === "stale";
+  const availableYieldLabel = hasAvailableYield
+    ? `${formatTokenAmount(availableYield, tokenDecimals)} ${tokenSymbol}${availableYieldStatus === "stale" ? " (stale)" : ""}`
+    : "—";
+  const confirmedRoundsLabel = hasTotalDraws
+    ? `${totalDraws} confirmed round${totalDraws === 1 ? "" : "s"}${totalDrawsStatus === "stale" ? " (last confirmed)" : ""}.`
+    : totalDrawsStatus === "loading"
+      ? "Loading confirmed rounds…"
+      : "Confirmed rounds unavailable.";
 
   const handleDraw = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
+      if (availableYieldStatus !== "fresh") throw new Error("Wait for fresh available-yield data before drawing.");
       const value = parseUnits(drawPrize, tokenDecimals);
       if (value <= 0n) throw new Error("Enter a prize greater than zero.");
       if (value > BigInt(availableYield)) throw new Error("Prize exceeds available yield.");
@@ -51,15 +66,14 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
       <div className="callout">
         <Dices size={18} aria-hidden="true" />
         <span>
-          {totalDraws} confirmed round{totalDraws === 1 ? "" : "s"}. Available yield is derived from live custody,
-          not a projected or demo balance.
+          {confirmedRoundsLabel} Available yield is derived from live custody, not a projected or demo balance.
         </span>
       </div>
       <form className="form-stack" onSubmit={handleDraw} style={{ marginTop: "1rem" }}>
         <label className="field" htmlFor="draw-prize-input">
           <span className="field__label">
             <span>Prize amount</span>
-            <span>Available: {formatTokenAmount(availableYield, tokenDecimals)} {tokenSymbol}</span>
+            <span>Available: {availableYieldLabel}</span>
           </span>
           <span className="input-shell">
             <input
@@ -68,7 +82,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
               autoComplete="off"
               value={drawPrize}
               onChange={(event) => { setDrawPrize(event.target.value); setValidationError(null); }}
-              disabled={!isOwner || !writesEnabled || isLoading}
+              disabled={!isOwner || !writesEnabled || isLoading || availableYieldStatus !== "fresh"}
               placeholder="0.00"
             />
             <span>{tokenSymbol}</span>
@@ -78,7 +92,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
         {(!isOwner || !writesEnabled) && (
           <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked until deployment verification and the operational safety switch both pass." : "Only the verified pool owner can execute a draw. Connected savers can monitor confirmed rounds here."}</span></div>
         )}
-        <Button className="button--wide" type="submit" disabled={!isOwner || !writesEnabled || !drawPrize} isLoading={isLoading}>
+        <Button className="button--wide" type="submit" disabled={!isOwner || !writesEnabled || !drawPrize || availableYieldStatus !== "fresh"} isLoading={isLoading}>
           <Sparkles size={17} /> {writesEnabled ? "Execute encrypted draw" : "Draws safety-locked"}
         </Button>
       </form>

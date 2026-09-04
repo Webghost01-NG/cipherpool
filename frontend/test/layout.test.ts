@@ -55,6 +55,41 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.equal((markup.match(/Deposit privately/g) ?? []).length, 1);
   });
 
+  test("Pool metrics distinguish loading, loaded-zero, and stale failure states", () => {
+    const loadingMarkup = renderToStaticMarkup(
+      React.createElement(StatBox, {
+        label: "Available yield",
+        value: "0 USDC",
+        subtext: "After reserved liabilities",
+        status: "loading",
+      })
+    );
+    const loadedZeroMarkup = renderToStaticMarkup(
+      React.createElement(StatBox, {
+        label: "Available yield",
+        value: "0 USDC",
+        subtext: "After reserved liabilities",
+        status: "fresh",
+      })
+    );
+    const staleMarkup = renderToStaticMarkup(
+      React.createElement(StatBox, {
+        label: "Available yield",
+        value: "25 USDC",
+        subtext: "After reserved liabilities",
+        status: "stale",
+      })
+    );
+
+    assert.match(loadingMarkup, /aria-label="Available yield loading"/);
+    assert.match(loadingMarkup, /aria-busy="true"/);
+    assert.doesNotMatch(loadingMarkup, />0 USDC</);
+    assert.match(loadedZeroMarkup, />0 USDC<\/strong>/);
+    assert.match(staleMarkup, />Stale<\/span>/);
+    assert.match(staleMarkup, />25 USDC<\/strong>/);
+    assert.match(staleMarkup, /Last confirmed value/);
+  });
+
   test("Header leaves wallet identity rendering to the wallet control", () => {
     const headerPath = path.join(process.cwd(), "frontend/src/components/layout/Header.tsx");
     const content = fs.readFileSync(headerPath, "utf-8");
