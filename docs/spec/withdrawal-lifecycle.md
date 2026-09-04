@@ -1,5 +1,7 @@
 # Forensic Audit: Encrypted Withdrawal Request Lifecycle & State Transitions
 
+> **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
+
 **Issue Reference:** [#2 — audit(lifecycle): Audit encrypted withdrawal request lifecycle and state transitions](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/2)  
 **Milestone:** Phase 2 — Project Architecture & Threat Modeling  
 **Author:** Security Research Team  

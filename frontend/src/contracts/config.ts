@@ -41,8 +41,7 @@ export const runtimeConfig = Object.freeze({
   chainId: readPositiveInteger("VITE_CHAIN_ID"),
   poolAddress: readAddress("VITE_POOL_ADDRESS"),
   legacyPoolAddress: readAddress("VITE_LEGACY_POOL_ADDRESS"),
-  vaultAddress: readAddress("VITE_VAULT_ADDRESS"),
-  custodyAssetAddress: readAddress("VITE_USDC_ADDRESS"),
+  custodyAssetAddress: readAddress("VITE_CONFIDENTIAL_ASSET_ADDRESS"),
   poolRuntimeCodeHash: readBytes32("VITE_POOL_RUNTIME_CODE_HASH"),
   deploymentBlock: readPositiveInteger("VITE_POOL_DEPLOYMENT_BLOCK"),
   backendUrl: readUrl("VITE_BACKEND_URL"),
@@ -60,8 +59,7 @@ export const configurationErrors = [
     runtimeConfig.legacyPoolAddress &&
     runtimeConfig.poolAddress.toLowerCase() === runtimeConfig.legacyPoolAddress.toLowerCase() &&
     "Active and legacy pool addresses must differ.",
-  !runtimeConfig.vaultAddress && "VITE_VAULT_ADDRESS must be a valid EVM address.",
-  !runtimeConfig.custodyAssetAddress && "VITE_USDC_ADDRESS must be a valid EVM address.",
+  !runtimeConfig.custodyAssetAddress && "VITE_CONFIDENTIAL_ASSET_ADDRESS must be a valid EVM address.",
   !runtimeConfig.poolRuntimeCodeHash && "VITE_POOL_RUNTIME_CODE_HASH must be a bytes32 hash.",
   runtimeConfig.deploymentBlock < 0 && "VITE_POOL_DEPLOYMENT_BLOCK must be a positive integer.",
   !runtimeConfig.backendUrl && "VITE_BACKEND_URL must be a valid absolute URL.",
@@ -72,6 +70,5 @@ export const configurationErrors = [
 
 export const DEFAULT_POOL_ADDRESS = runtimeConfig.poolAddress;
 export const DEFAULT_LEGACY_POOL_ADDRESS = runtimeConfig.legacyPoolAddress;
-export const DEFAULT_VAULT_ADDRESS = runtimeConfig.vaultAddress;
-export const DEFAULT_USDC_ADDRESS = runtimeConfig.custodyAssetAddress;
+export const DEFAULT_CONFIDENTIAL_ASSET_ADDRESS = runtimeConfig.custodyAssetAddress;
 export const DEFAULT_BACKEND_URL = runtimeConfig.backendUrl;

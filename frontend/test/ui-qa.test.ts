@@ -94,28 +94,16 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
       walletConnected: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
-      walletBalance: "1000000",
       writesEnabled: true,
     });
     assert.ok(depositCard);
 
     const withdrawalCard = React.createElement(WithdrawalCard, {
-      pendingWithdrawal: {
-        hasPending: false,
-        requestHash: "",
-        requestedAmount: "0",
-        handle: "",
-        timestamp: 0,
-        status: "FINALIZED",
-      },
-      onRequestWithdrawal: async () => {},
-      onFinalizeWithdrawal: async () => {},
-      onCancelWithdrawal: async () => {},
+      onWithdraw: async () => {},
       isLoading: false,
       walletConnected: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
-      cancellationDelaySeconds: 86400,
       writesEnabled: true,
     });
     assert.ok(withdrawalCard);

@@ -1,392 +1,299 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import {FHE, euint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, ebool, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IConfidentialPool} from "./interfaces/IConfidentialPool.sol";
-import {RequestBindingState} from "./base/RequestBindingState.sol";
+import {IERC7984} from "./interfaces/IERC7984.sol";
+import {IERC7984Receiver} from "./interfaces/IERC7984Receiver.sol";
 
 /**
  * @title ConfidentialPool
- * @notice Production implementation of the Confidential PoolTogether prize savings pool.
- * @dev Combines Zama fhEVM v0.13.3 encrypted accounting with storage-anchored 2-step settlement.
+ * @notice ERC-7984 prize savings pool with encrypted deposits, balances, withdrawals, and prizes.
+ * @dev Individual values never enter plaintext calldata. Only aggregate draw snapshots are publicly
+ *      decrypted so bounded randomness can select a winner over encrypted cumulative balances.
  */
 contract ConfidentialPool is
-    RequestBindingState,
     IConfidentialPool,
+    IERC7984Receiver,
     ReentrancyGuard,
     Ownable2Step,
     Pausable,
     ZamaEthereumConfig
 {
-    using SafeERC20 for IERC20;
+    bytes32 public constant DEPOSIT_ACTION = keccak256("CIPHERPOOL_DEPOSIT_V1");
+    bytes32 public constant PRIZE_RESERVE_ACTION = keccak256("CIPHERPOOL_PRIZE_RESERVE_V1");
 
-    /// @notice Address of the underlying ERC-20 asset held in custody.
     address public immutable override custodyAsset;
+    uint64 internal immutable _drawCancellationDelay;
 
-    /// @notice Remaining base-deposit liability after aggregate withdrawal settlement.
-    uint64 internal _totalDepositsPlain;
-
-    /// @notice Aggregate custody yield allocated to encrypted prize balances.
-    uint256 internal _reservedPrizesPlain;
-
-    /// @notice Sequential identifier for executed prize draws.
-    uint256 public override currentDrawId;
-
-    /// @notice Encrypted per-user principal balance ciphertexts.
     mapping(address => euint64) internal _balances;
-
-    /// @notice Encrypted per-user accumulated prize ciphertexts.
     mapping(address => euint64) internal _prizes;
+    mapping(address => bool) internal _positionInitialized;
 
-    /// @notice List of registered depositor addresses for draw iteration.
+    euint64 internal _totalAccountedBalance;
+    euint64 internal _prizeReserve;
+    bool internal _totalInitialized;
+    bool internal _reserveInitialized;
+
     address[] public participants;
-
-    /// @notice Mapping to track active participant registration.
     mapping(address => bool) public isParticipant;
-
-    /// @notice Monotonically increasing deposit sequence counter per user.
     mapping(address => uint256) public userDepositNonces;
+    mapping(address => uint256) public userWithdrawalNonces;
+
+    DrawRequest internal _pendingDraw;
+    uint256 public drawRequestNonce;
+    uint256 public override currentDrawId;
+    uint64 public override lastVerifiedTotalAccountedBalance;
+    uint64 public override lastVerifiedPrizeReserve;
+    uint64 public override lastDrawVerificationTimestamp;
+
+    constructor(address confidentialAsset, uint64 cancellationDelay) Ownable(msg.sender) {
+        if (confidentialAsset == address(0)) revert InvalidAssetAddress();
+        if (cancellationDelay == 0) revert InvalidCancellationDelay();
+        custodyAsset = confidentialAsset;
+        _drawCancellationDelay = cancellationDelay;
+    }
+
+    modifier whenBalanceUpdatesUnlocked() {
+        if (_pendingDraw.active) revert BalanceUpdatesLocked(_pendingDraw.requestHash);
+        _;
+    }
+
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
 
     /**
-     * @param _custodyAsset Address of the underlying ERC-20 token (e.g. USDC).
-     * @param _cancellationDelay Minimum duration (in seconds) before stale withdrawals can be cancelled.
+     * @notice Accepts an official ERC-7984 transfer callback and credits its actual encrypted result.
+     * @dev Call `confidentialTransferAndCall` on the custody token with DEPOSIT_ACTION or
+     *      PRIZE_RESERVE_ACTION encoded as a bytes32 value.
      */
-    constructor(
-        address _custodyAsset,
-        uint64 _cancellationDelay
-    ) RequestBindingState(_cancellationDelay) Ownable(msg.sender) {
-        if (_custodyAsset == address(0)) {
-            revert InvalidAssetAddress();
+    function onConfidentialTransferReceived(
+        address,
+        address from,
+        euint64 amount,
+        bytes calldata data
+    ) external override nonReentrant returns (ebool) {
+        if (msg.sender != custodyAsset) revert UnauthorizedTokenCallback(msg.sender);
+        if (paused() || _pendingDraw.active || data.length != 32) return _callbackResult(false);
+
+        bytes32 action = abi.decode(data, (bytes32));
+        if (action == DEPOSIT_ACTION) {
+            _creditDeposit(from, amount);
+            return _callbackResult(true);
         }
-        custodyAsset = _custodyAsset;
+        if (action == PRIZE_RESERVE_ACTION) {
+            _creditPrizeReserve(from, amount);
+            return _callbackResult(true);
+        }
+        return _callbackResult(false);
     }
 
     /**
-     * @notice Emergency administrative pause halts new deposits, withdrawals, and draws.
+     * @notice Withdraws up to an encrypted requested amount to the caller as ERC-7984 tokens.
+     * @dev Accounting is reduced by the token's returned actual transfer amount, so a silent
+     *      zero transfer cannot erase the user's claim.
      */
-    function pause() external onlyOwner {
-        _pause();
+    function withdraw(
+        externalEuint64 encryptedAmount,
+        bytes calldata inputProof
+    ) external override nonReentrant whenNotPaused whenBalanceUpdatesUnlocked {
+        if (!_positionInitialized[msg.sender]) revert NoBalancePosition(msg.sender);
+
+        euint64 requested = FHE.fromExternal(encryptedAmount, inputProof);
+        euint64 approved = FHE.select(
+            FHE.ge(_balances[msg.sender], requested),
+            requested,
+            FHE.asEuint64(0)
+        );
+        FHE.allowTransient(approved, custodyAsset);
+        euint64 transferred = IERC7984(custodyAsset).confidentialTransfer(msg.sender, approved);
+
+        _balances[msg.sender] = FHE.sub(_balances[msg.sender], transferred);
+        euint64 prizeDebit = FHE.select(
+            FHE.le(_prizes[msg.sender], transferred),
+            _prizes[msg.sender],
+            transferred
+        );
+        _prizes[msg.sender] = FHE.sub(_prizes[msg.sender], prizeDebit);
+        _totalAccountedBalance = FHE.sub(_totalAccountedBalance, transferred);
+
+        _allowPosition(msg.sender);
+        _totalAccountedBalance = FHE.allowThis(_totalAccountedBalance);
+        emit Withdrawn(msg.sender, userWithdrawalNonces[msg.sender]++, FHE.toBytes32(transferred));
     }
 
     /**
-     * @notice Unpauses normal protocol operations.
+     * @notice Anchors aggregate encrypted state for a verifiable weighted prize draw.
+     * @dev Balance-changing operations remain locked until the proof is finalized or cancelled.
      */
-    function unpause() external onlyOwner {
-        _unpause();
+    function requestDraw(uint64 prizeAmount) external override onlyOwner whenNotPaused nonReentrant {
+        if (_pendingDraw.active) revert ActiveDrawRequestExists(_pendingDraw.requestHash);
+        if (prizeAmount == 0) revert ZeroPrizeAmount();
+        if (!_totalInitialized || participants.length == 0) revert EmptyPool();
+        if (!_reserveInitialized) revert EmptyPrizeReserve();
+
+        FHE.makePubliclyDecryptable(_totalAccountedBalance);
+        FHE.makePubliclyDecryptable(_prizeReserve);
+
+        uint256 nonce = drawRequestNonce++;
+        uint64 timestamp = uint64(block.timestamp);
+        bytes32 totalHandle = FHE.toBytes32(_totalAccountedBalance);
+        bytes32 reserveHandle = FHE.toBytes32(_prizeReserve);
+        bytes32 requestHash = keccak256(abi.encode(
+            block.chainid,
+            address(this),
+            nonce,
+            prizeAmount,
+            timestamp,
+            totalHandle,
+            reserveHandle
+        ));
+
+        _pendingDraw = DrawRequest({
+            totalHandle: _totalAccountedBalance,
+            reserveHandle: _prizeReserve,
+            prizeAmount: prizeAmount,
+            timestamp: timestamp,
+            active: true,
+            requestHash: requestHash
+        });
+        emit DrawRequested(nonce, requestHash, prizeAmount, totalHandle, reserveHandle);
     }
 
-    /**
-     * @notice Deposits underlying ERC-20 tokens and credits the same amount to an encrypted balance.
-     * @dev The contract derives the ciphertext from the custody amount, so callers cannot provide
-     *      independent values for custody and encrypted accounting.
-     * @param amount The amount transferred from the caller and credited to their encrypted balance.
-     */
-    function deposit(uint64 amount) external override nonReentrant whenNotPaused {
-        if (amount == 0) {
-            revert ZeroDepositAmount();
-        }
-        uint256 attemptedLiability = totalAccountedBalancePlain() + amount;
-        if (attemptedLiability > type(uint64).max) {
-            revert AccountingCapacityExceeded(attemptedLiability, type(uint64).max);
-        }
-
-        // 1. Derive the encrypted credit from the sole custody amount.
-        euint64 amountEnc = FHE.asEuint64(amount);
-
-        // 2. Homomorphic balance incrementation & participant tracking
-        if (!isParticipant[msg.sender]) {
-            isParticipant[msg.sender] = true;
-            participants.push(msg.sender);
-            _balances[msg.sender] = amountEnc;
-        } else {
-            _balances[msg.sender] = FHE.add(_balances[msg.sender], amountEnc);
-        }
-
-        // 3. Persistent ACL allowances for contract and user
-        _balances[msg.sender] = FHE.allowThis(_balances[msg.sender]);
-        _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
-
-        // 4. Accounting & event emission
-        _totalDepositsPlain += amount;
-        uint256 nonce = userDepositNonces[msg.sender]++;
-
-        emit Deposited(msg.sender, nonce, amount, FHE.toBytes32(amountEnc));
-
-        // 5. Custody asset transfer (Checks-Effects-Interactions)
-        IERC20(custodyAsset).safeTransferFrom(msg.sender, address(this), amount);
-    }
-
-    /**
-     * @notice Initiates an asynchronous 2-step withdrawal request.
-     * @dev Homomorphically evaluates balance sufficiency and authorizes handle for KMS public decryption.
-     * @param amount The plaintext amount requested for withdrawal.
-     */
-    function requestWithdrawal(uint64 amount) external override nonReentrant whenNotPaused {
-        if (amount == 0) {
-            revert ZeroDepositAmount();
-        }
-
-        // 1. Homomorphically evaluate balance sufficiency
-        euint64 amountEnc = FHE.asEuint64(amount);
-        ebool sufficient = FHE.ge(_balances[msg.sender], amountEnc);
-        euint64 approvedEnc = FHE.select(sufficient, amountEnc, FHE.asEuint64(0));
-
-        // 2. Authorize approved ciphertext handle for KMS off-chain public decryption
-        FHE.makePubliclyDecryptable(approvedEnc);
-
-        // 3. Commit domain-bound request to storage (enforces single-use active state)
-        _createWithdrawalRequest(msg.sender, approvedEnc, amount);
-    }
-
-    /**
-     * @notice Finalizes a pending withdrawal using a verified KMS threshold decryption proof.
-     * @dev Verifies KMS signatures against storage-anchored handle, consumes request, and transfers assets.
-     * @param cleartextAmount The decrypted plaintext amount verified by the KMS signers.
-     * @param decryptionProof The KMS threshold signature proof.
-     */
-    function finalizeWithdrawal(
-        uint64 cleartextAmount,
+    /** @notice Verifies the aggregate snapshot and executes weighted selection over encrypted balances. */
+    function finalizeDraw(
+        uint64 totalAccountedBalance,
+        uint64 prizeReserve,
         bytes calldata decryptionProof
-    ) external override nonReentrant {
-        WithdrawalRequest storage req = _pendingWithdrawals[msg.sender];
-        if (!req.active) {
-            revert NoActiveWithdrawalRequest(msg.sender);
+    ) external override onlyOwner nonReentrant {
+        DrawRequest memory request = _pendingDraw;
+        if (!request.active) revert NoActiveDrawRequest();
+        if (totalAccountedBalance == 0) revert EmptyPool();
+        if (request.prizeAmount > prizeReserve) {
+            revert InsufficientPrizeYield(request.prizeAmount, prizeReserve);
         }
 
-        // Defensive range assertion: KMS output must strictly be requestedAmount or 0
-        if (cleartextAmount != req.requestedAmount && cleartextAmount != 0) {
-            revert InvalidDecryptedAmount(cleartextAmount, req.requestedAmount);
-        }
+        bytes32[] memory handles = new bytes32[](2);
+        handles[0] = FHE.toBytes32(request.totalHandle);
+        handles[1] = FHE.toBytes32(request.reserveHandle);
+        FHE.checkSignatures(handles, abi.encode(totalAccountedBalance, prizeReserve), decryptionProof);
 
-        // Storage-anchored handle extraction (calldata CANNOT inject or alter handles)
-        bytes32[] memory handles = new bytes32[](1);
-        handles[0] = FHE.toBytes32(req.handle);
-
-        // Verify KMS threshold signature
-        bytes memory abiEncodedCleartexts = abi.encode(cleartextAmount);
-        FHE.checkSignatures(handles, abiEncodedCleartexts, decryptionProof);
-
-        // Checks-Effects-Interactions: Delete request from storage BEFORE custody transfer
-        bytes32 consumedHash = _deleteWithdrawalRequest(msg.sender);
-
-        // Settle payout if balance was sufficient
-        if (cleartextAmount > 0) {
-            euint64 newBalance = FHE.sub(_balances[msg.sender], cleartextAmount);
-            _balances[msg.sender] = FHE.allowThis(newBalance);
-            _balances[msg.sender] = FHE.allow(newBalance, msg.sender);
-            _consumeAccountedLiabilities(cleartextAmount);
-
-            emit WithdrawalFinalized(msg.sender, consumedHash, cleartextAmount);
-
-            IERC20(custodyAsset).safeTransfer(msg.sender, cleartextAmount);
-        } else {
-            emit WithdrawalFinalized(msg.sender, consumedHash, 0);
-        }
-    }
-
-    /**
-     * @notice Cancels a stale pending withdrawal request if the cancellation delay has elapsed.
-     * @dev Atomic storage deletion resets state and reclaims gas.
-     */
-    function cancelWithdrawal() external override nonReentrant {
-        WithdrawalRequest storage req = _pendingWithdrawals[msg.sender];
-        if (!req.active) {
-            revert NoActiveWithdrawalRequest(msg.sender);
-        }
-
-        uint256 elapsed = block.timestamp - req.timestamp;
-        if (elapsed <= _cancellationDelay) {
-            revert WithdrawalNotStale(elapsed, _cancellationDelay);
-        }
-
-        bytes32 cancelledHash = _deleteWithdrawalRequest(msg.sender);
-
-        emit WithdrawalCancelled(msg.sender, cancelledHash);
-    }
-
-    /**
-     * @notice Executes an encrypted prize lottery draw across all registered depositors.
-     * @dev Uses homomorphic randomness with bounded reduction and cumulative interval evaluation.
-     * @param prizeAmount The plaintext prize amount to award to the winner.
-     */
-    function draw(uint64 prizeAmount) external override nonReentrant whenNotPaused onlyOwner {
-        if (prizeAmount == 0) {
-            revert ZeroPrizeAmount();
-        }
-        uint256 totalWeight = totalAccountedBalancePlain();
-        if (totalWeight == 0 || participants.length == 0) {
-            revert EmptyPool();
-        }
-
-        uint256 availableYield = availableYieldPlain();
-        if (prizeAmount > availableYield) {
-            revert InsufficientPrizeYield(prizeAmount, availableYield);
-        }
-        uint256 attemptedLiability = totalWeight + prizeAmount;
-        if (attemptedLiability > type(uint64).max) {
-            revert AccountingCapacityExceeded(attemptedLiability, type(uint64).max);
-        }
-
-        // Reserve custody before awarding so subsequent draws cannot reuse it.
-        _reservedPrizesPlain += prizeAmount;
-
-        // 1. Generate a homomorphic winning ticket bounded by all accounted balances.
-        euint64 winningTicket = FHE.randEuint64(uint64(totalWeight));
-
-        // 2. Cumulative interval search across participants
-        euint64 cumEnd = FHE.asEuint64(0);
-        euint64 prizeEnc = FHE.asEuint64(prizeAmount);
-
+        delete _pendingDraw;
+        euint64 winningTicket = FHE.randEuint64(totalAccountedBalance);
+        euint64 cumulativeEnd = FHE.asEuint64(0);
+        euint64 prize = FHE.asEuint64(request.prizeAmount);
         uint256 len = participants.length;
+
         for (uint256 i = 0; i < len; i++) {
-            address p = participants[i];
-            // Uncompounded prizes remain eligible without revealing who won.
-            euint64 bal = FHE.add(_balances[p], _prizes[p]);
-
-            euint64 cumStart = cumEnd;
-            cumEnd = FHE.add(cumEnd, bal);
-
-            // Winner condition: cumStart <= winningTicket < cumEnd
-            ebool geStart = FHE.ge(winningTicket, cumStart);
-            ebool ltEnd = FHE.lt(winningTicket, cumEnd);
-            ebool isWinner = FHE.and(geStart, ltEnd);
-
-            // Award prize homomorphically without revealing winner identity
-            euint64 award = FHE.select(isWinner, prizeEnc, FHE.asEuint64(0));
-            _prizes[p] = FHE.add(_prizes[p], award);
-
-            // Update ACL allowances for the user
-            _prizes[p] = FHE.allowThis(_prizes[p]);
-            _prizes[p] = FHE.allow(_prizes[p], p);
+            address participant = participants[i];
+            euint64 cumulativeStart = cumulativeEnd;
+            cumulativeEnd = FHE.add(cumulativeEnd, _balances[participant]);
+            ebool isWinner = FHE.and(
+                FHE.ge(winningTicket, cumulativeStart),
+                FHE.lt(winningTicket, cumulativeEnd)
+            );
+            euint64 award = FHE.select(isWinner, prize, FHE.asEuint64(0));
+            _balances[participant] = FHE.add(_balances[participant], award);
+            _prizes[participant] = FHE.add(_prizes[participant], award);
+            _allowPosition(participant);
         }
+
+        _prizeReserve = FHE.sub(_prizeReserve, prize);
+        _totalAccountedBalance = FHE.add(_totalAccountedBalance, prize);
+        _prizeReserve = FHE.allowThis(_prizeReserve);
+        _totalAccountedBalance = FHE.allowThis(_totalAccountedBalance);
 
         currentDrawId++;
-        emit DrawExecuted(currentDrawId, prizeAmount, block.timestamp, len);
+        lastVerifiedTotalAccountedBalance = totalAccountedBalance + request.prizeAmount;
+        lastVerifiedPrizeReserve = prizeReserve - request.prizeAmount;
+        lastDrawVerificationTimestamp = uint64(block.timestamp);
+        emit DrawExecuted(
+            currentDrawId,
+            request.requestHash,
+            request.prizeAmount,
+            totalAccountedBalance,
+            lastVerifiedPrizeReserve,
+            block.timestamp,
+            len
+        );
     }
 
-    /**
-     * @notice Merges caller's accumulated confidential prizes into their active principal balance.
-     * @dev Moves ciphertext between accounting buckets without changing the aggregate public liability.
-     */
-    function compoundPrizes() external override nonReentrant whenNotPaused {
-        _balances[msg.sender] = FHE.add(_balances[msg.sender], _prizes[msg.sender]);
-        _prizes[msg.sender] = FHE.asEuint64(0);
+    /** @notice Releases a draw lock if threshold decryption does not complete in time. */
+    function cancelDraw() external override nonReentrant {
+        DrawRequest memory request = _pendingDraw;
+        if (!request.active) revert NoActiveDrawRequest();
+        uint256 elapsed = block.timestamp - request.timestamp;
+        if (elapsed <= _drawCancellationDelay) {
+            revert DrawRequestNotStale(elapsed, _drawCancellationDelay);
+        }
+        delete _pendingDraw;
+        emit DrawCancelled(request.requestHash);
+    }
 
-        _balances[msg.sender] = FHE.allowThis(_balances[msg.sender]);
-        _balances[msg.sender] = FHE.allow(_balances[msg.sender], msg.sender);
+    /** @notice Clears the caller's prize counter after merging it into their saved position. */
+    function compoundPrizes() external override nonReentrant whenNotPaused {
+        if (!_positionInitialized[msg.sender]) revert NoBalancePosition(msg.sender);
+        _prizes[msg.sender] = FHE.asEuint64(0);
         _prizes[msg.sender] = FHE.allowThis(_prizes[msg.sender]);
         _prizes[msg.sender] = FHE.allow(_prizes[msg.sender], msg.sender);
     }
 
-    /**
-     * @notice Returns the pending withdrawal request for a given user.
-     * @param user The address of the user.
-     */
-    function getPendingWithdrawal(address user)
-        external
-        view
-        virtual
-        override(RequestBindingState, IConfidentialPool)
-        returns (WithdrawalRequest memory)
-    {
-        return _pendingWithdrawals[user];
+    function getPendingDraw() external view override returns (DrawRequest memory) { return _pendingDraw; }
+    function drawCancellationDelay() external view override returns (uint64) { return _drawCancellationDelay; }
+    function getBalanceHandle(address user) external view override returns (bytes32) { return FHE.toBytes32(_balances[user]); }
+    function getPrizeHandle(address user) external view override returns (bytes32) { return FHE.toBytes32(_prizes[user]); }
+    function getTotalAccountedBalanceHandle() external view override returns (bytes32) { return FHE.toBytes32(_totalAccountedBalance); }
+    function getPrizeReserveHandle() external view override returns (bytes32) { return FHE.toBytes32(_prizeReserve); }
+    function getParticipantCount() external view override returns (uint256) { return participants.length; }
+
+    function _creditDeposit(address user, euint64 amount) internal {
+        if (!_positionInitialized[user]) {
+            _positionInitialized[user] = true;
+            _balances[user] = amount;
+            _prizes[user] = FHE.asEuint64(0);
+        } else {
+            _balances[user] = FHE.add(_balances[user], amount);
+        }
+        if (!isParticipant[user]) {
+            isParticipant[user] = true;
+            participants.push(user);
+        }
+        if (!_totalInitialized) {
+            _totalInitialized = true;
+            _totalAccountedBalance = amount;
+        } else {
+            _totalAccountedBalance = FHE.add(_totalAccountedBalance, amount);
+        }
+        _allowPosition(user);
+        _totalAccountedBalance = FHE.allowThis(_totalAccountedBalance);
+        emit Deposited(user, userDepositNonces[user]++, FHE.toBytes32(amount));
     }
 
-    /**
-     * @notice Returns the current withdrawal nonce for a given user.
-     * @param user The address of the user.
-     */
-    function getUserWithdrawalNonce(address user)
-        external
-        view
-        virtual
-        override(RequestBindingState, IConfidentialPool)
-        returns (uint256)
-    {
-        return userWithdrawalNonces[user];
+    function _creditPrizeReserve(address source, euint64 amount) internal {
+        if (!_reserveInitialized) {
+            _reserveInitialized = true;
+            _prizeReserve = amount;
+        } else {
+            _prizeReserve = FHE.add(_prizeReserve, amount);
+        }
+        _prizeReserve = FHE.allowThis(_prizeReserve);
+        emit PrizeReserveFunded(source, FHE.toBytes32(amount));
     }
 
-    /**
-     * @notice Returns the cancellation delay in seconds.
-     */
-    function cancellationDelay()
-        external
-        view
-        virtual
-        override(RequestBindingState, IConfidentialPool)
-        returns (uint64)
-    {
-        return _cancellationDelay;
+    function _allowPosition(address user) internal {
+        _balances[user] = FHE.allowThis(_balances[user]);
+        _balances[user] = FHE.allow(_balances[user], user);
+        _prizes[user] = FHE.allowThis(_prizes[user]);
+        _prizes[user] = FHE.allow(_prizes[user], user);
     }
 
-    /**
-     * @notice Returns the raw ciphertext handle representing the user's encrypted balance.
-     * @param user The address of the user.
-     */
-    function getBalanceHandle(address user) external view override returns (bytes32) {
-        return FHE.toBytes32(_balances[user]);
-    }
-
-    /**
-     * @notice Returns the raw ciphertext handle representing the user's encrypted prize balance.
-     * @param user The address of the user.
-     */
-    function getPrizeHandle(address user) external view override returns (bytes32) {
-        return FHE.toBytes32(_prizes[user]);
-    }
-
-    /**
-     * @notice Returns the remaining base-deposit liability after the aggregate payout waterfall.
-     */
-    function totalDepositsPlain() external view override returns (uint64) {
-        return _totalDepositsPlain;
-    }
-
-    /**
-     * @notice Returns custody yield that has been allocated to encrypted prize balances.
-     */
-    function reservedPrizesPlain() external view override returns (uint256) {
-        return _reservedPrizesPlain;
-    }
-
-    /**
-     * @notice Returns the aggregate encrypted-balance liability used for draw bounds and solvency.
-     */
-    function totalAccountedBalancePlain() public view override returns (uint256) {
-        return uint256(_totalDepositsPlain) + _reservedPrizesPlain;
-    }
-
-    /**
-     * @notice Returns unallocated custody yield available for future draws.
-     * @dev Principal and already-awarded prizes are both treated as liabilities.
-     */
-    function availableYieldPlain() public view override returns (uint256) {
-        uint256 liabilities = totalAccountedBalancePlain();
-        uint256 custodyBalance = IERC20(custodyAsset).balanceOf(address(this));
-        return custodyBalance > liabilities ? custodyBalance - liabilities : 0;
-    }
-
-    /**
-     * @dev Settles fungible prize liabilities before base-deposit liabilities. This preserves
-     *      aggregate solvency without revealing whether a specific withdrawal included prizes.
-     */
-    function _consumeAccountedLiabilities(uint64 amount) internal {
-        uint256 prizePortion = amount < _reservedPrizesPlain ? amount : _reservedPrizesPlain;
-        _reservedPrizesPlain -= prizePortion;
-        _totalDepositsPlain -= uint64(uint256(amount) - prizePortion);
-    }
-
-    /**
-     * @notice Returns the total count of registered depositors in the pool.
-     */
-    function getParticipantCount() external view override returns (uint256) {
-        return participants.length;
+    function _callbackResult(bool accepted) internal returns (ebool result) {
+        result = FHE.asEbool(accepted);
+        FHE.allowTransient(result, custodyAsset);
     }
 }

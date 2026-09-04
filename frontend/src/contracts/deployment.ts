@@ -14,7 +14,7 @@ export interface DeploymentEvidence {
   custodyAssetAddress: string;
   tokenSymbol: string;
   tokenDecimals: number;
-  supportsCorrectedAccounting: boolean;
+  supportsConfidentialAccounting: boolean;
 }
 
 export function validateDeploymentEvidence(
@@ -35,7 +35,7 @@ export function validateDeploymentEvidence(
   }
   if (observed.tokenSymbol !== expected.tokenSymbol) errors.push("custody token symbol does not match configuration");
   if (observed.tokenDecimals !== expected.tokenDecimals) errors.push("custody token decimals do not match configuration");
-  if (!observed.supportsCorrectedAccounting) errors.push("pool does not expose corrected aggregate accounting");
+  if (!observed.supportsConfidentialAccounting) errors.push("pool does not expose confidential aggregate accounting");
 
   return errors;
 }

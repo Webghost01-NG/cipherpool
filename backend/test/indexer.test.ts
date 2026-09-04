@@ -1,216 +1,78 @@
-import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import { Interface, ethers } from "ethers";
 import { BlockchainIndexer } from "../src/indexer/indexer.js";
 import { IndexerStore } from "../src/indexer/store.js";
 
 const POOL_EVENTS_ABI = [
-  "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
-  "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
-  "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
-  "event WithdrawalCancelled(address indexed user, bytes32 indexed requestHash)",
-  "event DrawExecuted(uint256 indexed drawId, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
+  "event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
+  "event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
+  "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
+  "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
 ];
 
-describe("Blockchain Indexer & State Store Tests", () => {
+describe("Confidential pool indexer", () => {
   const iface = new Interface(POOL_EVENTS_ABI);
   const alice = "0x1111111111111111111111111111111111111111";
 
-  test("should correctly index Deposited event and track balances", () => {
-    const store = new IndexerStore();
-    const indexer = new BlockchainIndexer(store);
-
-    const log = iface.encodeEventLog(iface.getEvent("Deposited")!, [
-      alice,
-      0n,
-      50_000n,
-      ethers.zeroPadValue("0x1234", 32),
-    ]);
-
+  function process(indexer: BlockchainIndexer, eventName: string, args: unknown[], txHash: string) {
+    const log = iface.encodeEventLog(iface.getEvent(eventName)!, args);
     indexer.processLog({
       topics: log.topics,
       data: log.data,
       blockNumber: 100,
       blockTimestamp: 1_700_000_100,
-      transactionHash: "0xaaa",
+      transactionHash: txHash,
     });
+    return log;
+  }
 
-    assert.equal(store.getUserDeposit(alice), 50_000n);
-    assert.equal(store.getTotalDeposits(), 50_000n);
-    assert.equal(store.getTotalAccountedBalance(), 50_000n);
-  });
-
-  test("should index WithdrawalRequested, update state, and trigger callback", () => {
+  test("indexes deposit events without storing their plaintext value", () => {
     const store = new IndexerStore();
     const indexer = new BlockchainIndexer(store);
+    const handle = ethers.id("private-deposit");
 
-    let callbackFired = false;
-    indexer.setOnWithdrawalRequested((hash) => {
-      callbackFired = true;
-      assert.ok(hash.length > 0);
-    });
+    process(indexer, "Deposited", [alice, 0n, handle], "0xdeposit");
 
-    const rHash = ethers.id("request-1");
-    const rHandle = ethers.id("handle-1");
-
-    const log = iface.encodeEventLog(iface.getEvent("WithdrawalRequested")!, [
-      alice,
-      0n,
-      rHash,
-      25_000n,
-      rHandle,
-    ]);
-
-    indexer.processLog({
-      topics: log.topics,
-      data: log.data,
-      blockNumber: 101,
-      blockTimestamp: 1_700_000_101,
-      transactionHash: "0xbbb",
-    });
-
-    assert.ok(callbackFired);
-    const pending = store.getPendingWithdrawalByUser(alice);
-    assert.ok(pending);
-    assert.equal(pending.status, "PENDING");
-    assert.equal(pending.requestedAmount, 25_000n);
-    assert.equal(pending.timestamp, 1_700_000_101);
+    assert.equal(store.getUserDepositEventCount(alice), 1n);
+    assert.equal(store.getTotalDepositEvents(), 1n);
+    assert.equal(store.getTotalAccountedBalance(), 0n);
   });
 
-  test("should handle WithdrawalFinalized and transition state to FINALIZED", () => {
+  test("indexes confidential withdrawals idempotently", () => {
     const store = new IndexerStore();
     const indexer = new BlockchainIndexer(store);
+    const args = [alice, 1n, ethers.id("private-withdrawal")];
 
-    store.addDeposit({
-      user: alice,
-      nonce: 0n,
-      plainAmount: 20_000n,
-      inputHandle: ethers.id("initial-balance"),
-      blockNumber: 101,
-      transactionHash: "0xdeposit",
-    });
+    process(indexer, "Withdrawn", args, "0xwithdraw");
+    process(indexer, "Withdrawn", args, "0xwithdraw");
 
-    const rHash = ethers.id("request-finalize");
-    const rHandle = ethers.id("handle-finalize");
-
-    const reqLog = iface.encodeEventLog(iface.getEvent("WithdrawalRequested")!, [
-      alice,
-      1n,
-      rHash,
-      10_000n,
-      rHandle,
-    ]);
-    indexer.processLog({
-      topics: reqLog.topics,
-      data: reqLog.data,
-      blockNumber: 102,
-      blockTimestamp: 1_700_000_102,
-      transactionHash: "0xccc",
-    });
-
-    assert.ok(store.getPendingWithdrawalByUser(alice));
-
-    const finalLog = iface.encodeEventLog(iface.getEvent("WithdrawalFinalized")!, [
-      alice,
-      rHash,
-      10_000n,
-    ]);
-    indexer.processLog({
-      topics: finalLog.topics,
-      data: finalLog.data,
-      blockNumber: 103,
-      blockTimestamp: 1_700_000_103,
-      transactionHash: "0xddd",
-    });
-
-    assert.equal(store.getPendingWithdrawalByUser(alice), undefined);
-    const recorded = store.getPendingWithdrawalByHash(rHash);
-    assert.equal(recorded?.status, "FINALIZED");
-    assert.equal(store.getUserDeposit(alice), 10_000n);
-    assert.equal(store.getTotalAccountedBalance(), 10_000n);
-
-    indexer.processLog({
-      topics: finalLog.topics,
-      data: finalLog.data,
-      blockNumber: 103,
-      blockTimestamp: 1_700_000_103,
-      transactionHash: "0xddd",
-    });
-    assert.equal(store.getUserDeposit(alice), 10_000n);
-    assert.equal(store.getTotalAccountedBalance(), 10_000n);
+    assert.equal(store.getConfidentialWithdrawalCount(), 1n);
   });
 
-  test("should handle WithdrawalCancelled and transition state to CANCELLED", () => {
+  test("indexes confidential reserve funding idempotently", () => {
     const store = new IndexerStore();
     const indexer = new BlockchainIndexer(store);
+    const args = [alice, ethers.id("private-reserve")];
 
-    const rHash = ethers.id("request-cancel");
-    const rHandle = ethers.id("handle-cancel");
+    process(indexer, "PrizeReserveFunded", args, "0xreserve");
+    process(indexer, "PrizeReserveFunded", args, "0xreserve");
 
-    const reqLog = iface.encodeEventLog(iface.getEvent("WithdrawalRequested")!, [
-      alice,
-      2n,
-      rHash,
-      5_000n,
-      rHandle,
-    ]);
-    indexer.processLog({
-      topics: reqLog.topics,
-      data: reqLog.data,
-      blockNumber: 104,
-      blockTimestamp: 1_700_000_104,
-      transactionHash: "0xeee",
-    });
-
-    const cancelLog = iface.encodeEventLog(iface.getEvent("WithdrawalCancelled")!, [
-      alice,
-      rHash,
-    ]);
-    indexer.processLog({
-      topics: cancelLog.topics,
-      data: cancelLog.data,
-      blockNumber: 105,
-      blockTimestamp: 1_700_000_105,
-      transactionHash: "0xfff",
-    });
-
-    assert.equal(store.getPendingWithdrawalByUser(alice), undefined);
-    const recorded = store.getPendingWithdrawalByHash(rHash);
-    assert.equal(recorded?.status, "CANCELLED");
+    assert.equal(store.getPrizeReserveFundingCount(), 1n);
   });
 
-  test("should index DrawExecuted event", () => {
+  test("indexes the verified aggregate snapshot emitted by a draw", () => {
     const store = new IndexerStore();
     const indexer = new BlockchainIndexer(store);
+    const requestHash = ethers.id("draw-request");
+    const args = [1n, requestHash, 5_000n, 50_000n, 10_000n, 1_700_000_100, 10];
 
-    const log = iface.encodeEventLog(iface.getEvent("DrawExecuted")!, [
-      1n,
-      5_000n,
-      1700000000,
-      10,
-    ]);
-    indexer.processLog({
-      topics: log.topics,
-      data: log.data,
-      blockNumber: 106,
-      blockTimestamp: 1_700_000_106,
-      transactionHash: "0x111",
-    });
+    process(indexer, "DrawExecuted", args, "0xdraw");
+    process(indexer, "DrawExecuted", args, "0xdraw");
 
     assert.equal(store.getDrawCount(), 1);
-    const latest = store.getLatestDraw();
-    assert.equal(latest?.drawId, 1n);
-    assert.equal(latest?.prizeAmount, 5_000n);
-    assert.equal(store.getTotalAccountedBalance(), 5_000n);
-
-    indexer.processLog({
-      topics: log.topics,
-      data: log.data,
-      blockNumber: 106,
-      blockTimestamp: 1_700_000_106,
-      transactionHash: "0x111",
-    });
-    assert.equal(store.getDrawCount(), 1);
-    assert.equal(store.getTotalAccountedBalance(), 5_000n);
+    assert.equal(store.getLatestDraw()?.requestHash, requestHash);
+    assert.equal(store.getLatestDraw()?.remainingPrizeReserve, 10_000n);
+    assert.equal(store.getTotalAccountedBalance(), 55_000n);
   });
 });

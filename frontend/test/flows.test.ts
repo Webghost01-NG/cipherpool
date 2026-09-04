@@ -68,35 +68,23 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       walletConnected: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
-      walletBalance: "1000000",
       writesEnabled: true,
     });
     assert.ok(card);
     assert.equal(card.props.walletConnected, true);
   });
 
-  test("WithdrawalCard renders in-flight state when pending withdrawal exists", () => {
+  test("WithdrawalCard exposes a direct encrypted withdrawal action", () => {
     const cardPending = React.createElement(WithdrawalCard, {
-      pendingWithdrawal: {
-        hasPending: true,
-        requestHash: "0xhash123",
-        requestedAmount: "5000",
-        handle: "0xhandle456",
-        timestamp: Date.now(),
-        status: "PENDING",
-      },
-      onRequestWithdrawal: async () => {},
-      onFinalizeWithdrawal: async () => {},
-      onCancelWithdrawal: async () => {},
+      onWithdraw: async () => {},
       isLoading: false,
       walletConnected: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
-      cancellationDelaySeconds: 86400,
       writesEnabled: true,
     });
     assert.ok(cardPending);
-    assert.equal(cardPending.props.pendingWithdrawal.hasPending, true);
+    assert.equal(typeof cardPending.props.onWithdraw, "function");
   });
 
   test("LotteryDrawCard displays prize and executes round draw", () => {

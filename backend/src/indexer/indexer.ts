@@ -3,27 +3,21 @@ import { IndexerStore } from "./store.js";
 import { Logger } from "../utils/logger.js";
 
 const POOL_EVENTS_ABI = [
-  "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
-  "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
-  "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
-  "event WithdrawalCancelled(address indexed user, bytes32 indexed requestHash)",
-  "event DrawExecuted(uint256 indexed drawId, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
+  "event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
+  "event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
+  "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
+  "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
 ];
 
 export class BlockchainIndexer {
   private iface: Interface;
   public store: IndexerStore;
   private logger: Logger;
-  private onWithdrawalRequestedCallback?: (hash: string) => void;
 
   constructor(store: IndexerStore = new IndexerStore()) {
     this.iface = new Interface(POOL_EVENTS_ABI);
     this.store = store;
     this.logger = new Logger("BlockchainIndexer");
-  }
-
-  public setOnWithdrawalRequested(cb: (hash: string) => void) {
-    this.onWithdrawalRequestedCallback = cb;
   }
 
   public processLog(log: {
@@ -46,61 +40,41 @@ export class BlockchainIndexer {
           this.store.addDeposit({
             user: parsed.args.user,
             nonce: BigInt(parsed.args.nonce),
-            plainAmount: BigInt(parsed.args.plainAmount),
-            inputHandle: parsed.args.inputHandle,
+            encryptedAmountHandle: parsed.args.encryptedAmountHandle,
             blockNumber: log.blockNumber,
             transactionHash: log.transactionHash,
           });
-          this.logger.info("Indexed Deposited event", { user: parsed.args.user, amount: parsed.args.plainAmount.toString() });
+          this.logger.info("Indexed confidential deposit", { user: parsed.args.user });
           break;
         }
-        case "WithdrawalRequested": {
-          if (!Number.isSafeInteger(log.blockTimestamp) || log.blockTimestamp <= 0) {
-            throw new Error("Withdrawal request log is missing a valid block timestamp");
-          }
-          const req = {
+        case "Withdrawn": {
+          this.store.addConfidentialWithdrawal({
             user: parsed.args.user,
             nonce: BigInt(parsed.args.nonce),
-            requestHash: parsed.args.requestHash,
-            requestedAmount: BigInt(parsed.args.requestedAmount),
-            handle: parsed.args.handle,
-            blockNumber: log.blockNumber,
-            transactionHash: log.transactionHash,
-            timestamp: log.blockTimestamp,
-            status: "PENDING" as const,
-          };
-          this.store.addWithdrawalRequest(req);
-          this.logger.info("Indexed WithdrawalRequested event", { user: req.user, hash: req.requestHash });
-          if (this.onWithdrawalRequestedCallback) {
-            this.onWithdrawalRequestedCallback(req.requestHash);
-          }
-          break;
-        }
-        case "WithdrawalFinalized": {
-          this.store.finalizeWithdrawal({
-            user: parsed.args.user,
-            requestHash: parsed.args.requestHash,
-            cleartextAmount: BigInt(parsed.args.cleartextAmount),
+            encryptedAmountHandle: parsed.args.encryptedAmountHandle,
             blockNumber: log.blockNumber,
             transactionHash: log.transactionHash,
           });
-          this.logger.info("Indexed WithdrawalFinalized event", { user: parsed.args.user, hash: parsed.args.requestHash });
+          this.logger.info("Indexed confidential withdrawal", { user: parsed.args.user });
           break;
         }
-        case "WithdrawalCancelled": {
-          this.store.cancelWithdrawal({
-            user: parsed.args.user,
-            requestHash: parsed.args.requestHash,
+        case "PrizeReserveFunded": {
+          this.store.addPrizeReserveFunding({
+            source: parsed.args.source,
+            encryptedAmountHandle: parsed.args.encryptedAmountHandle,
             blockNumber: log.blockNumber,
             transactionHash: log.transactionHash,
           });
-          this.logger.info("Indexed WithdrawalCancelled event", { user: parsed.args.user, hash: parsed.args.requestHash });
+          this.logger.info("Indexed confidential prize reserve funding", { source: parsed.args.source });
           break;
         }
         case "DrawExecuted": {
           this.store.addDraw({
             drawId: BigInt(parsed.args.drawId),
+            requestHash: parsed.args.requestHash,
             prizeAmount: BigInt(parsed.args.prizeAmount),
+            totalWeight: BigInt(parsed.args.totalWeight),
+            remainingPrizeReserve: BigInt(parsed.args.remainingPrizeReserve),
             timestamp: Number(parsed.args.timestamp),
             participantCount: Number(parsed.args.participantCount),
             blockNumber: log.blockNumber,

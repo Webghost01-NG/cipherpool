@@ -1,5 +1,7 @@
 # CipherPool Protocol — Final Security Audit & Verification Report
 
+> **Archived design:** This report predates the ERC-7984 custody migration and is not a current security attestation. Use the active tests and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md) as current evidence.
+
 **Protocol Name:** CipherPool (Confidential Prize Savings Protocol)  
 **Target Platform:** Zama fhEVM v0.13.3 (Ethereum Sepolia Testnet)  
 **Date:** September 2026  

@@ -21,11 +21,9 @@ const envSchema = z.object({
   POOL_RUNTIME_CODE_HASH: z
     .string()
     .regex(/^0x[a-fA-F0-9]{64}$/, "Must be a valid bytes32 code hash"),
-  RELAYER_URL: z.string().url().optional(),
   INDEXER_START_BLOCK: z.coerce.number().int().nonnegative(),
   INDEXER_BLOCK_BATCH_SIZE: z.coerce.number().int().positive().max(5000).default(500),
   POLL_INTERVAL_MS: z.coerce.number().default(3000),
-  MAX_RETRIES: z.coerce.number().default(5),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

@@ -58,8 +58,6 @@ export const App: React.FC = () => {
     asset,
     isBalanceRevealed,
     revealedBalance,
-    pendingWithdrawal,
-    cancellationDelaySeconds,
     isLoading,
     backendStatus,
     dataError,
@@ -69,9 +67,7 @@ export const App: React.FC = () => {
     writesEnabled,
     isOwner,
     deposit,
-    requestWithdrawal,
-    finalizeWithdrawal,
-    cancelWithdrawal,
+    withdraw,
     revealBalance,
     hideBalance,
     drawLottery,
@@ -94,6 +90,7 @@ export const App: React.FC = () => {
       setBroadcasting(hash);
       setMining();
     },
+    onProofRequested: (requestHash) => setWaitingKms(requestHash),
   };
 
   const runAction = async (
@@ -138,7 +135,7 @@ export const App: React.FC = () => {
             <p className="eyebrow"><span className="signal-pulse" aria-hidden="true" /> Confidential savings console</p>
             <h1 id="console-title">Your position stays <em>private.</em></h1>
             <p className="console-intro__description">
-              Deposit testnet USDC, enter verifiable prize rounds, and withdraw through threshold decryption—without publishing your balance or ticket weight.
+              Deposit confidential cUSDC, enter verifiable prize rounds, and withdraw without publishing amounts, balances, or ticket weight.
             </p>
             <div className="console-intro__proofs" aria-label="Privacy guarantees">
               <span><ShieldCheck size={15} /> Encrypted accounting</span>
@@ -189,7 +186,7 @@ export const App: React.FC = () => {
             <div className="callout callout--alert" role="alert">
               <ShieldCheck size={18} />
               <span>
-                The operational safety switch is off. New deposits, withdrawal requests, and draws are disabled; active and archived withdrawal exits remain available.
+                The operational safety switch is off. New confidential deposits, withdrawals, and draws are disabled; archived withdrawal exits remain available.
               </span>
             </div>
           )}
@@ -231,8 +228,8 @@ export const App: React.FC = () => {
           </div>
 
           <div className="metrics-grid" aria-label="Live pool metrics">
-            <StatBox label="Accounted balances" value={totalDeposits + " " + asset.symbol} subtext="Principal + awarded prizes" status={metricFreshness.totalDeposits} />
-            <StatBox label="Available yield" value={availableYield + " " + asset.symbol} subtext="After reserved liabilities" status={metricFreshness.availableYield} />
+            <StatBox label="Verified pool snapshot" value={totalDeposits + " " + asset.symbol} subtext="Aggregate only; individual positions stay encrypted" status={metricFreshness.totalDeposits} />
+            <StatBox label="Verified prize reserve" value={availableYield + " " + asset.symbol} subtext="Last KMS-verified draw snapshot" status={metricFreshness.availableYield} />
             <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" status={metricFreshness.participantCount} />
             <StatBox
               label="Confirmed rounds"
@@ -276,41 +273,20 @@ export const App: React.FC = () => {
                 walletConnected={walletReady && !poolStats.isPaused}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
-                walletBalance={asset.walletBalance}
                 writesEnabled={writesEnabled}
               />
               <WithdrawalCard
-                pendingWithdrawal={pendingWithdrawal}
-                onRequestWithdrawal={(amount) =>
+                onWithdraw={(amount) =>
                   runAction(
-                    "Private withdrawal request",
-                    async () => {
-                      const result = await requestWithdrawal(amount, transactionCallbacks);
-                      setWaitingKms(result.requestHash || result.txHash);
-                      return result;
-                    },
-                    "Request confirmed. Generate the threshold proof to finalize settlement."
-                  )
-                }
-                onFinalizeWithdrawal={() =>
-                  runAction(
-                    "Finalize withdrawal",
-                    () => finalizeWithdrawal(transactionCallbacks),
-                    "KMS proof verified and withdrawal finalized on-chain."
-                  )
-                }
-                onCancelWithdrawal={() =>
-                  runAction(
-                    "Cancel stale withdrawal",
-                    () => cancelWithdrawal(transactionCallbacks),
-                    "Stale withdrawal request cancelled on-chain."
+                    "Encrypted withdrawal",
+                    () => withdraw(amount, transactionCallbacks),
+                    "Confidential cUSDC withdrawal confirmed on Ethereum Sepolia."
                   )
                 }
                 isLoading={isLoading}
                 walletConnected={walletReady && !poolStats.isPaused}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
-                cancellationDelaySeconds={cancellationDelaySeconds}
                 writesEnabled={writesEnabled}
               />
             </section>
@@ -359,7 +335,7 @@ export const App: React.FC = () => {
           <div className="tab-stage">
             <div className="section-heading">
               <div><p className="eyebrow">Prize operations</p><h2>Confidential rounds</h2></div>
-              <p>Only the pool owner can execute a draw. Prize capacity is read directly from reserved on-chain yield.</p>
+              <p>Only the pool owner can execute a draw. KMS verifies aggregate weight and reserve without revealing any individual position.</p>
             </div>
             <section className="workspace" aria-label="Prize round">
               <LotteryDrawCard

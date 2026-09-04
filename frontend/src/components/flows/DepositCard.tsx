@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { ArrowDown, ExternalLink, Info } from "lucide-react";
 import { parseUnits } from "ethers";
 import { Badge, Button, Card } from "../common/UIPrimitives.js";
-import { formatTokenAmount } from "../../utils/format.js";
 
 export interface DepositCardProps {
   onDeposit: (amount: bigint) => Promise<void>;
@@ -10,7 +9,6 @@ export interface DepositCardProps {
   walletConnected: boolean;
   tokenSymbol: string;
   tokenDecimals: number;
-  walletBalance: string;
   writesEnabled: boolean;
 }
 
@@ -20,7 +18,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({
   walletConnected,
   tokenSymbol,
   tokenDecimals,
-  walletBalance,
   writesEnabled,
 }) => {
   const [amount, setAmount] = useState("");
@@ -31,7 +28,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({
       const value = parseUnits(amount, tokenDecimals);
       if (value <= 0n) throw new Error("Enter an amount greater than zero.");
       if (value >= 2n ** 64n) throw new Error("Amount exceeds the protocol limit.");
-      if (value > BigInt(walletBalance)) throw new Error("Amount exceeds your wallet balance.");
       setValidationError(null);
       return value;
     } catch (error) {
@@ -46,27 +42,19 @@ export const DepositCard: React.FC<DepositCardProps> = ({
     if (value) await onDeposit(value);
   };
 
-  const handleMax = () => {
-    setAmount(formatTokenAmount(walletBalance, tokenDecimals, tokenDecimals));
-    setValidationError(null);
-  };
-
   return (
     <Card
       eyebrow="Step 01"
       title="Fund your private position"
-      subtitle="The deposit is public, while your running pool balance remains encrypted."
-      headerAction={<Badge variant="success">Encrypted balance</Badge>}
+      subtitle="The amount transfers as cUSDC and remains encrypted in calldata, events, and pool accounting."
+      headerAction={<Badge variant="success">Encrypted end-to-end</Badge>}
     >
       <form className="form-stack" onSubmit={handleSubmit}>
         <label className="field" htmlFor="deposit-amount-input">
           <span className="field__label">
             <span>Amount</span>
             <span>
-              Wallet: {walletConnected ? formatTokenAmount(walletBalance, tokenDecimals) : "—"} {tokenSymbol}
-              {walletConnected && BigInt(walletBalance) > 0n && (
-                <button className="button button--ghost" type="button" onClick={handleMax}>Max</button>
-              )}
+              Wallet balance is private
             </span>
           </span>
           <span className="input-shell">
@@ -87,13 +75,13 @@ export const DepositCard: React.FC<DepositCardProps> = ({
         {validationError && <p id="deposit-error" role="alert" className="badge badge--error">{validationError}</p>}
         <div className="callout" id="deposit-help">
           <Info size={17} aria-hidden="true" />
-          <span>One wallet approval may be required before the deposit transaction. Wait for both transactions to confirm.</span>
+          <span>The amount is encrypted for the official cUSDC contract before your wallet submits one transfer-and-deposit transaction.</span>
         </div>
         <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !amount} isLoading={isLoading}>
           <ArrowDown size={17} /> {!writesEnabled ? "Deposits safety-locked" : walletConnected ? "Deposit" : "Connect wallet to deposit"}
         </Button>
-        <a className="helper-link" href="https://faucet.circle.com/" target="_blank" rel="noreferrer">
-          Get Sepolia test USDC <ExternalLink size={12} />
+        <a className="helper-link" href="https://app.zama.org/" target="_blank" rel="noreferrer">
+          Shield test tokens to cUSDC <ExternalLink size={12} />
         </a>
       </form>
     </Card>

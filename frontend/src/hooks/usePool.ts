@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ethers } from "ethers";
 import { useWallet } from "./useWallet.js";
-import { getBrowserFhevmInstance } from "../../../client/src/adapters/InputEncryption.js";
-import { POOL_ABI, ERC20_ABI } from "../contracts/abi.js";
+import { getBrowserFhevmInstance, InputEncryptionAdapter } from "../../../client/src/adapters/InputEncryption.js";
+import { ERC7984_ABI, POOL_ABI } from "../contracts/abi.js";
 import {
   DEFAULT_BACKEND_URL,
+  DEFAULT_CONFIDENTIAL_ASSET_ADDRESS,
   DEFAULT_POOL_ADDRESS,
-  DEFAULT_USDC_ADDRESS,
   runtimeConfig,
 } from "../contracts/config.js";
 import { validateDeploymentEvidence } from "../contracts/deployment.js";
@@ -29,6 +29,7 @@ export interface AssetMetadata {
   isLoaded: boolean;
 }
 
+/** Archived-pool compatibility type used by the legacy exit card. */
 export interface PendingWithdrawal {
   hasPending: boolean;
   requestHash: string;
@@ -40,6 +41,7 @@ export interface PendingWithdrawal {
 
 export interface TransactionCallbacks {
   onBroadcast?: (hash: string) => void;
+  onProofRequested?: (requestHash: string) => void;
 }
 
 export interface DeploymentVerification {
@@ -48,22 +50,12 @@ export interface DeploymentVerification {
 }
 
 export type MetricFreshness = "loading" | "fresh" | "stale" | "unavailable";
-
 export interface PoolMetricFreshness {
   totalDeposits: MetricFreshness;
   availableYield: MetricFreshness;
   totalDraws: MetricFreshness;
   participantCount: MetricFreshness;
 }
-
-const emptyWithdrawal: PendingWithdrawal = {
-  hasPending: false,
-  requestHash: "",
-  requestedAmount: "0",
-  handle: "",
-  timestamp: 0,
-  status: "FINALIZED",
-};
 
 const initialMetricFreshness: PoolMetricFreshness = {
   totalDeposits: "loading",
@@ -72,13 +64,17 @@ const initialMetricFreshness: PoolMetricFreshness = {
   participantCount: "loading",
 };
 
-const markMetricUnavailable = (current: MetricFreshness): MetricFreshness => (
-  current === "fresh" || current === "stale" ? "stale" : "unavailable"
-);
+const DEPOSIT_ACTION = ethers.id("CIPHERPOOL_DEPOSIT_V1");
 
 function ensureReceipt(receipt: ethers.ContractTransactionReceipt | null): ethers.ContractTransactionReceipt {
   if (!receipt || receipt.status !== 1) throw new Error("Transaction was not confirmed on-chain.");
   return receipt;
+}
+
+function readClearValue(clearValues: Record<string, bigint>, handle: string): bigint {
+  const value = Object.entries(clearValues).find(([key]) => key.toLowerCase() === handle.toLowerCase())?.[1];
+  if (typeof value !== "bigint") throw new Error("Zama KMS returned an invalid aggregate value.");
+  return value;
 }
 
 export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
@@ -93,7 +89,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     owner: "",
   });
   const [asset, setAsset] = useState<AssetMetadata>({
-    address: DEFAULT_USDC_ADDRESS,
+    address: DEFAULT_CONFIDENTIAL_ASSET_ADDRESS,
     symbol: runtimeConfig.tokenSymbol,
     decimals: Math.max(runtimeConfig.tokenDecimals, 0),
     walletBalance: "0",
@@ -101,8 +97,6 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   });
   const [isBalanceRevealed, setIsBalanceRevealed] = useState(false);
   const [revealedBalance, setRevealedBalance] = useState<string | null>(null);
-  const [pendingWithdrawal, setPendingWithdrawal] = useState<PendingWithdrawal>(emptyWithdrawal);
-  const [cancellationDelaySeconds, setCancellationDelaySeconds] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
   const [dataError, setDataError] = useState<string | null>(null);
@@ -113,98 +107,50 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     message: "Connect a Sepolia wallet to verify the active deployment.",
   });
 
-  const withdrawalStorageKey = useCallback((userAddress: string) => (
-    "cipherpool_withdrawal_" + contractAddress.toLowerCase() + "_" + userAddress.toLowerCase()
-  ), [contractAddress]);
-
-  const persistWithdrawal = useCallback((withdrawal: PendingWithdrawal) => {
-    setPendingWithdrawal(withdrawal);
-    if (!address) return;
-    const key = withdrawalStorageKey(address);
-    try {
-      if (withdrawal.hasPending && withdrawal.status === "PENDING") {
-        localStorage.setItem(key, JSON.stringify(withdrawal));
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch {
-      // Local storage is an optional cache; chain state remains authoritative.
-    }
-  }, [address, withdrawalStorageKey]);
-
   useEffect(() => {
     if (!address) {
-      setPendingWithdrawal(emptyWithdrawal);
       setRevealedBalance(null);
       setIsBalanceRevealed(false);
-      return;
     }
-    try {
-      const saved = localStorage.getItem(withdrawalStorageKey(address));
-      if (saved) {
-        const parsed = JSON.parse(saved) as PendingWithdrawal;
-        if (parsed.status === "PENDING") setPendingWithdrawal(parsed);
-      }
-    } catch {
-      setPendingWithdrawal(emptyWithdrawal);
-    }
-  }, [address, withdrawalStorageKey]);
+  }, [address]);
 
   const refreshPoolData = useCallback(async () => {
     if (!contractAddress || !DEFAULT_BACKEND_URL) {
       setDataError("Protocol environment variables are incomplete.");
       setBackendStatus("offline");
-      setDeploymentVerification({ status: "failed", message: "Deployment configuration is incomplete." });
-      setMetricFreshness((current) => ({
-        totalDeposits: markMetricUnavailable(current.totalDeposits),
-        availableYield: markMetricUnavailable(current.availableYield),
-        totalDraws: markMetricUnavailable(current.totalDraws),
-        participantCount: markMetricUnavailable(current.participantCount),
-      }));
       return;
     }
 
-    let backendRequestFailed = false;
     try {
       const response = await fetch(DEFAULT_BACKEND_URL + "/api/v1/pool/state");
       if (!response.ok) throw new Error("Backend returned HTTP " + response.status);
       const data = await response.json() as {
-        totalDeposits?: string;
-        totalAccountedBalance?: string;
+        lastVerifiedTotalAccountedBalance?: string;
         totalDraws?: number;
+        latestDraw?: { remainingPrizeReserve?: string } | null;
       };
-      const totalAccountedBalance = data.totalAccountedBalance ?? data.totalDeposits;
-      const totalDraws = data.totalDraws;
-      if (!totalAccountedBalance || !/^\d+$/.test(totalAccountedBalance)) {
-        throw new Error("Backend returned an invalid accounted balance.");
-      }
-      if (typeof totalDraws !== "number" || !Number.isSafeInteger(totalDraws) || totalDraws < 0) {
-        throw new Error("Backend returned an invalid draw count.");
-      }
+      if (typeof data.totalDraws !== "number" || !Number.isSafeInteger(data.totalDraws)) throw new Error("Invalid draw count.");
       setBackendStatus("online");
       setPoolStats((current) => ({
         ...current,
-        totalDeposits: totalAccountedBalance,
-        totalDraws,
+        totalDeposits: data.lastVerifiedTotalAccountedBalance ?? current.totalDeposits,
+        availableYield: data.latestDraw?.remainingPrizeReserve ?? current.availableYield,
+        totalDraws: data.totalDraws!,
+      }));
+      setMetricFreshness((current) => ({
+        ...current,
+        totalDeposits: data.latestDraw ? "stale" : "unavailable",
+        availableYield: data.latestDraw ? "stale" : "unavailable",
+        totalDraws: "fresh",
       }));
     } catch {
-      backendRequestFailed = true;
       setBackendStatus("offline");
     }
 
     if (!window.ethereum || status === "wrong_network") {
-      setMetricFreshness((current) => ({
-        totalDeposits: backendRequestFailed ? markMetricUnavailable(current.totalDeposits) : "fresh",
-        availableYield: markMetricUnavailable(current.availableYield),
-        totalDraws: backendRequestFailed ? markMetricUnavailable(current.totalDraws) : "fresh",
-        participantCount: markMetricUnavailable(current.participantCount),
-      }));
-      setDataError(backendRequestFailed ? "Live protocol data is temporarily unavailable." : null);
       setDeploymentVerification({
         status: "pending",
-        message: status === "wrong_network"
-          ? "Switch the connected wallet to Ethereum Sepolia."
-          : "Connect a Sepolia wallet to verify the active deployment.",
+        message: status === "wrong_network" ? "Switch the connected wallet to Ethereum Sepolia." : "Connect a Sepolia wallet to verify the active deployment.",
       });
       setLastUpdatedAt(Date.now());
       return;
@@ -213,36 +159,24 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
-      const [
-        network,
-        poolCode,
-        totalAccountedBalance,
-        totalDraws,
-        participantCount,
-        paused,
-        owner,
-        custodyAddress,
-        cancellationDelay,
-      ] = await Promise.all([
+      const [network, poolCode, total, reserve, verifiedAt, totalDraws, participantCount, paused, owner, custodyAddress] = await Promise.all([
         provider.getNetwork(),
         provider.getCode(contractAddress),
-        pool.totalAccountedBalancePlain() as Promise<bigint>,
+        pool.lastVerifiedTotalAccountedBalance() as Promise<bigint>,
+        pool.lastVerifiedPrizeReserve() as Promise<bigint>,
+        pool.lastDrawVerificationTimestamp() as Promise<bigint>,
         pool.currentDrawId() as Promise<bigint>,
         pool.getParticipantCount() as Promise<bigint>,
         pool.paused() as Promise<boolean>,
         pool.owner() as Promise<string>,
         pool.custodyAsset() as Promise<string>,
-        pool.cancellationDelay() as Promise<bigint>,
       ]);
-
-      const token = new ethers.Contract(custodyAddress, ERC20_ABI, provider);
-      const [decimals, symbol, custodyBalance, walletBalance] = await Promise.all([
+      const token = new ethers.Contract(custodyAddress, ERC7984_ABI, provider);
+      const [decimals, symbol, aggregateHandle] = await Promise.all([
         token.decimals() as Promise<bigint>,
         token.symbol() as Promise<string>,
-        token.balanceOf(contractAddress) as Promise<bigint>,
-        address ? token.balanceOf(address) as Promise<bigint> : Promise.resolve(0n),
+        pool.getTotalAccountedBalanceHandle() as Promise<string>,
       ]);
-      const availableYield = await pool.availableYieldPlain() as bigint;
       const verificationErrors = validateDeploymentEvidence(
         {
           chainId: runtimeConfig.chainId,
@@ -259,57 +193,29 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
           custodyAssetAddress: custodyAddress,
           tokenSymbol: symbol,
           tokenDecimals: Number(decimals),
-          supportsCorrectedAccounting: typeof totalAccountedBalance === "bigint",
+          supportsConfidentialAccounting: /^0x[a-fA-F0-9]{64}$/.test(aggregateHandle),
         }
       );
-      if (verificationErrors.length > 0) {
-        throw new Error("Deployment verification failed: " + verificationErrors.join("; ") + ".");
-      }
-      setDeploymentVerification({
-        status: "verified",
-        message: "Active Sepolia bytecode and custody metadata verified.",
-      });
+      if (verificationErrors.length > 0) throw new Error("Deployment verification failed: " + verificationErrors.join("; ") + ".");
 
+      const hasSnapshot = verifiedAt > 0n;
+      setDeploymentVerification({ status: "verified", message: "Active Sepolia bytecode and ERC-7984 custody verified." });
       setPoolStats({
-        totalDeposits: totalAccountedBalance.toString(),
-        availableYield: availableYield.toString(),
-        custodyBalance: custodyBalance.toString(),
+        totalDeposits: total.toString(),
+        availableYield: reserve.toString(),
+        custodyBalance: "0",
         totalDraws: Number(totalDraws),
         participantCount: Number(participantCount),
         isPaused: paused,
         owner,
       });
       setMetricFreshness({
-        totalDeposits: "fresh",
-        availableYield: "fresh",
+        totalDeposits: hasSnapshot ? "stale" : "unavailable",
+        availableYield: hasSnapshot ? "stale" : "unavailable",
         totalDraws: "fresh",
         participantCount: "fresh",
       });
-      setAsset({
-        address: custodyAddress,
-        symbol,
-        decimals: Number(decimals),
-        walletBalance: walletBalance.toString(),
-        isLoaded: true,
-      });
-      setCancellationDelaySeconds(Number(cancellationDelay));
-
-      if (address) {
-        const pending = await pool.getPendingWithdrawal(address);
-        if (pending.active) {
-          persistWithdrawal({
-            hasPending: true,
-            requestHash: pending.requestHash,
-            requestedAmount: pending.requestedAmount.toString(),
-            handle: pending.handle,
-            timestamp: Number(pending.timestamp) * 1000,
-            status: "PENDING",
-          });
-        } else {
-          persistWithdrawal(emptyWithdrawal);
-        }
-      }
-
+      setAsset({ address: custodyAddress, symbol, decimals: Number(decimals), walletBalance: "0", isLoaded: true });
       setDataError(null);
       setLastUpdatedAt(Date.now());
     } catch (error) {
@@ -317,14 +223,8 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setDeploymentVerification({ status: "failed", message });
       setDataError(message);
       setLastUpdatedAt(Date.now());
-      setMetricFreshness((current) => ({
-        totalDeposits: backendRequestFailed ? markMetricUnavailable(current.totalDeposits) : "fresh",
-        availableYield: markMetricUnavailable(current.availableYield),
-        totalDraws: backendRequestFailed ? markMetricUnavailable(current.totalDraws) : "fresh",
-        participantCount: markMetricUnavailable(current.participantCount),
-      }));
     }
-  }, [address, contractAddress, persistWithdrawal, status]);
+  }, [contractAddress, status]);
 
   useEffect(() => {
     void refreshPoolData();
@@ -334,30 +234,19 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
 
   const requireVerifiedWrites = useCallback(() => {
     if (!runtimeConfig.protocolWritesEnabled) throw new Error("Protocol writes are disabled by the safety switch.");
-    if (deploymentVerification.status !== "verified") {
-      throw new Error("Protocol writes require verified Sepolia bytecode and custody metadata.");
-    }
+    if (deploymentVerification.status !== "verified") throw new Error("Protocol writes require verified Sepolia bytecode and ERC-7984 custody.");
   }, [deploymentVerification.status]);
 
   const deposit = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
-    if (!asset.isLoaded) throw new Error("Custody asset metadata is still loading.");
     requireVerifiedWrites();
     setIsLoading(true);
     try {
+      const encrypted = await new InputEncryptionAdapter(asset.address, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, signer);
-      const token = new ethers.Contract(asset.address, ERC20_ABI, signer);
-      const allowance = await token.allowance(address, contractAddress) as bigint;
-
-      if (allowance < amount) {
-        const approval = await token.approve(contractAddress, amount);
-        callbacks.onBroadcast?.(approval.hash);
-        ensureReceipt(await approval.wait());
-      }
-
-      const transaction = await pool.deposit(amount);
+      const token = new ethers.Contract(asset.address, ERC7984_ABI, await provider.getSigner());
+      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [DEPOSIT_ACTION]);
+      const transaction = await token.confidentialTransferAndCall(contractAddress, encrypted.handle, encrypted.inputProof, actionData);
       callbacks.onBroadcast?.(transaction.hash);
       const receipt = ensureReceipt(await transaction.wait());
       await refreshPoolData();
@@ -365,81 +254,25 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     } finally {
       setIsLoading(false);
     }
-  }, [address, asset, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
+  }, [address, asset.address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
 
-  const requestWithdrawal = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
+  const withdraw = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
     requireVerifiedWrites();
     setIsLoading(true);
     try {
+      const encrypted = await new InputEncryptionAdapter(contractAddress, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, signer);
-      const transaction = await pool.requestWithdrawal(amount);
+      const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
+      const transaction = await pool.withdraw(encrypted.handle, encrypted.inputProof);
       callbacks.onBroadcast?.(transaction.hash);
       const receipt = ensureReceipt(await transaction.wait());
-      const pending = await pool.getPendingWithdrawal(address);
-      const withdrawal: PendingWithdrawal = {
-        hasPending: true,
-        requestHash: pending.requestHash,
-        requestedAmount: pending.requestedAmount.toString(),
-        handle: pending.handle,
-        timestamp: Number(pending.timestamp) * 1000,
-        status: "PENDING",
-      };
-      persistWithdrawal(withdrawal);
-      return { txHash: receipt.hash, requestHash: withdrawal.requestHash };
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, contractAddress, persistWithdrawal, requireVerifiedWrites, status]);
-
-  const finalizeWithdrawal = useCallback(async (callbacks: TransactionCallbacks = {}) => {
-    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the requesting wallet first.");
-    if (!pendingWithdrawal.hasPending) throw new Error("No active withdrawal request was found.");
-    setIsLoading(true);
-    try {
-      const instance = await getBrowserFhevmInstance();
-      const result = await instance.publicDecrypt([pendingWithdrawal.handle]);
-      const clearValue = Object.entries(result.clearValues).find(
-        ([handle]) => handle.toLowerCase() === pendingWithdrawal.handle.toLowerCase()
-      )?.[1];
-      if (typeof clearValue !== "bigint") throw new Error("KMS returned an invalid withdrawal clear value.");
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, signer);
-      const transaction = await pool.finalizeWithdrawal(clearValue, result.decryptionProof);
-      callbacks.onBroadcast?.(transaction.hash);
-      const receipt = ensureReceipt(await transaction.wait());
-      persistWithdrawal(emptyWithdrawal);
       await refreshPoolData();
       return { txHash: receipt.hash };
     } finally {
       setIsLoading(false);
     }
-  }, [address, contractAddress, pendingWithdrawal, persistWithdrawal, refreshPoolData, status]);
-
-  const cancelWithdrawal = useCallback(async (callbacks: TransactionCallbacks = {}) => {
-    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the requesting wallet first.");
-    if (Date.now() <= pendingWithdrawal.timestamp + cancellationDelaySeconds * 1000) {
-      throw new Error("The withdrawal cancellation delay has not elapsed.");
-    }
-    setIsLoading(true);
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, signer);
-      const transaction = await pool.cancelWithdrawal();
-      callbacks.onBroadcast?.(transaction.hash);
-      const receipt = ensureReceipt(await transaction.wait());
-      persistWithdrawal({ ...emptyWithdrawal, status: "CANCELLED" });
-      await refreshPoolData();
-      return { txHash: receipt.hash };
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, cancellationDelaySeconds, contractAddress, pendingWithdrawal.timestamp, persistWithdrawal, refreshPoolData, status]);
+  }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
 
   const revealBalance = useCallback(async () => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
@@ -447,34 +280,22 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
-      const handle = await pool.getBalanceHandle(address) as string;
+      const handle = await new ethers.Contract(contractAddress, POOL_ABI, provider).getBalanceHandle(address) as string;
       if (handle === ethers.ZeroHash) {
         setRevealedBalance("0");
         setIsBalanceRevealed(true);
         return;
       }
-
       const instance = await getBrowserFhevmInstance();
       const keypair = instance.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
       const durationDays = 1;
       const contractAddresses = [contractAddress];
       const typedData = instance.createEIP712(keypair.publicKey, contractAddresses, startTimestamp, durationDays);
-      const signature = await signer.signTypedData(
-        typedData.domain,
-        { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification },
-        typedData.message
-      );
+      const signature = await signer.signTypedData(typedData.domain, { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification }, typedData.message);
       const result = await instance.userDecrypt(
-        [{ handle, contractAddress }],
-        keypair.privateKey,
-        keypair.publicKey,
-        signature,
-        contractAddresses,
-        address,
-        startTimestamp,
-        durationDays
+        [{ handle, contractAddress }], keypair.privateKey, keypair.publicKey, signature,
+        contractAddresses, address, startTimestamp, durationDays
       );
       const clearValue = result[handle];
       if (typeof clearValue !== "bigint") throw new Error("KMS returned an invalid balance value.");
@@ -485,58 +306,55 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     }
   }, [address, contractAddress, status]);
 
-  const hideBalance = useCallback(() => {
-    setIsBalanceRevealed(false);
-    setRevealedBalance(null);
-  }, []);
-
   const drawLottery = useCallback(async (prizeAmount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the owner wallet first.");
     requireVerifiedWrites();
     if (address.toLowerCase() !== poolStats.owner.toLowerCase()) throw new Error("Only the pool owner can execute a draw.");
-    if (prizeAmount > BigInt(poolStats.availableYield)) throw new Error("Prize exceeds verified available yield.");
     setIsLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, signer);
-      const transaction = await pool.draw(prizeAmount);
-      callbacks.onBroadcast?.(transaction.hash);
-      const receipt = ensureReceipt(await transaction.wait());
+      const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
+      const requestTx = await pool.requestDraw(prizeAmount);
+      callbacks.onBroadcast?.(requestTx.hash);
+      ensureReceipt(await requestTx.wait());
+      const pending = await pool.getPendingDraw();
+      callbacks.onProofRequested?.(pending.requestHash);
+      const result = await (await getBrowserFhevmInstance()).publicDecrypt([pending.totalHandle, pending.reserveHandle]);
+      const total = readClearValue(result.clearValues, pending.totalHandle);
+      const reserve = readClearValue(result.clearValues, pending.reserveHandle);
+      if (prizeAmount > reserve) throw new Error("Prize exceeds the KMS-verified confidential reserve.");
+      const finalizeTx = await pool.finalizeDraw(total, reserve, result.decryptionProof);
+      callbacks.onBroadcast?.(finalizeTx.hash);
+      const receipt = ensureReceipt(await finalizeTx.wait());
       await refreshPoolData();
       return { txHash: receipt.hash };
     } finally {
       setIsLoading(false);
     }
-  }, [address, contractAddress, poolStats.availableYield, poolStats.owner, refreshPoolData, requireVerifiedWrites, status]);
+  }, [address, contractAddress, poolStats.owner, refreshPoolData, requireVerifiedWrites, status]);
 
   const isOwner = useMemo(
     () => Boolean(address && poolStats.owner && address.toLowerCase() === poolStats.owner.toLowerCase()),
     [address, poolStats.owner]
   );
-  const writesEnabled = runtimeConfig.protocolWritesEnabled && deploymentVerification.status === "verified";
 
   return {
     poolStats,
     asset,
     isBalanceRevealed,
     revealedBalance,
-    pendingWithdrawal,
-    cancellationDelaySeconds,
     isLoading,
     backendStatus,
     dataError,
     lastUpdatedAt,
     metricFreshness,
     deploymentVerification,
-    writesEnabled,
+    writesEnabled: runtimeConfig.protocolWritesEnabled && deploymentVerification.status === "verified",
     isOwner,
     deposit,
-    requestWithdrawal,
-    finalizeWithdrawal,
-    cancelWithdrawal,
+    withdraw,
     revealBalance,
-    hideBalance,
+    hideBalance: () => { setIsBalanceRevealed(false); setRevealedBalance(null); },
     drawLottery,
     refreshPoolData,
   };

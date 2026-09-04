@@ -45,10 +45,8 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   const handleDraw = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      if (availableYieldStatus !== "fresh") throw new Error("Wait for fresh available-yield data before drawing.");
       const value = parseUnits(drawPrize, tokenDecimals);
       if (value <= 0n) throw new Error("Enter a prize greater than zero.");
-      if (value > BigInt(availableYield)) throw new Error("Prize exceeds available yield.");
       setValidationError(null);
       await onExecuteDraw(value);
     } catch (error) {
@@ -66,7 +64,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
       <div className="callout">
         <Dices size={18} aria-hidden="true" />
         <span>
-          {confirmedRoundsLabel} Available yield is derived from live custody, not a projected or demo balance.
+          {confirmedRoundsLabel} The displayed reserve is the last verified snapshot; each new draw verifies the current encrypted reserve through Zama KMS.
         </span>
       </div>
       <form className="form-stack" onSubmit={handleDraw} style={{ marginTop: "1rem" }}>
@@ -82,7 +80,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
               autoComplete="off"
               value={drawPrize}
               onChange={(event) => { setDrawPrize(event.target.value); setValidationError(null); }}
-              disabled={!isOwner || !writesEnabled || isLoading || availableYieldStatus !== "fresh"}
+              disabled={!isOwner || !writesEnabled || isLoading}
               placeholder="0.00"
             />
             <span>{tokenSymbol}</span>
@@ -92,7 +90,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
         {(!isOwner || !writesEnabled) && (
           <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked until deployment verification and the operational safety switch both pass." : "Only the verified pool owner can execute a draw. Connected savers can monitor confirmed rounds here."}</span></div>
         )}
-        <Button className="button--wide" type="submit" disabled={!isOwner || !writesEnabled || !drawPrize || availableYieldStatus !== "fresh"} isLoading={isLoading}>
+        <Button className="button--wide" type="submit" disabled={!isOwner || !writesEnabled || !drawPrize} isLoading={isLoading}>
           <Sparkles size={17} /> {writesEnabled ? "Execute encrypted draw" : "Draws safety-locked"}
         </Button>
       </form>

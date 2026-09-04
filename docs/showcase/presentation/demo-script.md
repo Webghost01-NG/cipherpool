@@ -1,5 +1,7 @@
 # CipherPool Demo Script
 
+> **Archived draft:** This script predates the ERC-7984 migration and must not be used for the final human-presented bounty video. See the [current submission overview](../SUBMISSION_OVERVIEW.md).
+
 Target runtime: approximately 2 minutes 40 seconds. The generated video uses the live public interface and already-verified Sepolia evidence. It does not simulate a wallet, signature, KMS response, or newly confirmed transaction.
 
 ## Slide 1 — Introduction
