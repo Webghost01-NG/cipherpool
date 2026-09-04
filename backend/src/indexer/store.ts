@@ -9,17 +9,14 @@ import {
 const unsignedIntegerSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
 
 export const indexerStoreSnapshotSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(3),
   depositEventCounts: z.array(z.tuple([z.string().min(1), unsignedIntegerSchema])),
   confidentialWithdrawalCount: unsignedIntegerSchema,
   prizeReserveFundingCount: unsignedIntegerSchema,
-  totalAccountedBalance: unsignedIntegerSchema,
   draws: z.array(z.object({
     drawId: unsignedIntegerSchema,
     requestHash: z.string().min(1),
     prizeAmount: unsignedIntegerSchema,
-    totalWeight: unsignedIntegerSchema,
-    remainingPrizeReserve: unsignedIntegerSchema,
     timestamp: z.number().int().positive(),
     participantCount: z.number().int().nonnegative(),
     blockNumber: z.number().int().nonnegative(),
@@ -39,7 +36,6 @@ export class IndexerStore {
   private depositEventCounts = new Map<string, bigint>();
   private confidentialWithdrawalCount = 0n;
   private prizeReserveFundingCount = 0n;
-  private totalAccountedBalance = 0n;
   private draws: DrawExecutedEvent[] = [];
   private seenEventKeys = new Set<string>();
 
@@ -51,13 +47,10 @@ export class IndexerStore {
     );
     store.confidentialWithdrawalCount = BigInt(snapshot.confidentialWithdrawalCount);
     store.prizeReserveFundingCount = BigInt(snapshot.prizeReserveFundingCount);
-    store.totalAccountedBalance = BigInt(snapshot.totalAccountedBalance);
     store.draws = snapshot.draws.map((draw) => ({
       ...draw,
       drawId: BigInt(draw.drawId),
       prizeAmount: BigInt(draw.prizeAmount),
-      totalWeight: BigInt(draw.totalWeight),
-      remainingPrizeReserve: BigInt(draw.remainingPrizeReserve),
     }));
     store.seenEventKeys = new Set(snapshot.seenEventKeys);
     return store;
@@ -65,20 +58,17 @@ export class IndexerStore {
 
   public toSnapshot(): IndexerStoreSnapshot {
     return {
-      version: 2,
+      version: 3,
       depositEventCounts: Array.from(
         this.depositEventCounts,
         ([user, count]) => [user, count.toString()]
       ),
       confidentialWithdrawalCount: this.confidentialWithdrawalCount.toString(),
       prizeReserveFundingCount: this.prizeReserveFundingCount.toString(),
-      totalAccountedBalance: this.totalAccountedBalance.toString(),
       draws: this.draws.map((draw) => ({
         ...draw,
         drawId: draw.drawId.toString(),
         prizeAmount: draw.prizeAmount.toString(),
-        totalWeight: draw.totalWeight.toString(),
-        remainingPrizeReserve: draw.remainingPrizeReserve.toString(),
       })),
       seenEventKeys: Array.from(this.seenEventKeys),
     };
@@ -112,7 +102,6 @@ export class IndexerStore {
     if (this.seenEventKeys.has(key)) return;
     this.seenEventKeys.add(key);
     this.draws.push(event);
-    this.totalAccountedBalance = event.totalWeight + event.prizeAmount;
   }
 
   public getUserDepositEventCount(user: string): bigint {
@@ -131,10 +120,6 @@ export class IndexerStore {
 
   public getPrizeReserveFundingCount(): bigint {
     return this.prizeReserveFundingCount;
-  }
-
-  public getTotalAccountedBalance(): bigint {
-    return this.totalAccountedBalance;
   }
 
   public getDrawCount(): number {

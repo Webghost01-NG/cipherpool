@@ -10,7 +10,7 @@ A keeper submits `finalizeDraw(ready, proof)`. `FHE.checkSignatures` rejects a c
 
 Observers still learn the participant addresses and count, fixed prize, request and settlement timing, readiness bit, finalized-round count, and timeout/cancellation status. Individual positions, aggregate eligible weight, exact reserve, winner, and prize balance remain ciphertexts. The readiness bit is necessary because the contract must branch truthfully between settlement and skip without allowing encrypted arithmetic wraparound to create an unfunded award.
 
-The active Sepolia deployment still reveals exact aggregate weight and reserve. Readiness-only settlement is source-level until a successor contract is deployed, verified, and migrated atomically with the indexer and frontend.
+The active Sepolia deployment uses readiness-only settlement. The backend records round metadata but its API does not collect or expose aggregate eligible weight or reserve values.
 
 ## Regression Evidence
 

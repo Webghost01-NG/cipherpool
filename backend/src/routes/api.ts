@@ -21,15 +21,13 @@ export function createApiRouter(store: IndexerStore): Router {
       confidentialWithdrawalEvents: store.getConfidentialWithdrawalCount().toString(),
       prizeReserveFundingEvents: store.getPrizeReserveFundingCount().toString(),
       prizeReserveFundingModel: "sponsor-funded-testnet",
-      lastVerifiedTotalEligibleBalance: store.getTotalAccountedBalance().toString(),
+      aggregateDisclosure: "encrypted-only",
       totalDraws: store.getDrawCount(),
       latestDraw: latest
         ? {
             drawId: latest.drawId.toString(),
             requestHash: latest.requestHash,
             prizeAmount: latest.prizeAmount.toString(),
-            totalWeight: latest.totalWeight.toString(),
-            remainingPrizeReserve: latest.remainingPrizeReserve.toString(),
             timestamp: latest.timestamp,
             participantCount: latest.participantCount,
           }

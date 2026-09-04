@@ -78,8 +78,6 @@ function populatedStore() {
     drawId: 1n,
     requestHash: ethers.id("draw-request"),
     prizeAmount: 1_000n,
-    totalWeight: 75_000n,
-    remainingPrizeReserve: 9_000n,
     timestamp: 1_700_000_106,
     participantCount: 2,
     blockNumber: 106,
@@ -99,10 +97,10 @@ describe("Indexer checkpoint persistence", () => {
     assert.equal(restored.getTotalDepositEvents(), 2n);
     assert.equal(restored.getConfidentialWithdrawalCount(), 1n);
     assert.equal(restored.getPrizeReserveFundingCount(), 1n);
-    assert.equal(restored.getTotalAccountedBalance(), 76_000n);
     assert.equal(restored.getDrawCount(), 1);
     assert.equal(restored.getLatestDraw()?.prizeAmount, 1_000n);
-    assert.equal(restored.getLatestDraw()?.remainingPrizeReserve, 9_000n);
+    assert.equal("totalWeight" in restored.getLatestDraw()!, false);
+    assert.equal("remainingPrizeReserve" in restored.getLatestDraw()!, false);
 
     restored.addDeposit({
       user: alice,
@@ -116,8 +114,8 @@ describe("Indexer checkpoint persistence", () => {
 
   test("rejects an unsupported or malformed snapshot", () => {
     const valid = new IndexerStore().toSnapshot();
-    assert.throws(() => IndexerStore.fromSnapshot({ ...valid, version: 1 }));
-    assert.throws(() => IndexerStore.fromSnapshot({ ...valid, totalAccountedBalance: "-1" }));
+    assert.throws(() => IndexerStore.fromSnapshot({ ...valid, version: 2 }));
+    assert.throws(() => IndexerStore.fromSnapshot({ ...valid, unknownAggregate: "1" }));
   });
 
   test("initializes, saves, reloads, and closes a checkpoint", async () => {

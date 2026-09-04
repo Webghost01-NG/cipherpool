@@ -5,7 +5,7 @@
 Veylott is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC deposit, position, withdrawal, prize counter, and winning outcome encrypted while selecting a winner over encrypted balance weights.
 
 - Application: [Veylott live demo](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/)
-- Pool: [`0x54FdC46D0EA722EfA4853192678b35fCABFad99C`](https://sepolia.etherscan.io/address/0x54FdC46D0EA722EfA4853192678b35fCABFad99C)
+- Pool: [`0x2150d7D82117b927Dd3253935E34f67D8B37d424`](https://sepolia.etherscan.io/address/0x2150d7D82117b927Dd3253935E34f67D8B37d424)
 - Official cUSDCMock: [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639)
 - Network: Ethereum Sepolia
 
@@ -22,7 +22,7 @@ Veylott is a confidential prize-savings prototype on Zama fhEVM. It keeps each s
 
 ## Evidence
 
-- The active activation-enabled runtime is 12,756 bytes and matches hash `0x9568c86d6d8a2ed93bcb6b229b3c3c0bc3ad8468cde60abc2ce671bc73a397a5`.
+- The active readiness-only runtime is 14,855 bytes and matches hash `0x38dcfee7fcbecb12f8be9c4d73c596e7f9bc1b0a3d910e49cc8d8a3cc7af4ed4`.
 - Predecessor pool `0x9c939b82…191e0` completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal before the permissionless-finalization migration.
 - Draw 1 finalized with verified weight and prize of 500,000 base units; authorized post-settlement KMS decryption returned a zero private position and zero prize counter.
 - Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).
