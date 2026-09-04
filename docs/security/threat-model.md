@@ -161,7 +161,7 @@ Therefore, a draw can allocate at most:
 
 $$\text{availableYieldPlain} = \max(0, \text{custody} - \text{base liability} - \text{reserved prizes})$$
 
-Compounding does not change this total: it only transfers a user's encrypted value from `_prizes` to `_balances`. Draw weights use `_balances[user] + _prizes[user]`, so the public draw bound remains equal to the encrypted cumulative intervals without revealing the winner. Successful withdrawals consume the aggregate prize tranche first and the base-deposit tranche second; this deterministic waterfall discloses no per-user prize attribution.
+Draw finalization credits the encrypted award to `_balances` and mirrors it in `_prizes` as private metadata; `compoundPrizes()` only clears that metadata and does not change aggregate liability. Because a distinctive caller-initiated compounding transaction can leak claim intent through timing, the production UI does not use it. Prize claims instead use the same encrypted `withdraw` selector as principal exits. Successful withdrawals consume the caller's encrypted prize counter first, without publishing the amount or the prize/principal split.
 
 ---
 

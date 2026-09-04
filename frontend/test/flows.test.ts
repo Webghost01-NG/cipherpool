@@ -1,5 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { revealBalanceWithFeedback, revealPrizeWithFeedback } from "../src/App.js";
@@ -215,8 +217,17 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     assert.match(noPrize, /No prize available to claim/);
     assert.match(noPrize, /disabled/);
     assert.match(winner, /0\.5 cUSDC/);
-    assert.match(winner, /Claim into savings/);
+    assert.match(winner, /Claim privately/);
+    assert.match(winner, /same on-chain path as an ordinary withdrawal/);
     assert.doesNotMatch(winner, /disabled/);
+  });
+
+  test("prize claims reuse the ordinary encrypted withdrawal path", () => {
+    const hookSource = fs.readFileSync(path.join(process.cwd(), "frontend/src/hooks/usePool.ts"), "utf8");
+    const frontendAbi = fs.readFileSync(path.join(process.cwd(), "frontend/src/contracts/abi.ts"), "utf8");
+
+    assert.match(hookSource, /await withdraw\(BigInt\(revealedPrize\), callbacks\)/);
+    assert.doesNotMatch(frontendAbi, /compoundPrizes/);
   });
 
   test("LegacyExitCard exposes settlement without enabling new legacy requests", () => {

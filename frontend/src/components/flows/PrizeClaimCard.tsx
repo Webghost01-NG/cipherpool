@@ -63,7 +63,7 @@ export const PrizeClaimCard: React.FC<PrizeClaimCardProps> = ({
         <p className="balance-display__hint">
           {isRevealed
             ? hasClaimablePrize
-              ? "The prize is already secured inside your encrypted position. Claiming clears the private prize notification; your funds remain withdrawable."
+              ? "Claiming re-encrypts this amount and pays it to your confidential cUSDC wallet through the same on-chain path as an ordinary withdrawal."
               : "This wallet has no unclaimed prize. The result remains private to you."
             : "Sign a one-time private decryption request to check your encrypted prize without broadcasting a transaction."}
         </p>
@@ -82,7 +82,7 @@ export const PrizeClaimCard: React.FC<PrizeClaimCardProps> = ({
                 switchNetworkLabel="Switch to Sepolia to claim"
                 lockedLabel="Prize claims safety-locked"
               >
-                <Trophy size={16} /> Claim into savings
+                <Trophy size={16} /> Claim privately
               </WalletGateButton>
             </div>
             {!hasClaimablePrize && <Badge variant="neutral">No prize available to claim</Badge>}
