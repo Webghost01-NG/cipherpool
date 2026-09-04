@@ -56,7 +56,7 @@ export const TxStatusModal: React.FC<TxStatusModalProps> = ({ state, onClose }) 
         tabIndex={-1}
       >
         <div className="modal__top">
-          <span className="eyebrow">Transaction evidence</span>
+          <span className="eyebrow">Operation status</span>
           {!isPending && (
             <button className="icon-button" type="button" aria-label="Close transaction dialog" onClick={onClose}>
               <X size={18} />

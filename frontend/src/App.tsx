@@ -28,6 +28,28 @@ import {
 } from "./contracts/config.js";
 import { formatTokenAmount } from "./utils/format.js";
 
+interface PrivateRevealFeedback {
+  start: (title: string, details?: string) => void;
+  confirm: (details?: string) => void;
+  fail: (error: Error | string) => void;
+}
+
+export async function revealBalanceWithFeedback(
+  revealBalance: () => Promise<void>,
+  feedback: PrivateRevealFeedback
+): Promise<void> {
+  feedback.start(
+    "Private balance reveal",
+    "Approve the private decryption request in your wallet. This signature does not broadcast a transaction."
+  );
+  try {
+    await revealBalance();
+    feedback.confirm("Balance decrypted locally. No blockchain transaction was submitted.");
+  } catch (error) {
+    feedback.fail(error instanceof Error ? error : String(error));
+  }
+}
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("pool");
   const { address, status } = useWallet();
@@ -89,6 +111,11 @@ export const App: React.FC = () => {
 
   const totalDeposits = formatTokenAmount(poolStats.totalDeposits, asset.decimals);
   const availableYield = formatTokenAmount(poolStats.availableYield, asset.decimals);
+  const runBalanceReveal = () => revealBalanceWithFeedback(revealBalance, {
+    start: startTx,
+    confirm: setConfirmed,
+    fail: setFailed,
+  });
 
   return (
     <Layout
@@ -221,7 +248,7 @@ export const App: React.FC = () => {
               <BalanceRevealCard
                 isRevealed={isBalanceRevealed}
                 revealedAmount={revealedBalance}
-                onReveal={revealBalance}
+                onReveal={runBalanceReveal}
                 onHide={hideBalance}
                 isLoading={isLoading}
                 walletConnected={walletReady}
