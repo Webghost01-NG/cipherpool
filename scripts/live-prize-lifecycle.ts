@@ -7,6 +7,7 @@ const ACTIONS = ["preflight", "deposit", "draw", "reveal-prize", "claim-prize", 
 export type LifecycleAction = typeof ACTIONS[number];
 
 const POOL_ABI = [
+  "function DEPOSIT_ACTION() view returns (bytes32)",
   "function custodyAsset() view returns (address)",
   "function owner() view returns (address)",
   "function paused() view returns (bool)",
@@ -42,7 +43,6 @@ const TOKEN_ABI = [
   "function symbol() view returns (string)",
 ];
 
-const DEPOSIT_ACTION = ethers.id("CIPHERPOOL_DEPOSIT_V1");
 const UINT64_LIMIT = 2n ** 64n;
 
 export function parseLifecycleAction(value: string | undefined): LifecycleAction {
@@ -411,7 +411,7 @@ async function main(): Promise<void> {
     const amount = parseLifecycleAmount(process.env.LIFECYCLE_AMOUNT, numericDecimals);
     if (walletBalance < amount) throw new Error("The confidential wallet balance cannot cover the deposit.");
     const encrypted = await instance.createEncryptedInput(custodyAssetAddress, actorAddress).add64(amount).encrypt();
-    const data = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [DEPOSIT_ACTION]);
+    const data = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [await pool.DEPOSIT_ACTION()]);
     const transaction = await signedToken.confidentialTransferAndCall(
       poolAddress,
       ethers.hexlify(encrypted.handles[0]),

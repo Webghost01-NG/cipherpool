@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 export const TARGET_CHAIN_ID = 11155111;
 export const TARGET_CHAIN_NAME = "Ethereum Sepolia";
-export const WALLET_DISCONNECT_SESSION_KEY = "cipherpool_wallet_disconnected";
+export const WALLET_DISCONNECT_SESSION_KEY = "veylott_wallet_disconnected";
+const LEGACY_WALLET_DISCONNECT_SESSION_KEY = "cipherpool_wallet_disconnected";
 
 export type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -77,7 +78,8 @@ export function readWalletDisconnectPreference(
   storage: Pick<Storage, "getItem"> | null | undefined
 ): boolean {
   try {
-    return storage?.getItem(WALLET_DISCONNECT_SESSION_KEY) === "true";
+    return storage?.getItem(WALLET_DISCONNECT_SESSION_KEY) === "true"
+      || storage?.getItem(LEGACY_WALLET_DISCONNECT_SESSION_KEY) === "true";
   } catch {
     return false;
   }
@@ -167,6 +169,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsManuallyDisconnected(false);
       try {
         window.sessionStorage.removeItem(WALLET_DISCONNECT_SESSION_KEY);
+        window.sessionStorage.removeItem(LEGACY_WALLET_DISCONNECT_SESSION_KEY);
       } catch {
         // Session storage is optional; the in-memory preference remains authoritative.
       }

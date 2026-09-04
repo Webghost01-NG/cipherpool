@@ -2,6 +2,12 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
+## Current Draw-Disclosure Addendum
+
+The successor Veylott source never marks its encrypted total weight or prize reserve as publicly decryptable. `requestDraw` derives one encrypted predicate covering both positive eligible weight and fixed-prize reserve sufficiency. The KMS reveals only that predicate. A proof-bound `true` permits settlement; `false` skips the round. Exact aggregates are absent from finalization calldata, public state, and draw-settlement events.
+
+Winner selection multiplies a full-width encrypted random value by the encrypted total in 128-bit space, then takes the high 64 bits. This preserves balance-weighted selection without a plaintext modulus or power-of-two restriction. Public observers still learn participant addresses/count, fixed prize, timing, whether the round was ready, and whether it finalized or timed out. They do not learn individual balances, total weight, remaining reserve, or winner identity from settlement. See [Draw Disclosure Boundary](draw-disclosure.md) for the proof boundary, residual leakage, and deployment status.
+
 **Issue Reference:** [#9 — docs(threat-model): Formalize threat model with DAG handle provenance and KMS trust boundaries](https://github.com/Webghost01-NG/veylott/issues/9)
 **Milestone:** Phase 2 — Project Architecture & Threat Modeling  
 **Author:** Security Research Team  

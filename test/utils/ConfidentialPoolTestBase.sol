@@ -74,10 +74,13 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
         uint64 eligibleTimestamp = pool.nextDrawRequestTimestamp();
         if (block.timestamp < eligibleTimestamp) vm.warp(eligibleTimestamp);
         pool.requestDraw(DRAW_PRIZE);
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(pool.getPendingDraw().totalHandle);
-        handles[1] = FHE.toBytes32(pool.getPendingDraw().reserveHandle);
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(total, reserve));
-        pool.finalizeDraw(total, reserve, proof);
+        bool ready = total > 0 && reserve >= DRAW_PRIZE;
+        pool.finalizeDraw(ready, _drawReadinessProof(ready));
+    }
+
+    function _drawReadinessProof(bool ready) internal returns (bytes memory) {
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = FHE.toBytes32(pool.getPendingDraw().readinessHandle);
+        return generateMockKMSProof(handles, abi.encode(ready));
     }
 }

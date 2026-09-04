@@ -272,6 +272,17 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     assert.doesNotMatch(frontendAbi, /compoundPrizes/);
   });
 
+  test("deposit and reserve actions come from the verified pool runtime", () => {
+    const hookSource = fs.readFileSync(path.join(process.cwd(), "frontend/src/hooks/usePool.ts"), "utf8");
+    const frontendAbi = fs.readFileSync(path.join(process.cwd(), "frontend/src/contracts/abi.ts"), "utf8");
+
+    assert.match(frontendAbi, /function DEPOSIT_ACTION\(\)/);
+    assert.match(frontendAbi, /function PRIZE_RESERVE_ACTION\(\)/);
+    assert.match(hookSource, /await pool\.DEPOSIT_ACTION\(\)/);
+    assert.match(hookSource, /await pool\.PRIZE_RESERVE_ACTION\(\)/);
+    assert.doesNotMatch(hookSource, /ethers\.id\(/);
+  });
+
   test("LegacyExitCard exposes settlement without enabling new legacy requests", () => {
     const card = React.createElement(LegacyExitCard, {
       legacyPoolAddress: "0x1111111111111111111111111111111111111111",

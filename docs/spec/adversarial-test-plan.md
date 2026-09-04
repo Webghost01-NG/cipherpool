@@ -23,7 +23,7 @@ The plan validates that the protocol adheres to its fundamental security promise
 
 ## 2. Adversarial Test Vector Matrix
 
-The matrix below establishes 17 primary exploit test vectors spanning all core contract interactions:
+The matrix below establishes 18 primary exploit test vectors spanning all core contract interactions:
 
 | Vector ID | Category | Target Method | Exploit Hypothesis | Expected Failure / Mitigation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -44,6 +44,7 @@ The matrix below establishes 17 primary exploit test vectors spanning all core c
 | **ADV-15** | Prize Withdrawal Underflow | `withdraw` | A winner withdraws more than the remaining prize tranche. | The token-returned encrypted transfer is debited from prize credit first and then principal, preventing base-counter underflow without publishing the split. |
 | **ADV-16** | Zero-Callback Sybil | `finalizeParticipantActivation` | An encrypted-zero transfer tries to consume permanent participant capacity, or a stale positive proof is replayed after balance mutation. | A KMS-verified positive predicate gates admission. Zero clears without admission; every balance mutation rotates the stored handle and invalidates stale proofs. |
 | **ADV-17** | Participant Capacity Exhaustion | activation/deactivation lifecycle | Pending activations race for the final slot, or withdrawn accounts permanently consume bounded draw capacity. | The 12-member ceiling cannot be exceeded; callbacks fail closed when full, and only a proof-bound zero position reclaims a slot. |
+| **ADV-18** | Aggregate Snapshot Disclosure | `requestDraw` / `finalizeDraw` | Repeated settlement calldata and events reveal exact pool weight or reserve. | Only a proof-bound readiness bit is decrypted; encrypted-bound sampling and settlement events contain no aggregate cleartexts. |
 
 ---
 

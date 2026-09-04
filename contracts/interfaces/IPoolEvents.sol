@@ -23,22 +23,15 @@ interface IPoolEvents {
         bytes32 indexed requestHash,
         uint64 prizeAmount,
         bytes32 totalHandle,
-        bytes32 reserveHandle
+        bytes32 reserveHandle,
+        bytes32 readinessHandle
     );
     event DrawCancelled(bytes32 indexed requestHash);
-    event DrawSkipped(
-        bytes32 indexed requestHash,
-        uint64 totalWeight,
-        uint64 prizeReserve,
-        uint64 requiredPrizeAmount,
-        uint256 timestamp
-    );
+    event DrawSkipped(bytes32 indexed requestHash, uint64 requiredPrizeAmount, uint256 timestamp);
     event DrawExecuted(
         uint256 indexed drawId,
         bytes32 indexed requestHash,
         uint64 prizeAmount,
-        uint64 totalWeight,
-        uint64 remainingPrizeReserve,
         uint256 timestamp,
         uint256 participantCount
     );

@@ -12,8 +12,8 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function finalizeParticipantActivation(address user, bool eligible, bytes calldata decryptionProof) external;
     function finalizeParticipantDeactivation(address user, bool zeroBalance, bytes calldata decryptionProof) external;
     function requestDraw(uint64 prizeAmount) external;
-    /// @notice Permissionlessly relays a KMS proof bound to the active draw request.
-    function finalizeDraw(uint64 totalEligibleBalance, uint64 prizeReserve, bytes calldata decryptionProof) external;
+    /// @notice Permissionlessly relays a KMS readiness proof bound to the active draw request.
+    function finalizeDraw(bool ready, bytes calldata decryptionProof) external;
     function cancelDraw() external;
     function compoundPrizes() external;
     function getPendingDraw() external view returns (DrawRequest memory);
@@ -33,8 +33,7 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function getParticipantCount() external view returns (uint256);
     function MAX_PARTICIPANTS() external view returns (uint256);
     function currentDrawId() external view returns (uint256);
-    function lastVerifiedTotalEligibleBalance() external view returns (uint64);
-    function lastVerifiedPrizeReserve() external view returns (uint64);
+    function lastDrawReady() external view returns (bool);
     function lastDrawVerificationTimestamp() external view returns (uint64);
     function custodyAsset() external view returns (address);
 }

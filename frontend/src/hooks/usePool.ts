@@ -389,8 +389,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       ]);
       const encrypted = await new InputEncryptionAdapter(asset.address, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const token = new ethers.Contract(asset.address, ERC7984_ABI, await provider.getSigner());
-      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [ethers.id("CIPHERPOOL_DEPOSIT_V1")]);
+      const signer = await provider.getSigner();
+      const token = new ethers.Contract(asset.address, ERC7984_ABI, signer);
+      const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
+      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [await pool.DEPOSIT_ACTION()]);
       const transaction = await token.confidentialTransferAndCall(contractAddress, encrypted.handle, encrypted.inputProof, actionData);
       callbacks.onBroadcast?.(transaction.hash);
       ensureReceipt(await transaction.wait());
@@ -433,8 +435,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       ]);
       const encrypted = await new InputEncryptionAdapter(asset.address, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const token = new ethers.Contract(asset.address, ERC7984_ABI, await provider.getSigner());
-      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [ethers.id("CIPHERPOOL_PRIZE_RESERVE_V1")]);
+      const signer = await provider.getSigner();
+      const token = new ethers.Contract(asset.address, ERC7984_ABI, signer);
+      const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
+      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [await pool.PRIZE_RESERVE_ACTION()]);
       const transaction = await token.confidentialTransferAndCall(
         contractAddress,
         encrypted.handle,

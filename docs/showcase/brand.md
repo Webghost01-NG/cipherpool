@@ -21,4 +21,4 @@ Copy should distinguish cryptographic proof from marketing claims. Never describ
 
 ## Compatibility Names
 
-The deployed Solidity contract remains `ConfidentialPool`. Existing `CIPHERPOOL_*` action domains, the `cipherpool_indexer_checkpoints` table, and the wallet disconnect storage key remain unchanged so the rebrand does not invalidate transactions, runtime evidence, database state, or user disconnect preferences.
+The deployed Solidity contract remains `ConfidentialPool`. Frontend and operational clients read action-domain values from the verified contract instead of hardcoding a brand-specific hash. The successor source uses `VEYLOTT_*` domains. The existing Render hostname, database checkpoint table, and legacy wallet-disconnect key remain as compatibility identifiers so the rebrand does not invalidate runtime evidence, database state, or an explicit disconnect preference.
