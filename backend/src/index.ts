@@ -51,12 +51,23 @@ async function main() {
         lastPolledBlock + config.INDEXER_BLOCK_BATCH_SIZE - 1
       );
       const events = await readContract.queryFilter("*", lastPolledBlock, queryToBlock);
+      const blockTimestamps = new Map<number, number>();
       for (const event of events) {
         if ("topics" in event && "data" in event) {
+          let blockTimestamp = blockTimestamps.get(event.blockNumber);
+          if (blockTimestamp === undefined) {
+            const block = await provider.getBlock(event.blockNumber);
+            if (!block) {
+              throw new Error(`Unable to load block ${event.blockNumber} for indexed event`);
+            }
+            blockTimestamp = block.timestamp;
+            blockTimestamps.set(event.blockNumber, blockTimestamp);
+          }
           indexer.processLog({
             topics: event.topics,
             data: event.data,
             blockNumber: event.blockNumber,
+            blockTimestamp,
             transactionHash: event.transactionHash,
           });
         }

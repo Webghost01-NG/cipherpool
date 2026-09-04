@@ -67,7 +67,7 @@ describe("Typed REST API Integration Tests", () => {
       handle: "0xhandle",
       blockNumber: 12,
       transactionHash: "0xtx",
-      timestamp: Date.now(),
+      timestamp: 1_700_000_012,
       status: "PENDING",
     });
 
@@ -77,6 +77,7 @@ describe("Typed REST API Integration Tests", () => {
     assert.equal(res.status, 200);
     assert.equal(res.body.hasPendingWithdrawal, true);
     assert.equal(res.body.withdrawal.requestedAmount, "20000");
+    assert.equal(res.body.withdrawal.timestamp, 1_700_000_012);
     assert.equal(res.body.withdrawal.status, "PENDING");
   });
 

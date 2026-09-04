@@ -30,6 +30,7 @@ export class BlockchainIndexer {
     topics: readonly string[];
     data: string;
     blockNumber: number;
+    blockTimestamp: number;
     transactionHash: string;
   }) {
     try {
@@ -54,6 +55,9 @@ export class BlockchainIndexer {
           break;
         }
         case "WithdrawalRequested": {
+          if (!Number.isSafeInteger(log.blockTimestamp) || log.blockTimestamp <= 0) {
+            throw new Error("Withdrawal request log is missing a valid block timestamp");
+          }
           const req = {
             user: parsed.args.user,
             nonce: BigInt(parsed.args.nonce),
@@ -62,7 +66,7 @@ export class BlockchainIndexer {
             handle: parsed.args.handle,
             blockNumber: log.blockNumber,
             transactionHash: log.transactionHash,
-            timestamp: Math.floor(Date.now() / 1000),
+            timestamp: log.blockTimestamp,
             status: "PENDING" as const,
           };
           this.store.addWithdrawalRequest(req);
