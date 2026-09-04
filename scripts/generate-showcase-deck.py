@@ -344,10 +344,10 @@ def slide_10(prs):
     add_text(slide, "Try the live app. Inspect the active Sepolia deployment. Review every invariant and test.",
              0.75, 3.65, 7.1, 0.65, size=17, color=MUTED)
     add_link(slide, "cipherpool-beta.vercel.app", "https://cipherpool-beta.vercel.app", 0.75, 4.65, 4.5, 0.36, size=14)
-    add_link(slide, "github.com/Webghost01-NG/fhevm-pooltogether-security", "https://github.com/Webghost01-NG/fhevm-pooltogether-security", 0.75, 5.18, 6.6, 0.36, size=11)
+    add_link(slide, "github.com/Webghost01-NG/cipherpool", "https://github.com/Webghost01-NG/cipherpool", 0.75, 5.18, 6.6, 0.36, size=11)
     add_box(slide, 8.6, 1.55, 3.75, 4.65, fill=BLUE_PALE, line=LINE)
     add_text(slide, "ACTIVE POOL", 8.95, 1.95, 2.8, 0.25, size=8, color=BLUE, bold=True, font=MONO)
-    add_text(slide, "0x9c939b82\na1B23b77\n746f934A\n1Ff2b9a5\nbCf191e0", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
+    add_text(slide, "0x63bA2DF5\n9b438014\n92060f2c\nc5D07115\n5C45dD47", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
     add_pill(slide, "Ethereum Sepolia", 8.95, 5.25, 1.6, fill=GREEN_PALE, color=GREEN)
     add_footer(slide, "CipherPool · Zama fhEVM · Research deployment")
 

@@ -2,7 +2,7 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
-**Issue Reference:** [#1 — feat(spec): Map application-level request binding and domain separation model](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/1)  
+**Issue Reference:** [#1 — feat(spec): Map application-level request binding and domain separation model](https://github.com/Webghost01-NG/cipherpool/issues/1)
 **Milestone:** Phase 2 — Application-Level Domain Binding Analysis  
 **Author:** Security Research Team  
 **Status:** Complete  

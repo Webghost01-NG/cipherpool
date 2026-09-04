@@ -2,7 +2,7 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
-**Issue Reference:** [#8 — feat(interface): Define core contract interfaces, structs, and custom errors](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/8)  
+**Issue Reference:** [#8 — feat(interface): Define core contract interfaces, structs, and custom errors](https://github.com/Webghost01-NG/cipherpool/issues/8)
 **Pull Request:** Planned for Issue #8  
 **Milestone:** Phase 2 — Project Architecture & Threat Modeling  
 **Author:** Security Research Team  

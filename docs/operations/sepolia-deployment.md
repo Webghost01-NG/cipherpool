@@ -6,14 +6,14 @@ The active pool uses the official Zama `cUSDCMock` ERC-7984 wrapper on Ethereum 
 
 | Component | Address | Block | Transaction | Runtime code hash |
 | --- | --- | ---: | --- | --- |
-| ConfidentialPool | `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` | `11634672` | [`0xc4d985...`](https://sepolia.etherscan.io/tx/0xc4d985e4c8178876b8f11b563aaa9abe0011d9f6cfcb41fa6c1883da309ac212) | `0x5f642b23de77a3c7e20735fb0f43ab4e23f346d41624b7eef0565ecfeb35f8c7` |
+| ConfidentialPool | `0x63bA2DF59b43801492060f2cc5D071155C45dD47` | `11635277` | [`0x889310...`](https://sepolia.etherscan.io/tx/0x88931045f63a8e66af7d8c165f8bc7d09be56784926db2852651a564b4553c94) | `0x4200e0006ccec7cfee9840944ac3b17996d078932dc4610155affab5e1fcd222` |
 | Official cUSDCMock | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` | Zama-managed | [Contract](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) | Upgradeable proxy |
 
 Verified initial state:
 
 - Owner: `0xF19125e08AFC9502DCde60703c1E24C334902356`
 - Custody asset: official cUSDCMock address above
-- Runtime size: `19,509` bytes
+- Runtime size: `19,501` bytes
 - Cancellation delay: `86,400` seconds
 - Paused: `false`; draw count and participant count: `0`
 
@@ -38,19 +38,19 @@ Sepolia has no verified external yield venue whose underlying asset matches the 
 | Step | Block | Transaction | Result |
 | --- | ---: | --- | --- |
 | Encrypted 1 cUSDC sponsor contribution | `11632933` | [`0x07b797...`](https://sepolia.etherscan.io/tx/0x07b797674aa730eea1b851d5ed78352741d7029ef0b1168521244c81e1057eaa) | Confirmed `PrizeReserveFunded`; backend indexed one funding event; authorized KMS verification confirmed the wallet moved from 10 to 9 cUSDC |
-| Encrypted 0.5 cUSDC contribution to corrected pool | `11634718` | [`0x1a5ec5...`](https://sepolia.etherscan.io/tx/0x1a5ec5591461605f1de3ec303079d7eaa0d70fdb072d4e7c869b9b2d43de2b8d) | Confirmed sponsor funding on the active deployment |
+| Encrypted 0.5 cUSDC contribution to predecessor pool | `11634718` | [`0x1a5ec5...`](https://sepolia.etherscan.io/tx/0x1a5ec5591461605f1de3ec303079d7eaa0d70fdb072d4e7c869b9b2d43de2b8d) | Confirmed sponsor funding used in the historical complete lifecycle |
 
 ## Superseded Draw Incident
 
-The predecessor pool accepted a real 8 cUSDC deposit and draw request, but finalization reverted because the prior bounded-randomness implementation required a power-of-two total. The corrected active deployment replaces that implementation with unbiased scaling over an unbounded encrypted `uint64`. The predecessor remains excluded from active configuration; its stale draw can be cancelled permissionlessly after the configured delay.
+An earlier predecessor pool accepted a real 8 cUSDC deposit and draw request, but finalization reverted because the prior bounded-randomness implementation required a power-of-two total. Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` replaced that implementation with unbiased scaling over an unbounded encrypted `uint64`. The affected predecessor remains excluded from active configuration; its stale draw can be cancelled permissionlessly after the configured delay.
 
-## Active Full Prize Lifecycle
+## Historical Full Prize Lifecycle
 
-The corrected pool subsequently completed the full real flow: encrypted 0.5 cUSDC deposit, KMS-verified draw request and finalization, private winner check, prize claim through the ordinary withdrawal path, and principal withdrawal. Draw 1 finalized in block `11634933` with total weight `500,000`, prize `500,000`, and zero remaining reserve. Post-settlement authorized KMS verification returned a zero private position and zero prize counter. See the [phase-by-phase evidence](live-prize-lifecycle.md) for every confirmed transaction.
+Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow before the permissionless-finalization migration: encrypted 0.5 cUSDC deposit, KMS-verified draw request and finalization, private winner check, prize claim through the ordinary withdrawal path, and principal withdrawal. Draw 1 finalized in block `11634933` with total weight `500,000`, prize `500,000`, and zero remaining reserve. Post-settlement authorized KMS verification returned a zero private position and zero prize counter. See the [phase-by-phase evidence](live-prize-lifecycle.md) for every confirmed transaction.
 
 ## Runtime Activation
 
-The backend must use `INDEXER_START_BLOCK=11634672` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks.
+The backend must use `INDEXER_START_BLOCK=11635277` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state.
 
 ## Rollback
 

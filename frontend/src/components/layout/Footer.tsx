@@ -1,7 +1,7 @@
 import React from "react";
 import { Code2, LockKeyhole } from "lucide-react";
 
-const repositoryUrl = "https://github.com/Webghost01-NG/fhevm-pooltogether-security";
+const repositoryUrl = "https://github.com/Webghost01-NG/cipherpool";
 
 export const Footer: React.FC = () => (
   <footer className="site-footer">
