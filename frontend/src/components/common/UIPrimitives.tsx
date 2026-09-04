@@ -95,7 +95,7 @@ export const StatBox: React.FC<StatBoxProps> = ({
   const hint = status === "loading"
     ? "Loading verified source…"
     : status === "unavailable"
-      ? "Verified source unavailable"
+      ? (subtext ?? "Verified source unavailable")
       : status === "stale"
         ? `Last confirmed value${subtext ? ` · ${subtext}` : ""}`
         : subtext;

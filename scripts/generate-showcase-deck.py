@@ -347,7 +347,7 @@ def slide_10(prs):
     add_link(slide, "github.com/Webghost01-NG/fhevm-pooltogether-security", "https://github.com/Webghost01-NG/fhevm-pooltogether-security", 0.75, 5.18, 6.6, 0.36, size=11)
     add_box(slide, 8.6, 1.55, 3.75, 4.65, fill=BLUE_PALE, line=LINE)
     add_text(slide, "ACTIVE POOL", 8.95, 1.95, 2.8, 0.25, size=8, color=BLUE, bold=True, font=MONO)
-    add_text(slide, "0xE47eF44E\nBB804A50\n7173BEFa\n5beb2325\naA7451AD", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
+    add_text(slide, "0x9c939b82\na1B23b77\n746f934A\n1Ff2b9a5\nbCf191e0", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
     add_pill(slide, "Ethereum Sepolia", 8.95, 5.25, 1.6, fill=GREEN_PALE, color=GREEN)
     add_footer(slide, "CipherPool · Zama fhEVM · Research deployment")
 

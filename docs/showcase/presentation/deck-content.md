@@ -51,4 +51,4 @@ The reproducible validation covers Foundry contract invariants, backend API and 
 
 ## 10. Confidential savings, without blind trust
 
-Try the research app at `https://cipherpool-beta.vercel.app`. Inspect the active pool on Sepolia at `0xE47eF44EBB804A507173BEFa5beb2325aA7451AD`. Review the source and evidence at `github.com/Webghost01-NG/fhevm-pooltogether-security`.
+Try the research app at `https://cipherpool-beta.vercel.app`. Inspect the active pool on Sepolia at `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. Review the source and evidence at `github.com/Webghost01-NG/fhevm-pooltogether-security`.

@@ -42,7 +42,7 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 | Component | Address |
 | --- | --- |
-| ConfidentialPool | [`0xE47eF44EBB804A507173BEFa5beb2325aA7451AD`](https://sepolia.etherscan.io/address/0xE47eF44EBB804A507173BEFa5beb2325aA7451AD) |
+| ConfidentialPool | [`0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`](https://sepolia.etherscan.io/address/0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0) |
 | Official cUSDCMock | [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) |
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |

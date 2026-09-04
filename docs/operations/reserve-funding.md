@@ -34,6 +34,8 @@ On 2026-09-04, the verified deployment wallet contributed 1 cUSDC to the reserve
 
 The contribution amount is disclosed here by the sponsor for reproducibility; the on-chain callback and event carry only its ciphertext handle. An authorized post-transaction KMS decryption returned a wallet balance of `9,000,000` base units, down from the previously verified `10,000,000`, independently confirming that 1 cUSDC left the sponsor wallet.
 
+That evidence belongs to the predecessor pool. The corrected active pool at `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` received an encrypted 0.5 cUSDC sponsor contribution in block `11634718`: [`0x1a5ec5...`](https://sepolia.etherscan.io/tx/0x1a5ec5591461605f1de3ec303079d7eaa0d70fdb072d4e7c869b9b2d43de2b8d).
+
 ## Solvency Boundary
 
 Sponsor funds enter `_prizeReserve`, never a saver’s position or `_totalAccountedBalance`. A draw can award no more than the KMS-verified reserve snapshot; finalization subtracts the awarded amount before another draw. Saver principal remains in cUSDC custody and is not deployed into the sponsor flow.
