@@ -11,14 +11,14 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     address internal sponsor = address(0xBEEF);
     address internal keeper = address(0xC0FFEE);
 
-    function setUp() public { setUpPool(); }
+    function setUp() public {
+        setUpPool();
+    }
 
     function test_RevertWhen_RequestPrizeDiffersFromPolicy() public {
-        vm.expectRevert(abi.encodeWithSelector(
-            InvalidDrawPrizeAmount.selector,
-            uint256(DRAW_PRIZE - 1),
-            uint256(DRAW_PRIZE)
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(InvalidDrawPrizeAmount.selector, uint256(DRAW_PRIZE - 1), uint256(DRAW_PRIZE))
+        );
         pool.requestDraw(DRAW_PRIZE - 1);
     }
 
@@ -48,11 +48,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         uint64 eligibleAt = pool.nextDrawRequestTimestamp();
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(
-            DrawRequestTooEarly.selector,
-            block.timestamp,
-            uint256(eligibleAt)
-        ));
+        vm.expectRevert(abi.encodeWithSelector(DrawRequestTooEarly.selector, block.timestamp, uint256(eligibleAt)));
         pool.requestDraw(DRAW_PRIZE);
 
         vm.warp(eligibleAt);
@@ -98,10 +94,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(request.totalHandle);
         handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(
-            handles,
-            abi.encode(uint64(10_000), uint64(2_000))
-        );
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(2_000)));
 
         vm.prank(keeper);
         pool.finalizeDraw(10_000, 2_000, proof);
@@ -130,10 +123,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(request.totalHandle);
         handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(
-            handles,
-            abi.encode(uint64(10_000), uint64(DRAW_PRIZE - 1))
-        );
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(DRAW_PRIZE - 1)));
 
         vm.prank(keeper);
         pool.finalizeDraw(10_000, DRAW_PRIZE - 1, proof);
@@ -154,10 +144,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         bytes32[] memory substitutedHandles = new bytes32[](2);
         substitutedHandles[0] = FHE.toBytes32(request.totalHandle);
         substitutedHandles[1] = bytes32(uint256(1));
-        bytes memory proof = generateMockKMSProof(
-            substitutedHandles,
-            abi.encode(uint64(10_000), uint64(2_000))
-        );
+        bytes memory proof = generateMockKMSProof(substitutedHandles, abi.encode(uint64(10_000), uint64(2_000)));
 
         vm.startPrank(keeper);
         vm.expectRevert();
@@ -175,10 +162,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(request.totalHandle);
         handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(
-            handles,
-            abi.encode(uint64(10_000), uint64(2_000))
-        );
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(2_000)));
 
         vm.startPrank(keeper);
         vm.expectRevert();
@@ -196,16 +180,39 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         bytes32[] memory handles = new bytes32[](2);
         handles[0] = FHE.toBytes32(request.totalHandle);
         handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(
-            handles,
-            abi.encode(uint64(10_000), uint64(2_000))
-        );
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(2_000)));
         vm.prank(keeper);
         pool.finalizeDraw(10_000, 2_000, proof);
 
         vm.prank(alice);
         vm.expectRevert(NoActiveDrawRequest.selector);
         pool.finalizeDraw(10_000, 2_000, proof);
+    }
+
+    function test_FinalizesAtDocumentedParticipantBound() public {
+        uint256 maximum = pool.MAX_PARTICIPANTS();
+        assertEq(maximum, 12);
+        uint64 balance = 1_000;
+        for (uint256 i = 0; i < maximum; i++) {
+            _deposit(vm.addr(0x1000 + i), balance);
+        }
+        _fundReserve(sponsor, DRAW_PRIZE);
+        pool.requestDraw(DRAW_PRIZE);
+        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
+        bytes32[] memory handles = new bytes32[](2);
+        handles[0] = FHE.toBytes32(request.totalHandle);
+        handles[1] = FHE.toBytes32(request.reserveHandle);
+        uint64 total = 12 * balance;
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(total, DRAW_PRIZE));
+
+        uint256 gasBefore = gasleft();
+        pool.finalizeDraw(total, DRAW_PRIZE, proof);
+        uint256 gasUsed = gasBefore - gasleft();
+
+        emit log_named_uint("bounded finalization gas", gasUsed);
+        assertLt(gasUsed, 30_000_000);
+        assertEq(pool.currentDrawId(), 1);
+        assertEq(pool.getParticipantCount(), maximum);
     }
 
     function test_AnyoneCanCancelStaleDrawLock() public {
@@ -241,11 +248,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
 
         uint64 eligibleAt = requestedAt + DRAW_INTERVAL;
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(
-            DrawRequestTooEarly.selector,
-            block.timestamp,
-            uint256(eligibleAt)
-        ));
+        vm.expectRevert(abi.encodeWithSelector(DrawRequestTooEarly.selector, block.timestamp, uint256(eligibleAt)));
         pool.requestDraw(DRAW_PRIZE);
 
         vm.warp(eligibleAt);

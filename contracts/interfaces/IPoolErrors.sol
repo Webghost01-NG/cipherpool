@@ -13,7 +13,10 @@ interface IPoolErrors {
     error EmptyPrizeReserve();
     error NoBalancePosition(address user);
     error NoActiveParticipantActivation(address user);
+    error NoActiveParticipantDeactivation(address user);
     error ParticipantAlreadyActive(address user);
+    error ParticipantNotActive(address user);
+    error ParticipantCapacityReached(uint256 maximum);
     error UnauthorizedTokenCallback(address caller);
     error BalanceUpdatesLocked(bytes32 requestHash);
     error ActiveDrawRequestExists(bytes32 requestHash);
@@ -23,7 +26,9 @@ interface IPoolErrors {
     error InsufficientCustodyBalance(uint256 required, uint256 available);
     error UnauthorizedCaller(address caller);
 
-    /** @dev Archived-pool exit errors retained for compatibility. */
+    /**
+     * @dev Archived-pool exit errors retained for compatibility.
+     */
     error ActiveWithdrawalExists(address user);
     error NoActiveWithdrawalRequest(address user);
     error WithdrawalNotStale(uint256 elapsed, uint256 requiredDelay);

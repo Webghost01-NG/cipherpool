@@ -101,6 +101,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - Invalid callback actions are rejected by returning an encrypted `false`, allowing ERC-7984 to refund.
 - Draw proofs are bound to both encrypted aggregate handles stored by the pool.
 - An address enters the draw set only after a storage-bound KMS proof verifies its encrypted position is positive.
+- Source-level admission is capped at 12 active participants, and a KMS-verified zero position reclaims a slot without revealing the balance amount.
 - Any keeper can relay a valid proof for an active draw; the caller cannot change its committed handles or prize amount.
 - Draw requests use an immutable prize and minimum cadence; any wallet may request the next eligible round without owner-set timing or prize size.
 - A stale draw can be cancelled permissionlessly after 24 hours.
@@ -110,8 +111,8 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 ## Current Limitations
 
 - Sepolia prizes are funded by voluntary encrypted sponsor contributions, not generated yield. A production deployment should adopt Zama’s audited confidential batching pattern for an ERC-4626 strategy whose underlying asset matches the pool’s cUSDC wrapper.
-- Winner selection is linear in participant count and is intended for a bounded prototype pool.
-- KMS-verified participant activation is live. Activated addresses remain in the linear participant set after later full withdrawals; scalable membership lifecycle is tracked separately.
+- Winner selection remains linear but the next runtime is explicitly capped at 12 active participants from the documented Zama HCU budget.
+- KMS-verified participant activation is live. The 12-member ceiling and proof-bound removal lifecycle are implemented in source and require a verified contract/service migration before use.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
 - The active Sepolia pool enforces permissionless, fixed-prize, cadence-controlled draw requests; see [the draw policy](docs/operations/draw-policy.md).
 

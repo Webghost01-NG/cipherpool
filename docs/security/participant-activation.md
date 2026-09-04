@@ -10,4 +10,6 @@ The boolean result discloses no amount. A successful result reveals only what pu
 
 Activation is intentionally recoverable. If the browser closes or a wallet rejects the finalization transaction, custody is unchanged and the interface exposes a retry action. Test-only FHE and KMS doubles remain under `test/`; production paths require a real Zama public-decryption proof.
 
-This mechanism prevents zero-callback list expansion. It does not compact previously activated addresses after they later withdraw fully; bounded or removable participant sets remain part of the separate scalability work.
+This mechanism prevents zero-callback list expansion. The next bounded-runtime source also creates a proof-bound zero-balance request after an active participant withdraws. A verified `true` removes that address with swap-and-pop and reclaims its slot; a verified `false` leaves membership unchanged. Deposits and draw awards invalidate stale removal handles before they can be replayed. The active Sepolia deployment must be migrated before presenting deactivation as live.
+
+See [Bounded Participant Set](bounded-participant-set.md) for the admission ceiling, removal lifecycle, and HCU calculation.

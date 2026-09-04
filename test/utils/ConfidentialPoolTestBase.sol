@@ -38,12 +38,7 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
         externalEuint64 encryptedAmount = _externalAmount(amount);
         bytes memory action = abi.encode(pool.DEPOSIT_ACTION());
         vm.prank(user);
-        token.confidentialTransferAndCall(
-            address(pool),
-            encryptedAmount,
-            "",
-            action
-        );
+        token.confidentialTransferAndCall(address(pool), encryptedAmount, "", action);
     }
 
     function _finalizeParticipantActivation(address user, bool eligible) internal {
@@ -54,16 +49,19 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
         pool.finalizeParticipantActivation(user, eligible, proof);
     }
 
+    function _finalizeParticipantDeactivation(address user, bool zeroBalance) internal {
+        ebool zeroBalanceHandle = pool.getPendingParticipantDeactivation(user).zeroBalanceHandle;
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = FHE.toBytes32(zeroBalanceHandle);
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(zeroBalance));
+        pool.finalizeParticipantDeactivation(user, zeroBalance, proof);
+    }
+
     function _fundReserve(address source, uint64 amount) internal {
         externalEuint64 encryptedAmount = _externalAmount(amount);
         bytes memory action = abi.encode(pool.PRIZE_RESERVE_ACTION());
         vm.prank(source);
-        token.confidentialTransferAndCall(
-            address(pool),
-            encryptedAmount,
-            "",
-            action
-        );
+        token.confidentialTransferAndCall(address(pool), encryptedAmount, "", action);
     }
 
     function _withdraw(address user, uint64 amount) internal {
