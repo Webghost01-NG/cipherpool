@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { App } from "../src/App.js";
 import { Header } from "../src/components/layout/Header.js";
 import { Footer } from "../src/components/layout/Footer.js";
@@ -40,6 +41,18 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.equal(typeof Badge, "function");
     assert.equal(typeof Button, "function");
     assert.equal(typeof StatBox, "function");
+  });
+
+  test("Loading buttons retain one accessible label while showing a decorative spinner", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(Button, { isLoading: true }, "Deposit privately")
+    );
+
+    assert.match(markup, /disabled=""/);
+    assert.match(markup, /aria-busy="true"/);
+    assert.match(markup, /aria-hidden="true"/);
+    assert.match(markup, /<span class="sr-only">Deposit privately<\/span>/);
+    assert.equal((markup.match(/Deposit privately/g) ?? []).length, 1);
   });
 
   test("Header leaves wallet identity rendering to the wallet control", () => {
