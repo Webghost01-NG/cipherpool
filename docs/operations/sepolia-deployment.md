@@ -31,6 +31,14 @@ No mocked handle, proof, RPC response, or transaction hash was used in this vali
 
 An authorized KMS user-decryption after settlement returned pool position `0` and wallet cUSDC balance `10,000,000` base units. These clear values were obtained only with the deployment wallet’s EIP-712 authorization.
 
+## Sponsor-Funded Prize Reserve
+
+Sepolia has no verified external yield venue whose underlying asset matches the official cUSDCMock wrapper used by CipherPool. The placeholder token-holding vault was therefore removed instead of being presented as a strategy. The active testnet reserve is explicitly sponsor-funded; see [the funding model and production path](reserve-funding.md).
+
+| Step | Block | Transaction | Result |
+| --- | ---: | --- | --- |
+| Encrypted 1 cUSDC sponsor contribution | `11632933` | [`0x07b797...`](https://sepolia.etherscan.io/tx/0x07b797674aa730eea1b851d5ed78352741d7029ef0b1168521244c81e1057eaa) | Confirmed `PrizeReserveFunded`; backend indexed one funding event; authorized KMS verification confirmed the wallet moved from 10 to 9 cUSDC |
+
 ## Runtime Activation
 
 The backend must use `INDEXER_START_BLOCK=11632698` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks.

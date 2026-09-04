@@ -68,6 +68,7 @@ export const App: React.FC = () => {
     isOwner,
     deposit,
     withdraw,
+    fundPrizeReserve,
     revealBalance,
     hideBalance,
     drawLottery,
@@ -108,8 +109,8 @@ export const App: React.FC = () => {
   };
 
   const totalDeposits = formatTokenAmount(poolStats.totalDeposits, asset.decimals);
-  const availableYield = formatTokenAmount(poolStats.availableYield, asset.decimals);
-  const poolStateStatus = metricFreshness.availableYield;
+  const prizeReserve = formatTokenAmount(poolStats.prizeReserve, asset.decimals);
+  const poolStateStatus = metricFreshness.prizeReserve;
   const poolStatusLabel = poolStateStatus === "loading"
     ? "Pool checking"
     : poolStateStatus === "unavailable"
@@ -229,7 +230,7 @@ export const App: React.FC = () => {
 
           <div className="metrics-grid" aria-label="Live pool metrics">
             <StatBox label="Verified pool snapshot" value={totalDeposits + " " + asset.symbol} subtext="Aggregate only; individual positions stay encrypted" status={metricFreshness.totalDeposits} />
-            <StatBox label="Verified prize reserve" value={availableYield + " " + asset.symbol} subtext="Last KMS-verified draw snapshot" status={metricFreshness.availableYield} />
+            <StatBox label="Verified prize reserve" value={prizeReserve + " " + asset.symbol} subtext="Sponsor-funded on Sepolia; last KMS-verified snapshot" status={metricFreshness.prizeReserve} />
             <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" status={metricFreshness.participantCount} />
             <StatBox
               label="Confirmed rounds"
@@ -339,10 +340,17 @@ export const App: React.FC = () => {
             </div>
             <section className="workspace" aria-label="Prize round">
               <LotteryDrawCard
-                availableYield={poolStats.availableYield}
+                prizeReserve={poolStats.prizeReserve}
                 totalDraws={poolStats.totalDraws}
-                availableYieldStatus={metricFreshness.availableYield}
+                prizeReserveStatus={metricFreshness.prizeReserve}
                 totalDrawsStatus={metricFreshness.totalDraws}
+                onFundReserve={(amount) =>
+                  runAction(
+                    "Sponsor prize reserve",
+                    () => fundPrizeReserve(amount, transactionCallbacks),
+                    "Encrypted sponsor contribution confirmed on Ethereum Sepolia."
+                  )
+                }
                 onExecuteDraw={(amount) =>
                   runAction(
                     "Confidential prize draw",
@@ -352,6 +360,7 @@ export const App: React.FC = () => {
                 }
                 isLoading={isLoading}
                 isOwner={isOwner && !poolStats.isPaused}
+                walletConnected={walletReady && !poolStats.isPaused}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
                 writesEnabled={writesEnabled}

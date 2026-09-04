@@ -14,11 +14,11 @@ Public ledgers make financial state easy to inspect. A savings balance, ticket w
 
 ## Slide 3 — Solution
 
-A deposit transfers a public custody amount, then the pool itself derives an equal encrypted credit. Balances and draw weights remain encrypted. A saver can reveal a balance locally only after signing a wallet authorization.
+A deposit transfers confidential cUSDC, and the pool credits only the token-returned encrypted result. Balances and draw weights remain encrypted. A saver can reveal a balance locally only after signing a wallet authorization.
 
 ## Slide 4 — Architecture
 
-The React application reads Ethereum Sepolia and sends explicit wallet-signed transactions. The pool owns encrypted accounting and prize liabilities, while the vault isolates strategy custody. Zama’s relayer and KMS prepare decryption evidence. The public indexer stores durable checkpoints in PostgreSQL.
+The React application reads Ethereum Sepolia and sends explicit wallet-signed transactions. The pool owns encrypted accounting and prize liabilities, while sponsors fund the encrypted testnet prize reserve. Zama’s relayer and KMS prepare decryption evidence. The public indexer stores durable checkpoints in PostgreSQL.
 
 ## Slide 5 — Live product
 
@@ -26,19 +26,19 @@ This is the production interface captured from Vercel. A disconnected session sh
 
 ## Slide 6 — User journey
 
-The journey has four explicit steps: deposit testnet USDC, participate in an encrypted weighted draw, request a private withdrawal, and submit the KMS-backed finalization from the same requesting wallet. Every transaction still requires a wallet confirmation.
+The journey has four explicit steps: deposit testnet cUSDC, contribute or monitor the sponsor-funded reserve, participate in an encrypted weighted draw, and withdraw cUSDC directly. Every transaction still requires wallet confirmation.
 
 ## Slide 7 — Security controls
 
-The current contracts bind encrypted credit to transferred assets, reserve yield when awarding prizes, and include compounded prizes in aggregate liabilities. Withdrawal requests anchor their encrypted handle in storage. On-chain signature verification and a cancellation timeout protect settlement.
+The current contracts bind encrypted credit to transferred assets, consume sponsor-funded prize reserves when awarding prizes, and include compounded prizes in aggregate liabilities. Withdrawal requests anchor their encrypted handle in storage. On-chain signature verification and a cancellation timeout protect settlement. Sepolia does not claim generated yield.
 
 ## Slide 8 — Verified transaction evidence
 
-This is not a simulated transaction. A real one-USDC Sepolia cycle completed through deposit, withdrawal request, and KMS-proof finalization. The three transaction hashes are linked in the repository, and the final state returned wallet funds while pool custody and accounted principal reached zero.
+This is not a simulated transaction. A real one-cUSDC deposit and direct withdrawal completed on Sepolia, followed by a real encrypted one-cUSDC sponsor contribution. The transaction hashes and authorized KMS verification are linked in the repository.
 
 ## Slide 9 — Engineering proof
 
-The project currently passes 113 automated checks across Solidity contracts, backend services, client adapters, and frontend behavior. The frontend runs on Vercel, the backend on Render, and free Neon PostgreSQL storage allows the indexer to resume from its saved checkpoint after a restart.
+The project currently passes 100 automated checks across Solidity contracts, backend services, client adapters, and frontend behavior. The frontend runs on Vercel, the backend on Render, and PostgreSQL storage allows the indexer to resume from its saved checkpoint after a restart.
 
 ## Slide 10 — Close
 

@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { revealBalanceWithFeedback } from "../src/App.js";
 import { BalanceRevealCard } from "../src/components/flows/BalanceRevealCard.js";
 import { DepositCard } from "../src/components/flows/DepositCard.js";
@@ -89,19 +90,26 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
 
   test("LotteryDrawCard displays prize and executes round draw", () => {
     const card = React.createElement(LotteryDrawCard, {
-      availableYield: "25000",
+      prizeReserve: "25000",
       totalDraws: 5,
-      availableYieldStatus: "fresh",
+      prizeReserveStatus: "fresh",
       totalDrawsStatus: "fresh",
+      onFundReserve: async () => {},
       onExecuteDraw: async () => {},
       isLoading: false,
       isOwner: true,
+      walletConnected: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
       writesEnabled: true,
     });
     assert.ok(card);
-    assert.equal(card.props.availableYield, "25000");
+    assert.equal(card.props.prizeReserve, "25000");
+    assert.equal(typeof card.props.onFundReserve, "function");
+    const markup = renderToStaticMarkup(card);
+    assert.match(markup, /Sepolia prizes are sponsor-funded, not protocol yield/);
+    assert.match(markup, /Sponsor prize reserve/);
+    assert.match(markup, /Fund encrypted reserve/);
   });
 
   test("LegacyExitCard exposes settlement without enabling new legacy requests", () => {

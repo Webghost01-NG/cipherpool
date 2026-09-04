@@ -6,6 +6,7 @@ import {IERC7984} from "../../contracts/interfaces/IERC7984.sol";
 import {IERC7984Receiver} from "../../contracts/interfaces/IERC7984Receiver.sol";
 
 contract MockERC7984 is IERC7984 {
+    bool public forceZeroIncomingTransfer;
     bool public forceZeroOutgoingTransfer;
     mapping(address => euint64) internal _balances;
 
@@ -16,6 +17,10 @@ contract MockERC7984 is IERC7984 {
 
     function setForceZeroOutgoingTransfer(bool enabled) external {
         forceZeroOutgoingTransfer = enabled;
+    }
+
+    function setForceZeroIncomingTransfer(bool enabled) external {
+        forceZeroIncomingTransfer = enabled;
     }
 
     function confidentialTransfer(address, euint64 amount) external returns (euint64 transferred) {
@@ -29,7 +34,9 @@ contract MockERC7984 is IERC7984 {
         bytes calldata inputProof,
         bytes calldata data
     ) external returns (euint64 transferred) {
-        transferred = FHE.fromExternal(encryptedAmount, inputProof);
+        transferred = forceZeroIncomingTransfer
+            ? FHE.asEuint64(0)
+            : FHE.fromExternal(encryptedAmount, inputProof);
         IERC7984Receiver(to).onConfidentialTransferReceived(msg.sender, msg.sender, transferred, data);
         FHE.allowTransient(transferred, msg.sender);
     }

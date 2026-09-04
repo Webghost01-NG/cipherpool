@@ -58,30 +58,30 @@ describe("Frontend Foundation & Design System Tests", () => {
   test("Pool metrics distinguish loading, loaded-zero, and stale failure states", () => {
     const loadingMarkup = renderToStaticMarkup(
       React.createElement(StatBox, {
-        label: "Available yield",
+        label: "Prize reserve",
         value: "0 USDC",
-        subtext: "After reserved liabilities",
+        subtext: "Sponsor-funded on Sepolia",
         status: "loading",
       })
     );
     const loadedZeroMarkup = renderToStaticMarkup(
       React.createElement(StatBox, {
-        label: "Available yield",
+        label: "Prize reserve",
         value: "0 USDC",
-        subtext: "After reserved liabilities",
+        subtext: "Sponsor-funded on Sepolia",
         status: "fresh",
       })
     );
     const staleMarkup = renderToStaticMarkup(
       React.createElement(StatBox, {
-        label: "Available yield",
+        label: "Prize reserve",
         value: "25 USDC",
-        subtext: "After reserved liabilities",
+        subtext: "Sponsor-funded on Sepolia",
         status: "stale",
       })
     );
 
-    assert.match(loadingMarkup, /aria-label="Available yield loading"/);
+    assert.match(loadingMarkup, /aria-label="Prize reserve loading"/);
     assert.match(loadingMarkup, /aria-busy="true"/);
     assert.doesNotMatch(loadingMarkup, />0 USDC</);
     assert.match(loadedZeroMarkup, />0 USDC<\/strong>/);
