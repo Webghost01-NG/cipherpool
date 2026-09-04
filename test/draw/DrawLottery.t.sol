@@ -10,6 +10,7 @@ import {ConfidentialPoolTestBase} from "../utils/ConfidentialPoolTestBase.sol";
 contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
     address internal alice = address(0xA11CE);
     address internal sponsor = address(0xBEEF);
+    address internal keeper = address(0xC0FFEE);
 
     function setUp() public { setUpPool(); }
 
@@ -59,6 +60,28 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         assertFalse(pool.getPendingDraw().active);
     }
 
+    function test_NonOwnerCanFinalizeProofBoundDraw() public {
+        _deposit(alice, 10_000);
+        _fundReserve(sponsor, 2_000);
+        pool.requestDraw(1_500);
+
+        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
+        bytes32[] memory handles = new bytes32[](2);
+        handles[0] = FHE.toBytes32(request.totalHandle);
+        handles[1] = FHE.toBytes32(request.reserveHandle);
+        bytes memory proof = generateMockKMSProof(
+            handles,
+            abi.encode(uint64(10_000), uint64(2_000))
+        );
+
+        vm.prank(keeper);
+        pool.finalizeDraw(10_000, 2_000, proof);
+
+        assertEq(pool.currentDrawId(), 1);
+        assertEq(pool.lastVerifiedPrizeReserve(), 500);
+        assertFalse(pool.getPendingDraw().active);
+    }
+
     function test_FinalizeDrawSupportsNonPowerOfTwoTotalWithoutBoundedRandomness() public {
         _deposit(alice, 8_000_000);
         _fundReserve(sponsor, 1_000_000);
@@ -98,8 +121,10 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
             abi.encode(uint64(10_000), uint64(2_000))
         );
 
+        vm.startPrank(keeper);
         vm.expectRevert();
         pool.finalizeDraw(10_000, 2_000, proof);
+        vm.stopPrank();
         assertTrue(pool.getPendingDraw().active);
     }
 
@@ -117,8 +142,10 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
             abi.encode(uint64(10_000), uint64(2_000))
         );
 
+        vm.startPrank(keeper);
         vm.expectRevert();
         pool.finalizeDraw(10_001, 2_000, proof);
+        vm.stopPrank();
         assertTrue(pool.getPendingDraw().active);
     }
 
@@ -135,8 +162,10 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
             handles,
             abi.encode(uint64(10_000), uint64(2_000))
         );
+        vm.prank(keeper);
         pool.finalizeDraw(10_000, 2_000, proof);
 
+        vm.prank(alice);
         vm.expectRevert(NoActiveDrawRequest.selector);
         pool.finalizeDraw(10_000, 2_000, proof);
     }

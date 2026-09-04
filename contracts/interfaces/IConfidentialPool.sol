@@ -9,6 +9,7 @@ import {IPoolErrors} from "./IPoolErrors.sol";
 interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function withdraw(externalEuint64 encryptedAmount, bytes calldata inputProof) external;
     function requestDraw(uint64 prizeAmount) external;
+    /// @notice Permissionlessly relays a KMS proof bound to the active draw request.
     function finalizeDraw(uint64 totalAccountedBalance, uint64 prizeReserve, bytes calldata decryptionProof) external;
     function cancelDraw() external;
     function compoundPrizes() external;

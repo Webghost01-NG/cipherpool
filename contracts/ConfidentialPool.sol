@@ -165,12 +165,16 @@ contract ConfidentialPool is
         emit DrawRequested(nonce, requestHash, prizeAmount, totalHandle, reserveHandle);
     }
 
-    /** @notice Verifies the aggregate snapshot and executes weighted selection over encrypted balances. */
+    /**
+     * @notice Verifies the aggregate snapshot and executes weighted selection over encrypted balances.
+     * @dev Permissionless because the KMS proof is bound to the active request's stored handles and
+     *      the request already fixes the prize amount. The caller cannot substitute settlement state.
+     */
     function finalizeDraw(
         uint64 totalAccountedBalance,
         uint64 prizeReserve,
         bytes calldata decryptionProof
-    ) external override onlyOwner nonReentrant {
+    ) external override nonReentrant {
         DrawRequest memory request = _pendingDraw;
         if (!request.active) revert NoActiveDrawRequest();
         if (totalAccountedBalance == 0) revert EmptyPool();

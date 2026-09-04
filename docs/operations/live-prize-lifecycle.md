@@ -21,7 +21,7 @@ Every write also requires:
 - `LIFECYCLE_AMOUNT` — human token units for deposits, draws, and withdrawals.
 - `LIFECYCLE_CONFIRM` — the exact phrase printed by a failed dry attempt, binding action, amount, draw ID, pool, and wallet.
 
-Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The draw phase deliberately keeps request and KMS finalization together. It prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the contract’s 24-hour permissionless cancellation path.
+Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The runner's draw phase keeps request and KMS finalization together for operator convenience. The updated contract source accepts finalization from any keeper presenting the valid proof bound to the active request, but the currently documented Sepolia deployment predates that change and remains owner-gated until migration. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path.
 
 `claim-prize` privately decrypts the caller’s prize, rejects zero, re-encrypts the positive amount, and submits the ordinary `withdraw` operation. Public calldata and events therefore do not label the payment as prize rather than principal.
 

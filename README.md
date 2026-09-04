@@ -97,6 +97,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - The token callback is accepted only from the configured cUSDC contract.
 - Invalid callback actions are rejected by returning an encrypted `false`, allowing ERC-7984 to refund.
 - Draw proofs are bound to both encrypted aggregate handles stored by the pool.
+- In the updated contract source, any keeper can relay a valid proof for an active draw; the caller cannot change its committed handles or prize amount.
 - A stale draw can be cancelled permissionlessly after 24 hours.
 - Protocol writes fail closed when deployment evidence does not match configuration.
 - Secrets, private keys, RPC credentials, and deployment tokens must never be committed.
@@ -107,6 +108,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
 - ERC-7984 can return an encrypted zero transfer; zero-value callbacks may add addresses to the participant list. This requires a positive-position activation proof before production use.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
+- The active Sepolia deployment predates permissionless finalization and remains owner-gated until the updated source is deployed and runtime verification is migrated.
 
 ## License
 
