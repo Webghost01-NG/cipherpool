@@ -6,11 +6,29 @@ Veylott’s Sepolia reserve is funded by voluntary sponsor contributions of offi
 
 The former `ConfidentialVault` was removed because it only held plaintext tokens and treated unsolicited balance increases as yield. It had no lending or ERC-4626 integration and could not prove where an increase originated.
 
-## Why Aave Is Not Wired In
+## Verified Sepolia Yield Route Status
 
-The [official Zama Sepolia cUSDC wrapper](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md) reports underlying token `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`. [Aave’s official Sepolia address book](https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Sepolia.sol) lists USDC `0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8`. These are different assets. Sending Veylott’s underlying to the Aave market would fail, while substituting or minting an equivalent amount would create an unverifiable bridge.
+The [official Zama Sepolia cUSDC wrapper](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md) reports underlying token `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`. [Aave’s official Sepolia address book](https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Sepolia.sol) lists USDC `0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8`. These are different assets, so the Aave route remains invalid.
 
-[Zama’s production confidential vault design](https://www.zama.org/post/private-deposits-into-public-defi-zamas-first-confidential-vault-design) solves the general ERC-7984/ERC-4626 boundary with OpenZeppelin’s [`BatcherConfidential`](https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/blob/master/contracts/finance/BatcherConfidential.sol): individual encrypted contributions are aggregated, only the batch total is decrypted, and failure paths rewrap funds. That is the appropriate production architecture, but no compatible deployed Sepolia route for Veylott’s official cUSDC asset was verified.
+On 5 September 2026, a newer Zama-managed Sepolia route was independently checked on-chain:
+
+| Component | Address | Verified relationship |
+| --- | --- | --- |
+| Confidential vault share | `0x13F7d34A4f0102734F19E3Ff16e068Fe194B28c4` | `csteakcUSDC (Mock)` wraps the vault below |
+| ERC-4626 vault | `0x6AB54988261AEC573a2CA13cF802d3B1114f864C` | Uses the same `0x9b5C...DFfF` underlying as cUSDCMock |
+| Deposit batcher | `0x48758559c14d4d92b4C74A99660B6a8dbe85F53b` | Routes cUSDCMock to confidential vault shares |
+| Redeem batcher | `0xe94E9afdDd43a19C2914739e9279cb6Fe287BEb0` | Routes confidential vault shares back to cUSDCMock |
+
+This proves asset compatibility and a deployed confidential batching boundary. It does **not** prove generated yield: the vault currently reports `maxRate = 0`, zero strategy adapters, and a zero liquidity adapter. Integrating this passive testnet vault would therefore reproduce the rejected token-holder design under a new name. Veylott will retain sponsor funding until that same venue is configured with a real strategy or another exact-asset venue is verified.
+
+Re-run the checks against an independent Sepolia endpoint:
+
+```bash
+SEPOLIA_RPC_URL=https://your-provider.example npm run verify:yield-route
+SEPOLIA_RPC_URL=https://your-provider.example npm run verify:yield-route -- --require-live-yield
+```
+
+The strict form exits unsuccessfully while the venue is passive, preventing release automation from turning compatibility into a false economic claim. The architecture follows [Zama’s confidential vault design](https://www.zama.org/post/private-deposits-into-public-defi-zamas-first-confidential-vault-design) and OpenZeppelin’s [`BatcherConfidential`](https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/blob/master/contracts/finance/BatcherConfidential.sol), but production integration remains blocked on a genuinely yielding venue.
 
 ## Reproducible Contribution
 
@@ -53,4 +71,4 @@ Sponsor funds enter `_prizeReserve`, never a saver’s position or `_totalAccoun
 
 ## Production Path
 
-Adopt the audited batcher pattern only after selecting a deployed strategy with matching wrapper underlying, implementing deposit and redemption recovery, testing strategy loss and unavailable liquidity, and independently auditing the resulting contracts. Until then, product copy and submission material must say “sponsor-funded prize reserve,” not “yield.”
+Adopt the verified batchers only after their exact-asset vault has a real strategy, then implement deposit and redemption recovery, test loss and unavailable liquidity, and independently audit the resulting contracts. Until then, product copy and submission material must say “sponsor-funded prize reserve,” not “yield.”
