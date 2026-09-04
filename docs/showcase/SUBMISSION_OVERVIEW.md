@@ -6,8 +6,8 @@
 **Live Application (Vercel):** [https://cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)  
 **Live Relayer & Indexer (Render):** [https://cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com) (`/health` verified)  
 **Live Sepolia Testnet Contracts:**
-- **ConfidentialPool:** [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) (Deploy Tx: [`0x93276d...`](https://sepolia.etherscan.io/tx/0x93276d8a857582f24169bc37550a38d7f1bf1e4cd6a94df7f1d95dbf3efb3253))
-- **ConfidentialVault:** [`0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7`](https://sepolia.etherscan.io/address/0x79e6B29e253eCA1d506AF330Bb17937Cba9327a7) (Deploy Tx: [`0x1f4b0b...`](https://sepolia.etherscan.io/tx/0x1f4b0bcc4e4436095a7d7412987ef4ec11c1cc72725066d131278d26bc88c9d4))
+- **ConfidentialPool:** [`0x105C57860b32a37F3C7CF2AEcF5a39AbbCA1d265`](https://sepolia.etherscan.io/address/0x105C57860b32a37F3C7CF2AEcF5a39AbbCA1d265) (Deploy Tx: [`0xf92d5f...`](https://sepolia.etherscan.io/tx/0xf92d5f8e11c97c03d2cc1f9d18c3b928085a59bba2477647c837bf066ae8bc55))
+- **ConfidentialVault:** [`0xF159100235A8B820CfF03aB402cD9d1D0d18aCDf`](https://sepolia.etherscan.io/address/0xF159100235A8B820CfF03aB402cD9d1D0d18aCDf) (Deploy Tx: [`0xc0e3fc...`](https://sepolia.etherscan.io/tx/0xc0e3fcd7a38faede8b7c148f25f30b14173ff2ef030a5b210d010324045f5c2a))
 - **Custody Asset (Sepolia USDC):** [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
 
 ---
@@ -71,13 +71,13 @@ CipherPool leverages **Zama fhEVM v0.13.3** homomorphic encryption to create a c
    - Trigger `draw(prizeAmount)`: winner credit is computed homomorphically inside the fhEVM coprocessor without revealing the winner address publicly.
 5. **2-Step Withdrawal & KMS Verification:**
    - Submit a withdrawal request: pool verifies sufficiency homomorphically (`FHE.select`) and anchors the request in storage.
-   - Relayer fetches threshold signature proof from Zama KMS gateway and invokes `finalizeWithdrawal`.
+   - The backend prepares the threshold signature proof from Zama KMS; the requesting wallet submits `finalizeWithdrawal` because the request is bound to `msg.sender`.
    - Contract executes `FHE.checkSignatures` against the storage-anchored handle and transfers custody assets.
 
 ---
 
 ## 5. Security & Verification Evidence
 
-- **85 Passing Automated Tests** across Foundry, Node.js backend services, client adapters, and frontend UX suites.
+- **113 Passing Automated Tests** across Foundry, Node.js backend services, client adapters, and frontend UX suites.
 - Formal forensic audit covering Cross-Contract Handle Provenance, Replay Boundaries, and Stale Handles (`docs/security/`).
 - 14-Point Sepolia Runtime Checklist verified (`test/runtime/SepoliaRuntimeChecklist.t.sol`).
