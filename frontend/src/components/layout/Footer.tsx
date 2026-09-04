@@ -1,14 +1,14 @@
 import React from "react";
 import { Code2, LockKeyhole } from "lucide-react";
 
-const repositoryUrl = "https://github.com/Webghost01-NG/cipherpool";
+const repositoryUrl = "https://github.com/Webghost01-NG/veylott";
 
 export const Footer: React.FC = () => (
   <footer className="site-footer">
     <div className="container">
       <div className="footer-grid">
         <div>
-          <div className="footer-title">CipherPool</div>
+          <div className="footer-title">Veylott</div>
           <p className="footer-copy">
             Prize savings where individual positions and winning odds remain encrypted.
             Built for the Zama fhEVM testnet and designed to surface cryptographic evidence—not promises.

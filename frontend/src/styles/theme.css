@@ -109,15 +109,14 @@ a { color: inherit; }
   text-align: left;
 }
 .brand__mark {
-  display: grid;
   width: 2.25rem;
   height: 2.25rem;
-  place-items: center;
-  border: 1px solid rgba(49, 87, 246, 0.3);
-  border-radius: 0.62rem;
-  background: linear-gradient(145deg, rgba(49, 87, 246, 0.14), rgba(49, 87, 246, 0.04));
-  color: var(--accent-blue);
-  box-shadow: inset 0 0 1.25rem rgba(49, 87, 246, 0.05);
+  flex: 0 0 auto;
+}
+.brand__mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .brand__name { display: block; font-size: 0.98rem; font-weight: 800; letter-spacing: -0.04em; }
 .brand__tag {

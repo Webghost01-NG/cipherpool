@@ -1,8 +1,8 @@
-# CipherPool Presentation Content
+# Veylott Presentation Content
 
 ## 1. Private prize savings, built for verification
 
-CipherPool is a no-loss prize savings protocol on Zama fhEVM. Principal remains withdrawable while encrypted balances and ticket weights stay confidential. This is a research deployment on Ethereum Sepolia—not production software.
+Veylott is a no-loss prize savings protocol on Zama fhEVM. Principal remains withdrawable while encrypted balances and ticket weights stay confidential. This is a research deployment on Ethereum Sepolia—not production software.
 
 ## 2. Public ledgers expose private financial context
 
@@ -12,7 +12,7 @@ CipherPool is a no-loss prize savings protocol on Zama fhEVM. Principal remains 
 
 ## 3. Public custody, confidential accounting
 
-The official cUSDC token passes the actual encrypted transfer result to CipherPool. The pool maintains balances and draw weights as `euint64` and reveals a balance only after wallet-authorized client-side decryption.
+The official cUSDC token passes the actual encrypted transfer result to Veylott. The pool maintains balances and draw weights as `euint64` and reveals a balance only after wallet-authorized client-side decryption.
 
 ## 4. Architecture
 
@@ -45,7 +45,7 @@ The white-and-blue console shows public pool health without exposing private pos
 - Private prize claim: `0x5763be…c969`
 - Principal withdrawal: `0x767d89…5262`
 
-All receipts succeeded on predecessor pool `0x9c939b82…191e0`. Zama KMS finalized draw 1 with a verified 0.5 cUSDC weight and prize. The winner privately detected and claimed the prize through the ordinary withdrawal path; post-settlement KMS verification returned zero position and prize balances. The active pool adds permissionless proof finalization and began from empty state.
+All receipts succeeded on predecessor pool `0x9c939b82…191e0`. Zama KMS finalized draw 1 with a verified 0.5 cUSDC weight and prize. The winner privately detected and claimed the prize through the ordinary withdrawal path; post-settlement KMS verification returned zero position and prize balances. The active pool adds permissionless draw policy and KMS-verified participant activation, and began from empty state.
 
 ## 9. Engineering evidence
 
@@ -53,4 +53,4 @@ The reproducible validation covers Foundry contract invariants, backend API and 
 
 ## 10. Confidential savings, without blind trust
 
-Try the research app at `https://cipherpool-beta.vercel.app`. Inspect the active pool on Sepolia at `0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8`. Review the source and evidence at `github.com/Webghost01-NG/cipherpool`.
+Try the research app at `https://veylott.vercel.app`. Inspect the active pool on Sepolia at `0x54FdC46D0EA722EfA4853192678b35fCABFad99C`. Review the source and evidence at `github.com/Webghost01-NG/veylott`.

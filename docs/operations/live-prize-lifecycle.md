@@ -1,6 +1,6 @@
 # Live Sepolia Prize Lifecycle
 
-Use `npm run lifecycle:sepolia` to inspect or execute one explicit phase of the real CipherPool lifecycle. The default action is read-only `preflight`; there is no “run everything” mode. The runner validates Ethereum Sepolia, reviewed runtime bytecode, custody token, pause and pending-draw state, current draw ID, wallet identity, and the complete expected participant set before accepting a write.
+Use `npm run lifecycle:sepolia` to inspect or execute one explicit phase of the real Veylott lifecycle. The default action is read-only `preflight`; there is no “run everything” mode. The runner validates Ethereum Sepolia, reviewed runtime bytecode, custody token, pause and pending-draw state, current draw ID, wallet identity, and the complete expected participant set before accepting a write.
 
 Load public deployment values from an untracked environment file. Supply the encrypted keystore password through a secret manager or a permission-restricted password file—never command history or the repository.
 
@@ -27,7 +27,7 @@ Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then
 
 ## Completed Predecessor-Deployment Lifecycle
 
-On 4 September 2026, the runner completed a real 0.5 cUSDC lifecycle against predecessor pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. No mocked handle, proof, receipt, RPC response, or winner was used. This remains historical protocol evidence; the current permissionless-request deployment began at block `11635612` with empty state. Participant activation remains source-only until its successor is deployed and verified.
+On 4 September 2026, the runner completed a real 0.5 cUSDC lifecycle against predecessor pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. No mocked handle, proof, receipt, RPC response, or winner was used. This remains historical protocol evidence; the current activation-enabled deployment began at block `11635883` with empty state.
 
 | Phase | Block | Transaction | Verified result |
 | --- | ---: | --- | --- |

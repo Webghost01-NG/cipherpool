@@ -11,7 +11,7 @@ describe("Backend Core & Health Tests", () => {
     const res = await request(app).get("/health");
     assert.equal(res.status, 200);
     assert.equal(res.body.status, "healthy");
-    assert.equal(res.body.service, "cipherpool-backend");
+    assert.equal(res.body.service, "veylott-backend");
     assert.equal(typeof res.body.uptimeSeconds, "number");
   });
 
@@ -33,7 +33,7 @@ describe("Backend Core & Health Tests", () => {
       PORT: "4000",
       NODE_ENV: "test",
       RPC_URL: "http://localhost:8545",
-      DATABASE_URL: "postgresql://cipherpool:secret@localhost:5432/cipherpool",
+      DATABASE_URL: "postgresql://veylott:secret@localhost:5432/veylott",
       POOL_CONTRACT_ADDRESS: "0x2222222222222222222222222222222222222222",
       CUSTODY_ASSET_ADDRESS: "0x3333333333333333333333333333333333333333",
       POOL_RUNTIME_CODE_HASH: "0x" + "ab".repeat(32),

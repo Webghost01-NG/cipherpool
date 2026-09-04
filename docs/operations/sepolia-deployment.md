@@ -6,14 +6,14 @@ The active pool uses the official Zama `cUSDCMock` ERC-7984 wrapper on Ethereum 
 
 | Component | Address | Block | Transaction | Runtime code hash |
 | --- | --- | ---: | --- | --- |
-| ConfidentialPool | `0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8` | `11635612` | [`0x381895...`](https://sepolia.etherscan.io/tx/0x3818956361bc145697a7a956947a494298d5a70ff491a3211e5674a5377b8bc6) | `0xe393050b9bdccc1802dcdef00bf8f7329b629c0e223d56fcd2a380e2a38c7abe` |
+| ConfidentialPool | `0x54FdC46D0EA722EfA4853192678b35fCABFad99C` | `11635883` | [`0xdc1625...`](https://sepolia.etherscan.io/tx/0xdc16256211b0bce6e01baea5a421e9d421d9ec0a776057dc723fc731c0531d88) | `0x9568c86d6d8a2ed93bcb6b229b3c3c0bc3ad8468cde60abc2ce671bc73a397a5` |
 | Official cUSDCMock | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` | Zama-managed | [Contract](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) | Upgradeable proxy |
 
 Verified initial state:
 
 - Owner: `0xF19125e08AFC9502DCde60703c1E24C334902356`
 - Custody asset: official cUSDCMock address above
-- Runtime size: `20,143` bytes
+- Runtime size: `12,756` bytes
 - Cancellation delay: `86,400` seconds
 - Draw interval: `604,800` seconds; fixed prize: `500,000` base units
 - Paused: `false`; draw count and participant count: `0`
@@ -34,7 +34,7 @@ An authorized KMS user-decryption after settlement returned pool position `0` an
 
 ## Sponsor-Funded Prize Reserve
 
-Sepolia has no verified external yield venue whose underlying asset matches the official cUSDCMock wrapper used by CipherPool. The placeholder token-holding vault was therefore removed instead of being presented as a strategy. The active testnet reserve is explicitly sponsor-funded; see [the funding model and production path](reserve-funding.md).
+Sepolia has no verified external yield venue whose underlying asset matches the official cUSDCMock wrapper used by Veylott. The placeholder token-holding vault was therefore removed instead of being presented as a strategy. The active testnet reserve is explicitly sponsor-funded; see [the funding model and production path](reserve-funding.md).
 
 | Step | Block | Transaction | Result |
 | --- | ---: | --- | --- |
@@ -51,7 +51,7 @@ Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow b
 
 ## Runtime Activation
 
-The backend uses `INDEXER_START_BLOCK=11635612` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. The positive-position activation changes in the current source require another atomic contract and service migration before they are live.
+The backend uses `INDEXER_START_BLOCK=11635883` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation is active in this runtime.
 
 ## Rollback
 

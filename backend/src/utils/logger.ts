@@ -11,7 +11,7 @@ export interface LogEntry {
 export class Logger {
   private context: string;
 
-  constructor(context: string = "CipherPoolBackend") {
+  constructor(context: string = "VeylottBackend") {
     this.context = context;
   }
 

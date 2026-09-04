@@ -43,7 +43,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
         <div className="modal__top">
           <div>
             <p className="eyebrow">Wallet access</p>
-            <h2 id="wallet-modal-title">{status === "wrong_network" ? "Change network" : "Enter CipherPool"}</h2>
+            <h2 id="wallet-modal-title">{status === "wrong_network" ? "Change network" : "Enter Veylott"}</h2>
           </div>
           <button className="icon-button" type="button" aria-label="Close wallet dialog" onClick={onClose}><X size={18} /></button>
         </div>

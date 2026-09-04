@@ -25,7 +25,7 @@ contract DeploySepolia is Script {
     uint64 public constant DRAW_PRIZE_AMOUNT = 500_000; // 0.5 cUSDC at 6 decimals
 
     function run() external returns (address poolAddress) {
-        console.log("=== CipherPool Sepolia Deployment ===");
+        console.log("=== Veylott Sepolia Deployment ===");
         console.log("Deployer Address:", msg.sender);
         console.log("Chain ID:", block.chainid);
 

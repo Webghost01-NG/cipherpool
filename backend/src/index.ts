@@ -103,7 +103,7 @@ async function main() {
 
   const app = createApp(store);
   const server = app.listen(config.PORT, () => {
-    defaultLogger.info("CipherPool Backend Service started successfully", {
+    defaultLogger.info("Veylott Backend Service started successfully", {
       port: config.PORT,
       nodeEnv: config.NODE_ENV,
       chainId: config.CHAIN_ID,

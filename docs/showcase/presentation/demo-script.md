@@ -1,14 +1,14 @@
-# CipherPool Demo Script
+# Veylott Demo Script
 
 Target runtime: approximately 3 minutes 20 seconds. The generated video uses the live public interface and already-verified Sepolia evidence. It does not simulate a wallet, signature, KMS response, or newly confirmed transaction.
 
 ## Slide 1 — Introduction
 
-CipherPool is private prize savings built on Zama fhEVM. It protects balances and ticket weights while keeping custody and settlement independently verifiable. The current deployment is research software on Ethereum Sepolia.
+Veylott is private prize savings built on Zama fhEVM. It protects balances and ticket weights while keeping custody and settlement independently verifiable. The current deployment is research software on Ethereum Sepolia.
 
 ## Slide 2 — Problem
 
-Public ledgers make financial state easy to inspect. A savings balance, ticket weight, and transaction timing can expose intent or make high-value users easy to track. CipherPool is designed to preserve auditability without publishing every private position.
+Public ledgers make financial state easy to inspect. A savings balance, ticket weight, and transaction timing can expose intent or make high-value users easy to track. Veylott is designed to preserve auditability without publishing every private position.
 
 ## Slide 3 — Solution
 
@@ -32,7 +32,7 @@ The contracts bind encrypted credit to the token-returned transfer, consume spon
 
 ## Slide 8 — Verified transaction evidence
 
-This is not a simulated transaction. On the corrected active deployment, a real encrypted 0.5 cUSDC deposit entered draw one. Zama KMS finalized the encrypted winner selection, the winner privately detected and claimed the prize through an ordinary withdrawal, and the remaining principal was withdrawn. Every receipt and the authorized post-settlement KMS verification are linked in the repository.
+This is not a simulated transaction. On a documented predecessor deployment, a real encrypted 0.5 cUSDC deposit entered draw one. Zama KMS finalized the encrypted winner selection, the winner privately detected and claimed the prize through an ordinary withdrawal, and the remaining principal was withdrawn. Every historical receipt and the authorized post-settlement KMS verification are linked in the repository.
 
 ## Slide 9 — Engineering proof
 
@@ -40,4 +40,4 @@ Reproducible validation covers Solidity invariants, backend API and indexer beha
 
 ## Slide 10 — Close
 
-CipherPool demonstrates that private savings can remain usable and verifiable. Open the live research app, inspect the active Sepolia contracts, and review every security decision and test in the public repository.
+Veylott demonstrates that private savings can remain usable and verifiable. Open the live research app, inspect the active Sepolia contracts, and review every security decision and test in the public repository.

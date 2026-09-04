@@ -30,6 +30,7 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.match(html, /href="\/favicon\.ico" sizes="any"/);
     assert.equal(fs.existsSync(path.join(publicDirectory, "favicon.svg")), true);
     assert.equal(fs.existsSync(path.join(publicDirectory, "favicon.ico")), true);
+    assert.equal(fs.existsSync(path.join(publicDirectory, "veylott-mark.svg")), true);
   });
 
   test("App presents live state and primary savings actions in an app-first layout", () => {
@@ -117,6 +118,9 @@ describe("Frontend Foundation & Design System Tests", () => {
     const element = React.createElement(Header);
 
     assert.ok(element);
+    assert.match(content, /Veylott/);
+    assert.match(content, /\/veylott-mark\.svg/);
+    assert.doesNotMatch(content, /Fingerprint/);
     assert.ok(content.includes("<WalletButton />"), "Wallet control is present");
     assert.ok(!content.includes("contractAddress"), "Contract address is not rendered as wallet identity");
     assert.ok(!content.includes("contract-chip"), "Misleading contract chip is absent");

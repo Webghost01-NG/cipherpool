@@ -1,14 +1,16 @@
-# CipherPool
+# Veylott
 
-CipherPool is a confidential prize-savings prototype for Zama fhEVM. It uses the official ERC-7984 `cUSDCMock` wrapper on Ethereum Sepolia so deposit amounts, saved positions, withdrawals, prize reserves, and winner credits remain encrypted on-chain.
+<p align="center"><img src="frontend/public/veylott-mark.svg" width="88" alt="Veylott logo" /></p>
 
-> CipherPool is research software using test assets. It has not been independently audited and must not hold real funds.
+Veylott is a confidential prize-savings prototype for Zama fhEVM. It uses the official ERC-7984 `cUSDCMock` wrapper on Ethereum Sepolia so deposit amounts, saved positions, withdrawals, prize reserves, and winner credits remain encrypted on-chain.
 
-## Why CipherPool
+> Veylott is research software using test assets. It has not been independently audited and must not hold real funds.
 
-Public prize pools reveal each saver’s position and therefore their exact winning odds. CipherPool instead performs balance updates, sufficiency checks, and weighted winner selection over `euint64` ciphertexts. A wallet may reveal its own position with an EIP-712 authorization, but the application does not index plaintext user balances.
+## Why Veylott
 
-![CipherPool production interface showing a disconnected, privacy-preserving dashboard](docs/showcase/presentation/assets/live-dashboard.png)
+Public prize pools reveal each saver’s position and therefore their exact winning odds. Veylott instead performs balance updates, sufficiency checks, and weighted winner selection over `euint64` ciphertexts. A wallet may reveal its own position with an EIP-712 authorization, but the application does not index plaintext user balances.
+
+![Veylott production interface showing a disconnected, privacy-preserving dashboard](docs/showcase/presentation/assets/live-dashboard.png)
 
 The interface reports public protocol health without substituting sample balances when a wallet, deployment check, or verified source is unavailable.
 
@@ -43,23 +45,23 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 | Component | Address |
 | --- | --- |
-| ConfidentialPool | [`0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8`](https://sepolia.etherscan.io/address/0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8) |
+| ConfidentialPool | [`0x54FdC46D0EA722EfA4853192678b35fCABFad99C`](https://sepolia.etherscan.io/address/0x54FdC46D0EA722EfA4853192678b35fCABFad99C) |
 | Official cUSDCMock | [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) |
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |
 
-- Application: [cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
+- Application: [veylott.vercel.app](https://veylott.vercel.app)
 - Indexer: [cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
 - Deployment verification and historical encrypted prize-lifecycle evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
 - Official Zama wrapper registry: [Sepolia confidential-token addresses](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md)
 
 ## Demo and First Use
 
-- [Captioned demo video](docs/showcase/presentation/CipherPool-Demo.mp4)
-- [Presentation PDF](docs/showcase/presentation/CipherPool-Presentation.pdf)
-- [Editable PowerPoint deck](docs/showcase/presentation/CipherPool-Presentation.pptx)
+- [Captioned demo video](docs/showcase/presentation/Veylott-Demo.mp4)
+- [Presentation PDF](docs/showcase/presentation/Veylott-Presentation.pdf)
+- [Editable PowerPoint deck](docs/showcase/presentation/Veylott-Presentation.pptx)
 
-To explore safely, open the application, connect the intended wallet on Ethereum Sepolia, and wait for runtime assurance to verify the chain, bytecode, and custody asset. Obtain test USDC, wrap it with the official cUSDC contract, then use CipherPool's encrypted deposit, prize-round, private prize claim, and direct-withdrawal actions. Review every wallet prompt before signing and treat only a confirmed receipt as success. The recorded transactions above are historical evidence, not a promise that a new transaction has completed.
+To explore safely, open the application, connect the intended wallet on Ethereum Sepolia, and wait for runtime assurance to verify the chain, bytecode, and custody asset. Obtain test USDC, wrap it with the official cUSDC contract, then use Veylott's encrypted deposit, prize-round, private prize claim, and direct-withdrawal actions. Review every wallet prompt before signing and treat only a confirmed receipt as success. The recorded transactions above are historical evidence, not a promise that a new transaction has completed.
 
 ## Repository Layout
 
@@ -109,7 +111,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 
 - Sepolia prizes are funded by voluntary encrypted sponsor contributions, not generated yield. A production deployment should adopt Zama’s audited confidential batching pattern for an ERC-4626 strategy whose underlying asset matches the pool’s cUSDC wrapper.
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
-- Participant activation is implemented in source but requires a new verified deployment before the live application can use it. Activated addresses remain in the linear participant set after later full withdrawals; scalable membership lifecycle is tracked separately.
+- KMS-verified participant activation is live. Activated addresses remain in the linear participant set after later full withdrawals; scalable membership lifecycle is tracked separately.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
 - The active Sepolia pool enforces permissionless, fixed-prize, cadence-controlled draw requests; see [the draw policy](docs/operations/draw-policy.md).
 
