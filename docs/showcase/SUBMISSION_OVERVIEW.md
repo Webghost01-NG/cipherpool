@@ -5,7 +5,7 @@
 CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC deposit, position, withdrawal, prize counter, and winning outcome encrypted while selecting a winner over encrypted balance weights.
 
 - Application: [cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
-- Pool: [`0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`](https://sepolia.etherscan.io/address/0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0)
+- Pool: [`0x63bA2DF59b43801492060f2cc5D071155C45dD47`](https://sepolia.etherscan.io/address/0x63bA2DF59b43801492060f2cc5D071155C45dD47)
 - Official cUSDCMock: [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639)
 - Network: Ethereum Sepolia
 
@@ -22,8 +22,8 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 
 ## Evidence
 
-- The active runtime is 19,509 bytes and matches hash `0x5f642b23de77a3c7e20735fb0f43ab4e23f346d41624b7eef0565ecfeb35f8c7`.
-- The corrected active pool completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal.
+- The active runtime is 19,501 bytes and matches hash `0x4200e0006ccec7cfee9840944ac3b17996d078932dc4610155affab5e1fcd222`.
+- Predecessor pool `0x9c939b82…191e0` completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal before the permissionless-finalization migration.
 - Draw 1 finalized with verified weight and prize of 500,000 base units; authorized post-settlement KMS decryption returned a zero private position and zero prize counter.
 - Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).
 

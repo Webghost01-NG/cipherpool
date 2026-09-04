@@ -2,7 +2,7 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
-**Issue Reference:** [#9 — docs(threat-model): Formalize threat model with DAG handle provenance and KMS trust boundaries](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/9)  
+**Issue Reference:** [#9 — docs(threat-model): Formalize threat model with DAG handle provenance and KMS trust boundaries](https://github.com/Webghost01-NG/cipherpool/issues/9)
 **Milestone:** Phase 2 — Project Architecture & Threat Modeling  
 **Author:** Security Research Team  
 **Version:** 1.0 (Forensically Verified)  
@@ -163,7 +163,7 @@ $$\text{availableYieldPlain} = \max(0, \text{custody} - \text{base liability} - 
 
 Draw finalization credits the encrypted award to `_balances` and mirrors it in `_prizes` as private metadata; `compoundPrizes()` only clears that metadata and does not change aggregate liability. Because a distinctive caller-initiated compounding transaction can leak claim intent through timing, the production UI does not use it. Prize claims instead use the same encrypted `withdraw` selector as principal exits. Successful withdrawals consume the caller's encrypted prize counter first, without publishing the amount or the prize/principal split.
 
-The updated contract source makes finalization permissionless after a draw request is committed. A keeper can only relay the aggregate values and KMS proof: `FHE.checkSignatures` binds those values to the request's stored total and reserve handles, while the request already fixes the prize amount. Deleting the request before winner evaluation and reverting when no request exists preserve single-use settlement and replay protection. Draw requests remain owner-controlled and are tracked separately. The active Sepolia deployment predates this source change, so permissionless finalization is not claimed for that address until a verified redeployment occurs.
+Finalization is permissionless after a draw request is committed. A keeper can only relay the aggregate values and KMS proof: `FHE.checkSignatures` binds those values to the request's stored total and reserve handles, while the request already fixes the prize amount. Deleting the request before winner evaluation and reverting when no request exists preserve single-use settlement and replay protection. Draw requests remain owner-controlled and are tracked separately.
 
 ---
 

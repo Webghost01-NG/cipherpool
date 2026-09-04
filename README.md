@@ -42,14 +42,14 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 | Component | Address |
 | --- | --- |
-| ConfidentialPool | [`0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`](https://sepolia.etherscan.io/address/0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0) |
+| ConfidentialPool | [`0x63bA2DF59b43801492060f2cc5D071155C45dD47`](https://sepolia.etherscan.io/address/0x63bA2DF59b43801492060f2cc5D071155C45dD47) |
 | Official cUSDCMock | [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) |
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |
 
 - Application: [cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
 - Indexer: [cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
-- Deployment and complete encrypted prize-lifecycle evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
+- Deployment verification and historical encrypted prize-lifecycle evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
 - Official Zama wrapper registry: [Sepolia confidential-token addresses](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md)
 
 ## Demo and First Use
@@ -97,7 +97,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - The token callback is accepted only from the configured cUSDC contract.
 - Invalid callback actions are rejected by returning an encrypted `false`, allowing ERC-7984 to refund.
 - Draw proofs are bound to both encrypted aggregate handles stored by the pool.
-- In the updated contract source, any keeper can relay a valid proof for an active draw; the caller cannot change its committed handles or prize amount.
+- Any keeper can relay a valid proof for an active draw; the caller cannot change its committed handles or prize amount.
 - A stale draw can be cancelled permissionlessly after 24 hours.
 - Protocol writes fail closed when deployment evidence does not match configuration.
 - Secrets, private keys, RPC credentials, and deployment tokens must never be committed.
@@ -108,7 +108,6 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
 - ERC-7984 can return an encrypted zero transfer; zero-value callbacks may add addresses to the participant list. This requires a positive-position activation proof before production use.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
-- The active Sepolia deployment predates permissionless finalization and remains owner-gated until the updated source is deployed and runtime verification is migrated.
 
 ## License
 

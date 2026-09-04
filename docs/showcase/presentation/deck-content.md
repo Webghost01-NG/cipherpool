@@ -44,7 +44,7 @@ The white-and-blue console shows public pool health without exposing private pos
 - Private prize claim: `0x5763be…c969`
 - Principal withdrawal: `0x767d89…5262`
 
-All receipts succeeded on the corrected active pool. Zama KMS finalized draw 1 with a verified 0.5 cUSDC weight and prize. The winner privately detected and claimed the prize through the ordinary withdrawal path; post-settlement KMS verification returned zero position and prize balances.
+All receipts succeeded on predecessor pool `0x9c939b82…191e0`. Zama KMS finalized draw 1 with a verified 0.5 cUSDC weight and prize. The winner privately detected and claimed the prize through the ordinary withdrawal path; post-settlement KMS verification returned zero position and prize balances. The active pool adds permissionless proof finalization and began from empty state.
 
 ## 9. Engineering evidence
 
@@ -52,4 +52,4 @@ The reproducible validation covers Foundry contract invariants, backend API and 
 
 ## 10. Confidential savings, without blind trust
 
-Try the research app at `https://cipherpool-beta.vercel.app`. Inspect the active pool on Sepolia at `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. Review the source and evidence at `github.com/Webghost01-NG/fhevm-pooltogether-security`.
+Try the research app at `https://cipherpool-beta.vercel.app`. Inspect the active pool on Sepolia at `0x63bA2DF59b43801492060f2cc5D071155C45dD47`. Review the source and evidence at `github.com/Webghost01-NG/cipherpool`.

@@ -21,13 +21,13 @@ Every write also requires:
 - `LIFECYCLE_AMOUNT` — human token units for deposits, draws, and withdrawals.
 - `LIFECYCLE_CONFIRM` — the exact phrase printed by a failed dry attempt, binding action, amount, draw ID, pool, and wallet.
 
-Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The runner's draw phase keeps request and KMS finalization together for operator convenience. The updated contract source accepts finalization from any keeper presenting the valid proof bound to the active request, but the currently documented Sepolia deployment predates that change and remains owner-gated until migration. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path.
+Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The runner's draw phase keeps request and KMS finalization together for operator convenience. Any keeper may present the valid proof bound to an active request. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path.
 
 `claim-prize` privately decrypts the caller’s prize, rejects zero, re-encrypts the positive amount, and submits the ordinary `withdraw` operation. Public calldata and events therefore do not label the payment as prize rather than principal.
 
-## Completed Active-Deployment Lifecycle
+## Completed Predecessor-Deployment Lifecycle
 
-On 4 September 2026, the runner completed a real 0.5 cUSDC lifecycle against the corrected active pool. No mocked handle, proof, receipt, RPC response, or winner was used.
+On 4 September 2026, the runner completed a real 0.5 cUSDC lifecycle against predecessor pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. No mocked handle, proof, receipt, RPC response, or winner was used. This remains historical protocol evidence; the current permissionless-finalization deployment began at block `11635277` with empty state.
 
 | Phase | Block | Transaction | Verified result |
 | --- | ---: | --- | --- |
