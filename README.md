@@ -25,9 +25,14 @@ ConfidentialPool
           │
           ▼
 Backend indexer (event counts + verified aggregate snapshots only)
+
+Sponsor wallet
+  └─ encrypted cUSDC testnet contribution ──► prize reserve
 ```
 
 Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. Draws temporarily lock balance-changing operations, publicly decrypt only the aggregate weight and reserve, verify both storage-bound handles with `FHE.checkSignatures`, then select a winner over encrypted cumulative balances with `FHE.randEuint64`.
+
+The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCMock wraps `0x9b5C...DFfF`, whereas Aave Sepolia’s deployed USDC market uses `0x94a9...E4C8`; treating either a passive token holder or an unrelated Aave position as pool yield would be false. The rejected strategy and production path are documented in [the reserve funding model](docs/operations/reserve-funding.md).
 
 ## Live Sepolia Deployment
 
@@ -66,6 +71,8 @@ npm run build:backend
 npm run build:frontend
 ```
 
+To make a real encrypted testnet prize contribution, load credentials from an external keystore and run `npm run fund:sponsor-reserve`. Required variables and receipt checks are documented in [the reserve funding guide](docs/operations/reserve-funding.md).
+
 Set `RPC_URL` and `DATABASE_URL` in `.env`. Frontend writes remain disabled unless `VITE_ENABLE_PROTOCOL_WRITES=true` and runtime verification confirms the configured chain, pool bytecode hash, cUSDC address, symbol, and decimals.
 
 Run the backend with `npm run build:backend && node dist/backend/src/index.js`. Run the frontend locally with `npx vite --config vite.config.ts`.
@@ -82,7 +89,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 
 ## Current Limitations
 
-- Prize reserve funding is confidential but manual. Connecting it to verifiable external yield is tracked in [issue #118](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/118).
+- Sepolia prizes are funded by voluntary encrypted sponsor contributions, not generated yield. A production deployment should adopt Zama’s audited confidential batching pattern for an ERC-4626 strategy whose underlying asset matches the pool’s cUSDC wrapper.
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
 - ERC-7984 can return an encrypted zero transfer; zero-value callbacks may add addresses to the participant list. This requires a positive-position activation proof before production use.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.

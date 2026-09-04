@@ -1,46 +1,65 @@
 import React, { useState } from "react";
-import { Dices, Info, Sparkles } from "lucide-react";
+import { Dices, Gift, Info, Sparkles } from "lucide-react";
 import { parseUnits } from "ethers";
 import { Badge, Button, Card } from "../common/UIPrimitives.js";
 import { formatTokenAmount } from "../../utils/format.js";
 
 export interface LotteryDrawCardProps {
-  availableYield: string;
+  prizeReserve: string;
   totalDraws: number;
-  availableYieldStatus: "loading" | "fresh" | "stale" | "unavailable";
+  prizeReserveStatus: "loading" | "fresh" | "stale" | "unavailable";
   totalDrawsStatus: "loading" | "fresh" | "stale" | "unavailable";
+  onFundReserve: (amount: bigint) => Promise<void>;
   onExecuteDraw: (prize: bigint) => Promise<void>;
   isLoading: boolean;
   isOwner: boolean;
+  walletConnected: boolean;
   tokenSymbol: string;
   tokenDecimals: number;
   writesEnabled: boolean;
 }
 
 export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
-  availableYield,
+  prizeReserve,
   totalDraws,
-  availableYieldStatus,
+  prizeReserveStatus,
   totalDrawsStatus,
+  onFundReserve,
   onExecuteDraw,
   isLoading,
   isOwner,
+  walletConnected,
   tokenSymbol,
   tokenDecimals,
   writesEnabled,
 }) => {
+  const [sponsorAmount, setSponsorAmount] = useState("");
   const [drawPrize, setDrawPrize] = useState("");
+  const [sponsorError, setSponsorError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const hasAvailableYield = availableYieldStatus === "fresh" || availableYieldStatus === "stale";
+  const hasPrizeReserve = prizeReserveStatus === "fresh" || prizeReserveStatus === "stale";
   const hasTotalDraws = totalDrawsStatus === "fresh" || totalDrawsStatus === "stale";
-  const availableYieldLabel = hasAvailableYield
-    ? `${formatTokenAmount(availableYield, tokenDecimals)} ${tokenSymbol}${availableYieldStatus === "stale" ? " (stale)" : ""}`
+  const prizeReserveLabel = hasPrizeReserve
+    ? `${formatTokenAmount(prizeReserve, tokenDecimals)} ${tokenSymbol}${prizeReserveStatus === "stale" ? " (stale)" : ""}`
     : "—";
   const confirmedRoundsLabel = hasTotalDraws
     ? `${totalDraws} confirmed round${totalDraws === 1 ? "" : "s"}${totalDrawsStatus === "stale" ? " (last confirmed)" : ""}.`
     : totalDrawsStatus === "loading"
       ? "Loading confirmed rounds…"
       : "Confirmed rounds unavailable.";
+
+  const handleSponsor = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      const value = parseUnits(sponsorAmount, tokenDecimals);
+      if (value <= 0n) throw new Error("Enter a contribution greater than zero.");
+      setSponsorError(null);
+      await onFundReserve(value);
+      setSponsorAmount("");
+    } catch (error) {
+      setSponsorError(error instanceof Error ? error.message : "Enter a valid contribution.");
+    }
+  };
 
   const handleDraw = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -64,14 +83,38 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
       <div className="callout">
         <Dices size={18} aria-hidden="true" />
         <span>
-          {confirmedRoundsLabel} The displayed reserve is the last verified snapshot; each new draw verifies the current encrypted reserve through Zama KMS.
+          {confirmedRoundsLabel} Sepolia prizes are sponsor-funded, not protocol yield. Each draw verifies the current encrypted reserve through Zama KMS.
         </span>
       </div>
+      <form className="form-stack" onSubmit={handleSponsor} style={{ marginTop: "1rem" }}>
+        <label className="field" htmlFor="sponsor-reserve-input">
+          <span className="field__label">
+            <span>Sponsor prize reserve</span>
+            <span>Encrypted cUSDC contribution</span>
+          </span>
+          <span className="input-shell">
+            <input
+              id="sponsor-reserve-input"
+              inputMode="decimal"
+              autoComplete="off"
+              value={sponsorAmount}
+              onChange={(event) => { setSponsorAmount(event.target.value); setSponsorError(null); }}
+              disabled={!walletConnected || !writesEnabled || isLoading}
+              placeholder="0.00"
+            />
+            <span>{tokenSymbol}</span>
+          </span>
+        </label>
+        {sponsorError && <p role="alert" className="badge badge--error">{sponsorError}</p>}
+        <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !sponsorAmount} isLoading={isLoading}>
+          <Gift size={17} /> Fund encrypted reserve
+        </Button>
+      </form>
       <form className="form-stack" onSubmit={handleDraw} style={{ marginTop: "1rem" }}>
         <label className="field" htmlFor="draw-prize-input">
           <span className="field__label">
             <span>Prize amount</span>
-            <span>Available: {availableYieldLabel}</span>
+            <span>Verified reserve: {prizeReserveLabel}</span>
           </span>
           <span className="input-shell">
             <input

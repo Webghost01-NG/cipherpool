@@ -13,7 +13,7 @@ import { validateDeploymentEvidence } from "../contracts/deployment.js";
 
 export interface PoolStats {
   totalDeposits: string;
-  availableYield: string;
+  prizeReserve: string;
   custodyBalance: string;
   totalDraws: number;
   participantCount: number;
@@ -52,19 +52,20 @@ export interface DeploymentVerification {
 export type MetricFreshness = "loading" | "fresh" | "stale" | "unavailable";
 export interface PoolMetricFreshness {
   totalDeposits: MetricFreshness;
-  availableYield: MetricFreshness;
+  prizeReserve: MetricFreshness;
   totalDraws: MetricFreshness;
   participantCount: MetricFreshness;
 }
 
 const initialMetricFreshness: PoolMetricFreshness = {
   totalDeposits: "loading",
-  availableYield: "loading",
+  prizeReserve: "loading",
   totalDraws: "loading",
   participantCount: "loading",
 };
 
 const DEPOSIT_ACTION = ethers.id("CIPHERPOOL_DEPOSIT_V1");
+const PRIZE_RESERVE_ACTION = ethers.id("CIPHERPOOL_PRIZE_RESERVE_V1");
 
 function ensureReceipt(receipt: ethers.ContractTransactionReceipt | null): ethers.ContractTransactionReceipt {
   if (!receipt || receipt.status !== 1) throw new Error("Transaction was not confirmed on-chain.");
@@ -81,7 +82,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   const { address, status } = useWallet();
   const [poolStats, setPoolStats] = useState<PoolStats>({
     totalDeposits: "0",
-    availableYield: "0",
+    prizeReserve: "0",
     custodyBalance: "0",
     totalDraws: 0,
     participantCount: 0,
@@ -127,20 +128,22 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const data = await response.json() as {
         lastVerifiedTotalAccountedBalance?: string;
         totalDraws?: number;
+        prizeReserveFundingModel?: string;
         latestDraw?: { remainingPrizeReserve?: string } | null;
       };
       if (typeof data.totalDraws !== "number" || !Number.isSafeInteger(data.totalDraws)) throw new Error("Invalid draw count.");
+      if (data.prizeReserveFundingModel !== "sponsor-funded-testnet") throw new Error("Unsupported prize reserve funding model.");
       setBackendStatus("online");
       setPoolStats((current) => ({
         ...current,
         totalDeposits: data.lastVerifiedTotalAccountedBalance ?? current.totalDeposits,
-        availableYield: data.latestDraw?.remainingPrizeReserve ?? current.availableYield,
+        prizeReserve: data.latestDraw?.remainingPrizeReserve ?? current.prizeReserve,
         totalDraws: data.totalDraws!,
       }));
       setMetricFreshness((current) => ({
         ...current,
         totalDeposits: data.latestDraw ? "stale" : "unavailable",
-        availableYield: data.latestDraw ? "stale" : "unavailable",
+        prizeReserve: data.latestDraw ? "stale" : "unavailable",
         totalDraws: "fresh",
       }));
     } catch {
@@ -202,7 +205,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setDeploymentVerification({ status: "verified", message: "Active Sepolia bytecode and ERC-7984 custody verified." });
       setPoolStats({
         totalDeposits: total.toString(),
-        availableYield: reserve.toString(),
+        prizeReserve: reserve.toString(),
         custodyBalance: "0",
         totalDraws: Number(totalDraws),
         participantCount: Number(participantCount),
@@ -211,7 +214,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       });
       setMetricFreshness({
         totalDeposits: hasSnapshot ? "stale" : "unavailable",
-        availableYield: hasSnapshot ? "stale" : "unavailable",
+        prizeReserve: hasSnapshot ? "stale" : "unavailable",
         totalDraws: "fresh",
         participantCount: "fresh",
       });
@@ -273,6 +276,30 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setIsLoading(false);
     }
   }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
+
+  const fundPrizeReserve = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
+    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
+    requireVerifiedWrites();
+    setIsLoading(true);
+    try {
+      const encrypted = await new InputEncryptionAdapter(asset.address, address).encryptUint64(amount);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const token = new ethers.Contract(asset.address, ERC7984_ABI, await provider.getSigner());
+      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [PRIZE_RESERVE_ACTION]);
+      const transaction = await token.confidentialTransferAndCall(
+        contractAddress,
+        encrypted.handle,
+        encrypted.inputProof,
+        actionData
+      );
+      callbacks.onBroadcast?.(transaction.hash);
+      const receipt = ensureReceipt(await transaction.wait());
+      await refreshPoolData();
+      return { txHash: receipt.hash };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address, asset.address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
 
   const revealBalance = useCallback(async () => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
@@ -353,6 +380,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     isOwner,
     deposit,
     withdraw,
+    fundPrizeReserve,
     revealBalance,
     hideBalance: () => { setIsBalanceRevealed(false); setRevealedBalance(null); },
     drawLottery,

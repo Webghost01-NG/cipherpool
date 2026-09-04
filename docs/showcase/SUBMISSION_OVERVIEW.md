@@ -14,9 +14,10 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 1. A wallet encrypts a `uint64` deposit for the official cUSDC contract.
 2. `confidentialTransferAndCall` moves cUSDC and passes the actual encrypted result to CipherPool.
 3. CipherPool updates the user position and aggregate liability homomorphically.
-4. The owner requests a draw, anchoring publicly decryptable aggregate weight and reserve handles while balance mutations are locked.
-5. A KMS proof verifies both aggregate handles. `FHE.randEuint64` and encrypted cumulative intervals award the prize without revealing the winning address.
-6. A saver withdraws directly with an encrypted amount; CipherPool and cUSDC update both sides using the actual encrypted transfer result.
+4. A sponsor contributes encrypted cUSDC to the Sepolia prize reserve; this is explicitly not presented as generated yield.
+5. The owner requests a draw, anchoring publicly decryptable aggregate weight and reserve handles while balance mutations are locked.
+6. A KMS proof verifies both aggregate handles. `FHE.randEuint64` and encrypted cumulative intervals award the prize without revealing the winning address.
+7. A saver withdraws directly with an encrypted amount; CipherPool and cUSDC update both sides using the actual encrypted transfer result.
 
 ## Evidence
 
@@ -27,4 +28,4 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 
 ## Submission Readiness
 
-Contract custody is ERC-7984-native. The next protocol milestone is [verifiable external yield](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/118), followed by the final UI audit, screenshots, and a new human-presented demo. Existing presentation binaries predate this migration and must not be submitted as current evidence.
+Contract custody is ERC-7984-native. The placeholder vault that mislabeled donated tokens as yield has been removed. Sepolia prizes use the truthful sponsor-reserve fallback documented in [the funding model](../operations/reserve-funding.md); production yield requires a compatible audited confidential batcher route. The remaining milestone is the final UI audit, screenshots, and a new human-presented demo. Existing presentation binaries predate this migration and must not be submitted as current evidence.

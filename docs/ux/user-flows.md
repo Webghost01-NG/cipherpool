@@ -33,13 +33,15 @@ This is one transaction. The active pool has no plaintext withdrawal request, ba
 
 ## Weighted Draw
 
-1. The owner submits a public prize size with `requestDraw`.
-2. The pool marks aggregate position and reserve handles publicly decryptable and locks deposits and withdrawals.
-3. The client asks the Zama KMS to decrypt those two aggregates.
-4. The owner submits `finalizeDraw(total, reserve, proof)`.
-5. The pool verifies both stored handles, creates a bounded encrypted random ticket, and evaluates encrypted cumulative balance intervals.
-6. Exactly one encrypted interval receives the encrypted prize credit; the reserve is reduced homomorphically.
-7. If KMS settlement stalls beyond 24 hours, anyone may call `cancelDraw` to release the lock.
+1. A sponsor encrypts a cUSDC amount for the custody token and submits `confidentialTransferAndCall` with `CIPHERPOOL_PRIZE_RESERVE_V1`.
+2. The pool credits only the token-returned ciphertext to the prize reserve. Sepolia copy must describe this as sponsor funding, not generated yield.
+3. The owner submits a public prize size with `requestDraw`.
+4. The pool marks aggregate position and reserve handles publicly decryptable and locks deposits and withdrawals.
+5. The client asks the Zama KMS to decrypt those two aggregates.
+6. The owner submits `finalizeDraw(total, reserve, proof)`.
+7. The pool verifies both stored handles, creates a bounded encrypted random ticket, and evaluates encrypted cumulative balance intervals.
+8. Exactly one encrypted interval receives the encrypted prize credit; the reserve is reduced homomorphically.
+9. If KMS settlement stalls beyond 24 hours, anyone may call `cancelDraw` to release the lock.
 
 Only aggregate weight, reserve, prize size, timestamp, and participant count become public. Individual balances, prize counters, and the winner remain encrypted.
 

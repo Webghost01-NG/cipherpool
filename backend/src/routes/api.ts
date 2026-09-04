@@ -20,6 +20,7 @@ export function createApiRouter(store: IndexerStore): Router {
       depositEvents: store.getTotalDepositEvents().toString(),
       confidentialWithdrawalEvents: store.getConfidentialWithdrawalCount().toString(),
       prizeReserveFundingEvents: store.getPrizeReserveFundingCount().toString(),
+      prizeReserveFundingModel: "sponsor-funded-testnet",
       lastVerifiedTotalAccountedBalance: store.getTotalAccountedBalance().toString(),
       totalDraws: store.getDrawCount(),
       latestDraw: latest
