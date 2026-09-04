@@ -7,7 +7,8 @@ export interface PoolStatusPresentation {
 
 export function getPoolStatus(
   deploymentStatus: DeploymentStatus,
-  isPaused: boolean
+  isPaused: boolean,
+  hasPendingDraw = false
 ): PoolStatusPresentation {
   if (deploymentStatus === "pending") {
     return { label: "Pool checking", isHealthy: false };
@@ -17,6 +18,9 @@ export function getPoolStatus(
   }
   if (isPaused) {
     return { label: "Pool paused", isHealthy: false };
+  }
+  if (hasPendingDraw) {
+    return { label: "Draw settlement pending", isHealthy: false };
   }
   return { label: "Pool active", isHealthy: true };
 }

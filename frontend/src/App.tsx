@@ -112,7 +112,11 @@ export const App: React.FC = () => {
 
   const walletReady = status === "connected" && Boolean(address) && asset.isLoaded && configurationErrors.length === 0;
   const walletConfigurationReady = configurationErrors.length === 0;
-  const walletWriteActionEnabled = walletConfigurationReady && runtimeConfig.protocolWritesEnabled && !poolStats.isPaused;
+  const walletWriteActionEnabled =
+    walletConfigurationReady &&
+    runtimeConfig.protocolWritesEnabled &&
+    !poolStats.isPaused &&
+    !poolStats.pendingDraw.active;
   const transactionCallbacks: TransactionCallbacks = {
     onBroadcast: (hash) => {
       setBroadcasting(hash);
@@ -143,8 +147,13 @@ export const App: React.FC = () => {
   const totalDeposits = formatTokenAmount(poolStats.totalDeposits, asset.decimals);
   const prizeReserve = formatTokenAmount(poolStats.prizeReserve, asset.decimals);
   const networkStatus = getNetworkStatus(status);
-  const poolStatus = getPoolStatus(deploymentVerification.status, poolStats.isPaused);
+  const poolStatus = getPoolStatus(
+    deploymentVerification.status,
+    poolStats.isPaused,
+    poolStats.pendingDraw.active
+  );
   const hasDrawCount = metricFreshness.totalDraws === "fresh" || metricFreshness.totalDraws === "stale";
+  const hasConfirmedRounds = hasDrawCount && poolStats.totalDraws > 0;
   const runBalanceReveal = () => revealBalanceWithFeedback(revealBalance, {
     start: startTx,
     confirm: setConfirmed,
@@ -236,6 +245,16 @@ export const App: React.FC = () => {
             </div>
           )}
 
+          {deploymentVerification.status === "verified" && poolStats.pendingDraw.active && (
+            <div className="callout callout--alert" role="status">
+              <Activity size={17} />
+              <span>
+                A prize draw is awaiting KMS settlement or timeout cancellation. Deposits, withdrawals,
+                reserve funding, and new draw requests remain locked until it resolves.
+              </span>
+            </div>
+          )}
+
           {dataError && (
             <div className="callout callout--alert" role="status">
               <Activity size={17} /><span>{dataError}</span>
@@ -269,13 +288,27 @@ export const App: React.FC = () => {
           </div>
 
           <div className="metrics-grid" aria-label="Live pool metrics">
-            <StatBox label="Verified pool snapshot" value={totalDeposits + " " + asset.symbol} subtext="Aggregate only; individual positions stay encrypted" status={metricFreshness.totalDeposits} />
-            <StatBox label="Verified prize reserve" value={prizeReserve + " " + asset.symbol} subtext="Sponsor-funded on Sepolia; last KMS-verified snapshot" status={metricFreshness.prizeReserve} />
+            <StatBox
+              label="Verified pool snapshot"
+              value={totalDeposits + " " + asset.symbol}
+              subtext={metricFreshness.totalDeposits === "unavailable"
+                ? "Awaiting the first KMS-finalized draw"
+                : "Aggregate only; individual positions stay encrypted"}
+              status={metricFreshness.totalDeposits}
+            />
+            <StatBox
+              label="Verified prize reserve"
+              value={prizeReserve + " " + asset.symbol}
+              subtext={metricFreshness.prizeReserve === "unavailable"
+                ? "Awaiting the first KMS-finalized draw"
+                : "Sponsor-funded on Sepolia; last KMS-verified snapshot"}
+              status={metricFreshness.prizeReserve}
+            />
             <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" status={metricFreshness.participantCount} />
             <StatBox
               label="Confirmed rounds"
               value={poolStats.totalDraws}
-              subtext="Recorded on Sepolia"
+              subtext={poolStats.totalDraws === 0 ? "No finalized rounds yet" : "Recorded on Sepolia"}
               badge={<Badge variant="info">Live</Badge>}
               status={metricFreshness.totalDraws}
             />
@@ -453,9 +486,11 @@ export const App: React.FC = () => {
               <div>
                 <strong>The winner is never exposed</strong>
                 <p>
-                  {hasDrawCount
+                  {hasConfirmedRounds
                     ? `${poolStats.totalDraws} encrypted round${poolStats.totalDraws === 1 ? "" : "s"} completed. Each wallet privately checks its own result.`
-                    : "Confirmed round data will appear after a verified source responds."}
+                    : hasDrawCount
+                      ? "No prize round has finalized on this deployment yet."
+                      : "Confirmed round data will appear after a verified source responds."}
                 </p>
               </div>
             </aside>

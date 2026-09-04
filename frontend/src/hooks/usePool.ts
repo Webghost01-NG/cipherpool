@@ -20,6 +20,12 @@ export interface PoolStats {
   participantCount: number;
   isPaused: boolean;
   owner: string;
+  pendingDraw: {
+    active: boolean;
+    prizeAmount: string;
+    timestamp: number;
+    requestHash: string;
+  };
 }
 
 export interface AssetMetadata {
@@ -89,6 +95,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     participantCount: 0,
     isPaused: false,
     owner: "",
+    pendingDraw: {
+      active: false,
+      prizeAmount: "0",
+      timestamp: 0,
+      requestHash: ethers.ZeroHash,
+    },
   });
   const [asset, setAsset] = useState<AssetMetadata>({
     address: DEFAULT_CONFIDENTIAL_ASSET_ADDRESS,
@@ -184,7 +196,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         throw new Error("The configured CipherPool bytecode does not match the reviewed Sepolia deployment.");
       }
 
-      const [total, reserve, verifiedAt, totalDraws, participantCount, paused, owner, custodyAddress] = await Promise.all([
+      const [total, reserve, verifiedAt, totalDraws, participantCount, paused, owner, custodyAddress, pendingDraw] = await Promise.all([
         pool.lastVerifiedTotalAccountedBalance() as Promise<bigint>,
         pool.lastVerifiedPrizeReserve() as Promise<bigint>,
         pool.lastDrawVerificationTimestamp() as Promise<bigint>,
@@ -193,6 +205,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         pool.paused() as Promise<boolean>,
         pool.owner() as Promise<string>,
         pool.custodyAsset() as Promise<string>,
+        pool.getPendingDraw() as Promise<{
+          prizeAmount: bigint;
+          timestamp: bigint;
+          active: boolean;
+          requestHash: string;
+        }>,
       ]);
       const token = new ethers.Contract(custodyAddress, ERC7984_ABI, provider);
       const [decimals, symbol, aggregateHandle] = await Promise.all([
@@ -231,6 +249,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         participantCount: Number(participantCount),
         isPaused: paused,
         owner,
+        pendingDraw: {
+          active: pendingDraw.active,
+          prizeAmount: pendingDraw.prizeAmount.toString(),
+          timestamp: Number(pendingDraw.timestamp),
+          requestHash: pendingDraw.requestHash,
+        },
       });
       setMetricFreshness({
         totalDeposits: hasSnapshot ? "stale" : "unavailable",
@@ -258,7 +282,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   const requireVerifiedWrites = useCallback(() => {
     if (!runtimeConfig.protocolWritesEnabled) throw new Error("Protocol writes are disabled by the safety switch.");
     if (deploymentVerification.status !== "verified") throw new Error("Protocol writes require verified Sepolia bytecode and ERC-7984 custody.");
-  }, [deploymentVerification.status]);
+    if (poolStats.isPaused) throw new Error("Protocol writes are disabled while the pool is paused.");
+    if (poolStats.pendingDraw.active) throw new Error("Protocol writes are locked while a prize draw awaits settlement or cancellation.");
+  }, [deploymentVerification.status, poolStats.isPaused, poolStats.pendingDraw.active]);
 
   const deposit = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
@@ -425,9 +451,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const finalizeTx = await pool.finalizeDraw(total, reserve, result.decryptionProof);
       callbacks.onBroadcast?.(finalizeTx.hash);
       const receipt = ensureReceipt(await finalizeTx.wait());
-      await refreshPoolData();
       return { txHash: receipt.hash };
     } finally {
+      await refreshPoolData();
       setIsLoading(false);
     }
   }, [address, contractAddress, poolStats.owner, refreshPoolData, requireVerifiedWrites, status]);
@@ -450,7 +476,11 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     lastUpdatedAt,
     metricFreshness,
     deploymentVerification,
-    writesEnabled: runtimeConfig.protocolWritesEnabled && deploymentVerification.status === "verified",
+    writesEnabled:
+      runtimeConfig.protocolWritesEnabled &&
+      deploymentVerification.status === "verified" &&
+      !poolStats.isPaused &&
+      !poolStats.pendingDraw.active,
     isOwner,
     deposit,
     withdraw,

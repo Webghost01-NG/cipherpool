@@ -150,7 +150,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
         </label>
         {validationError && <p role="alert" className="badge badge--error">{validationError}</p>}
         {(!isOwner || !writesEnabled) && (
-          <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked until deployment verification and the operational safety switch both pass." : "Only the verified pool owner can execute a draw. Connected savers can monitor confirmed rounds here."}</span></div>
+          <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked by runtime verification, the safety switch, a pool pause, or an unsettled draw." : "Only the verified pool owner can execute a draw. Connected savers can monitor confirmed rounds here."}</span></div>
         )}
         <WalletGateButton
           className="button--wide"

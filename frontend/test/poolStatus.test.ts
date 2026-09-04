@@ -21,6 +21,13 @@ describe("Pool health presentation", () => {
     });
   });
 
+  test("reports an active draw as a settlement lock", () => {
+    assert.deepEqual(getPoolStatus("verified", false, true), {
+      label: "Draw settlement pending",
+      isHealthy: false,
+    });
+  });
+
   test("uses a checking state until deployment verification completes", () => {
     assert.deepEqual(getPoolStatus("pending", false), {
       label: "Pool checking",

@@ -12,8 +12,22 @@ import { LotteryDrawCard } from "../src/components/flows/LotteryDrawCard.js";
 import { PrizeClaimCard } from "../src/components/flows/PrizeClaimCard.js";
 import { LegacyExitCard } from "../src/components/flows/LegacyExitCard.js";
 import { WalletGateButton } from "../src/components/wallet/WalletGateButton.js";
+import { StatBox } from "../src/components/common/UIPrimitives.js";
 
 describe("Core Product Flows & Interactive Cards Tests", () => {
+  test("unavailable verified metrics explain the first-draw lifecycle", () => {
+    const markup = renderToStaticMarkup(React.createElement(StatBox, {
+      label: "Verified pool snapshot",
+      value: "0 cUSDCMock",
+      status: "unavailable",
+      subtext: "Awaiting the first KMS-finalized draw",
+    }));
+
+    assert.match(markup, /Unavailable/);
+    assert.match(markup, /Awaiting the first KMS-finalized draw/);
+    assert.doesNotMatch(markup, /0 cUSDCMock/);
+  });
+
   test("private balance reveal reports truthful success feedback", async () => {
     const events: string[] = [];
 

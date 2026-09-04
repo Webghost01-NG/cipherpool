@@ -6,20 +6,20 @@ The active pool uses the official Zama `cUSDCMock` ERC-7984 wrapper on Ethereum 
 
 | Component | Address | Block | Transaction | Runtime code hash |
 | --- | --- | ---: | --- | --- |
-| ConfidentialPool | `0xE47eF44EBB804A507173BEFa5beb2325aA7451AD` | `11632698` | [`0x975f25...`](https://sepolia.etherscan.io/tx/0x975f25bb9a538be979f95649c1dd52756e7df6bbac6cd58424f8505d70666b29) | `0xbc5984bbcc66d3f24893ec880973aa268989bcce76e6c485b3f39c33bb047f51` |
+| ConfidentialPool | `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` | `11634672` | [`0xc4d985...`](https://sepolia.etherscan.io/tx/0xc4d985e4c8178876b8f11b563aaa9abe0011d9f6cfcb41fa6c1883da309ac212) | `0x5f642b23de77a3c7e20735fb0f43ab4e23f346d41624b7eef0565ecfeb35f8c7` |
 | Official cUSDCMock | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` | Zama-managed | [Contract](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) | Upgradeable proxy |
 
 Verified initial state:
 
 - Owner: `0xF19125e08AFC9502DCde60703c1E24C334902356`
 - Custody asset: official cUSDCMock address above
-- Runtime size: `18,516` bytes
+- Runtime size: `19,509` bytes
 - Cancellation delay: `86,400` seconds
 - Paused: `false`; draw count and participant count: `0`
 
-## Real ERC-7984 Round Trip
+## Predecessor ERC-7984 Round Trip
 
-No mocked handle, proof, RPC response, or transaction hash was used in this validation. Ten test USDCMock were minted and wrapped 1:1. A 1 cUSDC amount was encrypted by the official Zama Sepolia relayer, transferred into the pool through the ERC-7984 callback, then withdrawn through the pool’s encrypted withdrawal entry point.
+No mocked handle, proof, RPC response, or transaction hash was used in this validation of the predecessor pool at `0xE47eF44EBB804A507173BEFa5beb2325aA7451AD`. Ten test USDCMock were minted and wrapped 1:1. A 1 cUSDC amount was encrypted by the official Zama Sepolia relayer, transferred into the pool through the ERC-7984 callback, then withdrawn through the pool’s encrypted withdrawal entry point.
 
 | Step | Block | Transaction | Result |
 | --- | ---: | --- | --- |
@@ -38,10 +38,15 @@ Sepolia has no verified external yield venue whose underlying asset matches the 
 | Step | Block | Transaction | Result |
 | --- | ---: | --- | --- |
 | Encrypted 1 cUSDC sponsor contribution | `11632933` | [`0x07b797...`](https://sepolia.etherscan.io/tx/0x07b797674aa730eea1b851d5ed78352741d7029ef0b1168521244c81e1057eaa) | Confirmed `PrizeReserveFunded`; backend indexed one funding event; authorized KMS verification confirmed the wallet moved from 10 to 9 cUSDC |
+| Encrypted 0.5 cUSDC contribution to corrected pool | `11634718` | [`0x1a5ec5...`](https://sepolia.etherscan.io/tx/0x1a5ec5591461605f1de3ec303079d7eaa0d70fdb072d4e7c869b9b2d43de2b8d) | Confirmed sponsor funding on the active deployment |
+
+## Superseded Draw Incident
+
+The predecessor pool accepted a real 8 cUSDC deposit and draw request, but finalization reverted because the prior bounded-randomness implementation required a power-of-two total. The corrected active deployment replaces that implementation with unbiased scaling over an unbounded encrypted `uint64`. The predecessor remains excluded from active configuration; its stale draw can be cancelled permissionlessly after the configured delay.
 
 ## Runtime Activation
 
-The backend must use `INDEXER_START_BLOCK=11632698` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks.
+The backend must use `INDEXER_START_BLOCK=11634672` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks.
 
 ## Rollback
 
