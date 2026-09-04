@@ -5,6 +5,7 @@ import {
   Fingerprint,
   KeyRound,
   Layers3,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 import { Layout } from "./components/layout/Layout.js";
@@ -86,6 +87,7 @@ export const App: React.FC = () => {
     lastUpdatedAt,
     metricFreshness,
     deploymentVerification,
+    walletRpcVerification,
     writesEnabled,
     deposit,
     activateParticipant,
@@ -97,6 +99,7 @@ export const App: React.FC = () => {
     hidePrize,
     claimPrize,
     drawLottery,
+    refreshPoolData,
   } = usePool(DEFAULT_POOL_ADDRESS);
   const legacyExit = useLegacyExit(DEFAULT_LEGACY_POOL_ADDRESS);
   const {
@@ -201,10 +204,11 @@ export const App: React.FC = () => {
             <dl className="assurance-list">
               <div>
                 <dt>Network</dt>
-                <dd>
-                  <span className={"status-dot " + (networkStatus.isHealthy ? "status-dot--ok" : "status-dot--warn")} />
-                  {networkStatus.label}
-                </dd>
+                <dd><span className={"status-dot " + (deploymentVerification.status === "verified" ? "status-dot--ok" : "status-dot--warn")} /> App Sepolia</dd>
+              </div>
+              <div>
+                <dt>Wallet</dt>
+                <dd><span className={"status-dot " + (walletRpcVerification.status === "ready" ? "status-dot--ok" : "status-dot--warn")} /> {walletRpcVerification.status.replace("_", "-")}</dd>
               </div>
               <div>
                 <dt>Indexer</dt>
@@ -242,6 +246,16 @@ export const App: React.FC = () => {
             <div className="callout callout--alert" role="alert">
               <AlertTriangle size={18} />
               <span>Writes remain locked until runtime verification succeeds. {deploymentVerification.message}</span>
+            </div>
+          )}
+
+          {runtimeConfig.protocolWritesEnabled && deploymentVerification.status === "verified" && status !== "disconnected" && walletRpcVerification.status !== "ready" && (
+            <div className="callout callout--alert" role="alert">
+              <AlertTriangle size={18} />
+              <span>{walletRpcVerification.message}</span>
+              <button className="button button--secondary callout__action" type="button" onClick={() => void refreshPoolData()}>
+                <RefreshCw size={15} /> Retry
+              </button>
             </div>
           )}
 

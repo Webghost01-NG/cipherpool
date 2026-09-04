@@ -53,6 +53,8 @@ Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow b
 
 The backend uses `INDEXER_START_BLOCK=11635883` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation is active in this runtime.
 
+Frontend public reads use the comma-separated `VITE_SEPOLIA_RPC_URLS` list and require at least two HTTPS endpoints. These endpoints are independent of the injected wallet. The reviewed `VITE_POOL_RUNTIME_CODE_HASH` selects the configured `VITE_POOL_RUNTIME_VERSION`; unknown bytecode fails closed instead of trying an assumed ABI. A connected wallet must independently see the same runtime on chain ID `11155111` before transactions are enabled.
+
 ## Rollback
 
 1. Set `VITE_ENABLE_PROTOCOL_WRITES=false` and redeploy the frontend.

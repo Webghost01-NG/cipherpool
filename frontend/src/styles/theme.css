@@ -435,6 +435,7 @@ a { color: inherit; }
 .callout--alert { border-color: rgba(145, 82, 0, 0.22); background: var(--accent-amber-subtle); }
 .callout svg { flex: 0 0 auto; margin-top: 0.1rem; color: var(--accent-blue); }
 .callout--alert svg { color: var(--accent-amber); }
+.callout__action { min-height: 2rem; margin-left: auto; padding: 0.35rem 0.65rem; white-space: nowrap; }
 .helper-link { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.3rem; color: var(--accent-blue); font-size: 0.75rem; font-weight: 700; text-decoration: none; }
 .helper-link:hover { text-decoration: underline; }
 

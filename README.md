@@ -90,9 +90,9 @@ To make a real encrypted testnet prize contribution, load credentials from an ex
 
 For a fail-closed deposit, draw, private claim, and withdrawal demonstration, use the phase-by-phase [live Sepolia lifecycle guide](docs/operations/live-prize-lifecycle.md). The runner defaults to read-only preflight and requires an exact state-bound confirmation phrase for every write.
 
-Set `RPC_URL` and `DATABASE_URL` in `.env`. Frontend writes remain disabled unless `VITE_ENABLE_PROTOCOL_WRITES=true` and runtime verification confirms the configured chain, pool bytecode hash, cUSDC address, symbol, and decimals.
+Set `RPC_URL` and `DATABASE_URL` in `.env`. Configure at least two independent, credential-free frontend read endpoints in `VITE_SEPOLIA_RPC_URLS` and bind the reviewed code hash to `VITE_POOL_RUNTIME_VERSION`. Public state is read through those endpoints even when no wallet is connected; the injected wallet RPC is used only to verify the transaction route, sign, and submit. Frontend writes remain disabled unless `VITE_ENABLE_PROTOCOL_WRITES=true`, the independent runtime verification succeeds, and the wallet RPC sees the same bytecode.
 
-Run the backend with `npm run build:backend && node dist/backend/src/index.js`. Run the frontend locally with `npx vite --config vite.config.ts`.
+Run the backend with `npm run build:backend && node dist/backend/src/index.js`. Run the frontend locally with `npx vite --config vite.config.mts`.
 
 ## Security Properties
 
