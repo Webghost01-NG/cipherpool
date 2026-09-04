@@ -118,13 +118,13 @@ graph TD
 
 ---
 
-### 4.4 Modulo Bias in Confidential Draws
-- **Threat Vector:** Does the prize draw's bounded random ticket (`FHE.randEuint64(totalAccountedBalancePlain)`) introduce exploitable statistical bias favoring specific participants?
+### 4.4 Range Reduction in Confidential Draws
+- **Threat Vector:** Zama's bounded random primitive accepts only power-of-two bounds, while valid pool totals are arbitrary positive `uint64` values.
 - **Root Mitigation:**
-  - As proven in the Phase 1G.6 mathematical audit:
-    $$\Delta P_{\text{abs}} = \frac{1}{2^{64}} \approx 5.42 \times 10^{-20}$$
-  - For a pool with 1,000 participants, relative bias $\Delta P_{\text{rel}} \approx 5.42 \times 10^{-17}$.
-  - An attacker would need to participate in $\approx 1.84 \times 10^{19}$ consecutive draws to gain a single statistical advantage of $1$ unit. This bias is cryptographically negligible and accepted without non-deterministic rejection sampling.
+  - Draws start with a full-width encrypted `uint64` random value $R$ and compute $\lfloor R N / 2^{64} \rfloor$ for the public verified total $N$.
+  - The multiplication uses an encrypted `uint128` intermediate, so the product of two `uint64` values cannot overflow and the result is always in $[0,N)$.
+  - Each ticket has either $\lfloor 2^{64}/N \rfloor$ or $\lceil 2^{64}/N \rceil$ preimages. The absolute difference between bucket probabilities is therefore at most $2^{-64}$.
+  - This avoids the production `NotPowerOfTwo()` failure and the much larger low-ticket bias introduced by direct modulo reduction. The residual finite-domain deviation is documented rather than described as perfect uniformity.
 
 ---
 

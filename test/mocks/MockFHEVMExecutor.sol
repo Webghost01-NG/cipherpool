@@ -4,7 +4,11 @@ pragma solidity ^0.8.24;
 import {FheType} from "@fhevm/solidity/lib/FheType.sol";
 
 contract MockFHEVMExecutor {
+    error NotPowerOfTwo();
+
     uint256 private _nonce;
+    uint256 public randomCalls;
+    uint256 public boundedRandomCalls;
 
     function verify(bytes32 inputHandle, bytes memory, uint8) external returns (bytes32) {
         return inputHandle;
@@ -75,11 +79,14 @@ contract MockFHEVMExecutor {
         return keccak256(abi.encodePacked("select", control, ifTrue, ifFalse, ++_nonce));
     }
 
-    function fheRand(bytes1) external returns (bytes32) {
+    function fheRand(FheType) external returns (bytes32) {
+        randomCalls++;
         return keccak256(abi.encodePacked("rand", ++_nonce));
     }
 
-    function fheRandBounded(bytes32 upperBound, bytes1) external returns (bytes32) {
+    function fheRandBounded(uint256 upperBound, FheType) external returns (bytes32) {
+        if (upperBound == 0 || (upperBound & (upperBound - 1)) != 0) revert NotPowerOfTwo();
+        boundedRandomCalls++;
         return keccak256(abi.encodePacked("randBounded", upperBound, ++_nonce));
     }
 

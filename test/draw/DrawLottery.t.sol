@@ -59,6 +59,17 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         assertFalse(pool.getPendingDraw().active);
     }
 
+    function test_FinalizeDrawSupportsNonPowerOfTwoTotalWithoutBoundedRandomness() public {
+        _deposit(alice, 8_000_000);
+        _fundReserve(sponsor, 1_000_000);
+
+        _requestAndFinalizeDraw(500_000, 8_000_000, 1_000_000);
+
+        assertEq(pool.currentDrawId(), 1);
+        assertEq(mockExecutor.randomCalls(), 1);
+        assertEq(mockExecutor.boundedRandomCalls(), 0);
+    }
+
     function test_RevertWhen_VerifiedReserveCannotCoverPrize() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 500);

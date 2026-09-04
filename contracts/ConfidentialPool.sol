@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import {FHE, ebool, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, ebool, euint64, euint128, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -184,7 +184,7 @@ contract ConfidentialPool is
         FHE.checkSignatures(handles, abi.encode(totalAccountedBalance, prizeReserve), decryptionProof);
 
         delete _pendingDraw;
-        euint64 winningTicket = FHE.randEuint64(totalAccountedBalance);
+        euint64 winningTicket = _sampleWeightedTicket(totalAccountedBalance);
         euint64 cumulativeEnd = FHE.asEuint64(0);
         euint64 prize = FHE.asEuint64(request.prizeAmount);
         uint256 len = participants.length;
@@ -290,6 +290,19 @@ contract ConfidentialPool is
         _balances[user] = FHE.allow(_balances[user], user);
         _prizes[user] = FHE.allowThis(_prizes[user]);
         _prizes[user] = FHE.allow(_prizes[user], user);
+    }
+
+    /**
+     * @dev Maps a full-width encrypted random value into [0, upperBound) without requiring
+     *      upperBound to be a power of two. The 128-bit intermediate cannot overflow because
+     *      both factors are uint64. Multiply-high reduction gives each ticket either floor or
+     *      ceil(2^64 / upperBound) source values, so bucket probabilities differ by at most 2^-64.
+     */
+    function _sampleWeightedTicket(uint64 upperBound) internal returns (euint64) {
+        euint128 random = FHE.asEuint128(FHE.randEuint64());
+        euint128 product = FHE.mul(random, uint128(upperBound));
+        euint128 scaled = FHE.div(product, uint128(1) << 64);
+        return FHE.asEuint64(scaled);
     }
 
     function _callbackResult(bool accepted) internal returns (ebool result) {

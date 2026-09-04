@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {FHE, euint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
+import {MockFHEVMExecutor} from "./MockFHEVMExecutor.sol";
 import {FHEVMMockHarness} from "../utils/FHEVMMockHarness.sol";
 
 contract FHEVMMockHarnessTest is Test, FHEVMMockHarness {
@@ -31,5 +32,10 @@ contract FHEVMMockHarnessTest is Test, FHEVMMockHarness {
 
         euint64 selected = FHE.select(isGe, a, b);
         assertTrue(FHE.toBytes32(selected) != bytes32(0));
+    }
+
+    function test_MockHarness_RejectsNonPowerOfTwoBoundedRandomness() public {
+        vm.expectRevert(MockFHEVMExecutor.NotPowerOfTwo.selector);
+        FHE.randEuint64(10_000);
     }
 }
