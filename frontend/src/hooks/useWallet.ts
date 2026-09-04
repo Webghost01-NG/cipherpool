@@ -26,6 +26,7 @@ export interface WalletContextType {
   errorMessage: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
+  switchAccount: () => Promise<void>;
   switchNetwork: () => Promise<void>;
 }
 
@@ -35,6 +36,42 @@ function parseChainId(value: unknown): number | null {
   if (typeof value !== "string") return null;
   const parsed = Number.parseInt(value, 16);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isUnsupportedPermissionsMethod(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("code" in error)) return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 4200 || code === -32601;
+}
+
+function parseWalletAccounts(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (account): account is string =>
+      typeof account === "string" && /^0x[a-fA-F0-9]{40}$/.test(account)
+  );
+}
+
+export async function requestWalletAccountSelection(
+  ethereum: EthereumProvider
+): Promise<string[]> {
+  let accounts: unknown;
+  try {
+    await ethereum.request({
+      method: "wallet_requestPermissions",
+      params: [{ eth_accounts: {} }],
+    });
+    accounts = await ethereum.request({ method: "eth_accounts" });
+  } catch (error) {
+    if (!isUnsupportedPermissionsMethod(error)) throw error;
+    accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  }
+
+  const parsedAccounts = parseWalletAccounts(accounts);
+  if (parsedAccounts.length === 0) {
+    throw new Error("The wallet did not return an account.");
+  }
+  return parsedAccounts;
 }
 
 export function readWalletDisconnectPreference(
@@ -155,6 +192,37 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  const switchAccount = useCallback(async () => {
+    const ethereum = window.ethereum;
+    if (!ethereum) {
+      const message = "No EIP-1193 browser wallet was detected.";
+      setErrorMessage(message);
+      throw new Error(message);
+    }
+
+    const previousAddress = addressRef.current;
+    const previousChainId = chainIdRef.current;
+    setStatus("connecting");
+    setErrorMessage(null);
+    try {
+      const accounts = await requestWalletAccountSelection(ethereum);
+      const currentChain = await ethereum.request({ method: "eth_chainId" });
+      applyWalletState(accounts, parseChainId(currentChain));
+    } catch (error) {
+      applyWalletState(previousAddress ? [previousAddress] : [], previousChainId);
+      const code = error && typeof error === "object" && "code" in error
+        ? (error as { code?: unknown }).code
+        : undefined;
+      const message = code === 4001
+        ? "Account selection was cancelled. Your current account is still connected."
+        : error instanceof Error
+          ? error.message
+          : "Unable to change the connected account.";
+      setErrorMessage(message);
+      throw new Error(message, { cause: error });
+    }
+  }, [applyWalletState]);
+
   const switchNetwork = useCallback(async () => {
     const ethereum = window.ethereum;
     if (!ethereum) throw new Error("No EIP-1193 browser wallet was detected.");
@@ -176,8 +244,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const value = useMemo(
-    () => ({ status, address, chainId, isCorrectNetwork, errorMessage, connect, disconnect, switchNetwork }),
-    [status, address, chainId, isCorrectNetwork, errorMessage, connect, disconnect, switchNetwork]
+    () => ({ status, address, chainId, isCorrectNetwork, errorMessage, connect, disconnect, switchAccount, switchNetwork }),
+    [status, address, chainId, isCorrectNetwork, errorMessage, connect, disconnect, switchAccount, switchNetwork]
   );
 
   return React.createElement(WalletContext.Provider, { value }, children);

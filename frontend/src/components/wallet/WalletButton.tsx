@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { AlertTriangle, Check, ChevronDown, Copy, LogOut, Wallet } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Copy, LogOut, RefreshCw, Wallet } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet.js";
 import { Button } from "../common/UIPrimitives.js";
 import { WalletModal } from "./WalletModal.js";
 import { shortenHex } from "../../utils/format.js";
 
 export const WalletButton: React.FC = () => {
-  const { status, address, isCorrectNetwork, disconnect } = useWallet();
+  const { status, address, isCorrectNetwork, errorMessage, disconnect, switchAccount } = useWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
 
   if (status === "disconnected" || !address) {
     return (
@@ -37,6 +38,18 @@ export const WalletButton: React.FC = () => {
     window.setTimeout(() => setCopied(false), 1600);
   };
 
+  const handleSwitchAccount = async () => {
+    setIsSwitchingAccount(true);
+    try {
+      await switchAccount();
+      setIsDropdownOpen(false);
+    } catch {
+      // The wallet context retains the current account and exposes an actionable message.
+    } finally {
+      setIsSwitchingAccount(false);
+    }
+  };
+
   return (
     <div className="wallet-wrap">
       <button
@@ -57,6 +70,17 @@ export const WalletButton: React.FC = () => {
             {copied ? <Check size={15} /> : <Copy size={15} />}
             {copied ? "Address copied" : "Copy address"}
           </button>
+          <button
+            className="menu-button"
+            type="button"
+            role="menuitem"
+            disabled={isSwitchingAccount}
+            onClick={() => void handleSwitchAccount()}
+          >
+            <RefreshCw className={isSwitchingAccount ? "animate-spin" : undefined} size={15} />
+            {isSwitchingAccount ? "Waiting for wallet…" : "Switch account"}
+          </button>
+          {errorMessage && <div className="wallet-menu__error" role="alert">{errorMessage}</div>}
           <button
             className="menu-button menu-button--danger"
             type="button"
