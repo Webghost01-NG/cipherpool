@@ -50,7 +50,7 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |
 
-- Application: [veylott.vercel.app](https://veylott.vercel.app)
+- Application: [Veylott live demo](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/)
 - Indexer: [cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
 - Deployment verification and historical encrypted prize-lifecycle evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
 - Official Zama wrapper registry: [Sepolia confidential-token addresses](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md)
@@ -90,9 +90,9 @@ To make a real encrypted testnet prize contribution, load credentials from an ex
 
 For a fail-closed deposit, draw, private claim, and withdrawal demonstration, use the phase-by-phase [live Sepolia lifecycle guide](docs/operations/live-prize-lifecycle.md). The runner defaults to read-only preflight and requires an exact state-bound confirmation phrase for every write.
 
-Set `RPC_URL` and `DATABASE_URL` in `.env`. Frontend writes remain disabled unless `VITE_ENABLE_PROTOCOL_WRITES=true` and runtime verification confirms the configured chain, pool bytecode hash, cUSDC address, symbol, and decimals.
+Set `RPC_URL` and `DATABASE_URL` in `.env`. Configure at least two independent, credential-free frontend read endpoints in `VITE_SEPOLIA_RPC_URLS` and bind the reviewed code hash to `VITE_POOL_RUNTIME_VERSION`. Public state is read through those endpoints even when no wallet is connected; the injected wallet RPC is used only to verify the transaction route, sign, and submit. Frontend writes remain disabled unless `VITE_ENABLE_PROTOCOL_WRITES=true`, the independent runtime verification succeeds, and the wallet RPC sees the same bytecode.
 
-Run the backend with `npm run build:backend && node dist/backend/src/index.js`. Run the frontend locally with `npx vite --config vite.config.ts`.
+Run the backend with `npm run build:backend && node dist/backend/src/index.js`. Run the frontend locally with `npx vite --config vite.config.mts`.
 
 ## Security Properties
 

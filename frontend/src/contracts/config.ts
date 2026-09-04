@@ -20,6 +20,31 @@ function readUrl(name: string): string {
   }
 }
 
+function readUrlList(name: string): string[] {
+  const values = environment[name]?.split(",") ?? [];
+  const urls = values.flatMap((entry) => {
+    const value = entry.trim();
+    if (!value) return [];
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+        return [];
+      }
+      return [url.toString().replace(/\/$/, "")];
+    } catch {
+      return [];
+    }
+  });
+  return [...new Set(urls)];
+}
+
+export type PoolRuntimeVersion = "aggregate-v1" | "readiness-v2";
+
+function readRuntimeVersion(): PoolRuntimeVersion | "" {
+  const value = environment.VITE_POOL_RUNTIME_VERSION?.trim();
+  return value === "aggregate-v1" || value === "readiness-v2" ? value : "";
+}
+
 function readTokenDecimals(): number {
   const value = Number(environment.VITE_TOKEN_DECIMALS);
   return Number.isInteger(value) && value >= 0 && value <= 255 ? value : -1;
@@ -41,7 +66,9 @@ export const runtimeConfig = Object.freeze({
   legacyPoolAddress: readAddress("VITE_LEGACY_POOL_ADDRESS"),
   custodyAssetAddress: readAddress("VITE_CONFIDENTIAL_ASSET_ADDRESS"),
   poolRuntimeCodeHash: readBytes32("VITE_POOL_RUNTIME_CODE_HASH"),
+  poolRuntimeVersion: readRuntimeVersion(),
   deploymentBlock: readPositiveInteger("VITE_POOL_DEPLOYMENT_BLOCK"),
+  sepoliaRpcUrls: Object.freeze(readUrlList("VITE_SEPOLIA_RPC_URLS")),
   backendUrl: readUrl("VITE_BACKEND_URL"),
   explorerUrl: readUrl("VITE_EXPLORER_URL"),
   tokenSymbol: environment.VITE_TOKEN_SYMBOL?.trim() ?? "",
@@ -59,7 +86,9 @@ export const configurationErrors = [
     "Active and legacy pool addresses must differ.",
   !runtimeConfig.custodyAssetAddress && "VITE_CONFIDENTIAL_ASSET_ADDRESS must be a valid EVM address.",
   !runtimeConfig.poolRuntimeCodeHash && "VITE_POOL_RUNTIME_CODE_HASH must be a bytes32 hash.",
+  !runtimeConfig.poolRuntimeVersion && "VITE_POOL_RUNTIME_VERSION must be aggregate-v1 or readiness-v2.",
   runtimeConfig.deploymentBlock < 0 && "VITE_POOL_DEPLOYMENT_BLOCK must be a positive integer.",
+  runtimeConfig.sepoliaRpcUrls.length < 2 && "VITE_SEPOLIA_RPC_URLS must contain at least two unique HTTPS RPC URLs.",
   !runtimeConfig.backendUrl && "VITE_BACKEND_URL must be a valid absolute URL.",
   !runtimeConfig.explorerUrl && "VITE_EXPLORER_URL must be a valid absolute URL.",
   !runtimeConfig.tokenSymbol && "VITE_TOKEN_SYMBOL is required.",

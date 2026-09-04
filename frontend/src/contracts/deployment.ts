@@ -23,7 +23,7 @@ export function validateDeploymentEvidence(
 ): string[] {
   const errors: string[] = [];
 
-  if (observed.chainId !== expected.chainId) errors.push("wallet network does not match the configured chain");
+  if (observed.chainId !== expected.chainId) errors.push("read-provider network does not match the configured chain");
   if (observed.poolAddress.toLowerCase() !== expected.poolAddress.toLowerCase()) {
     errors.push("pool address does not match the configured deployment");
   }

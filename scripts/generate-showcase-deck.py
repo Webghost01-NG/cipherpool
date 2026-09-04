@@ -136,6 +136,9 @@ def add_card_heading(slide, number, heading, body, x, y, w, h, *, accent=BLUE):
     add_text(slide, body, x + 0.25, y + 1.42, w - 0.5, h - 1.65, size=11, color=MUTED, line_spacing=1.15)
 
 
+APP_URL = "https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/"
+
+
 def slide_1(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
@@ -145,7 +148,7 @@ def slide_1(prs):
                   0.72, 1.72, 7.3, 1.75, size=36)
     add_text(slide, "Principal stays withdrawable while encrypted balances and ticket weights stay confidential.",
              0.75, 3.68, 6.55, 0.68, size=17, color=MUTED, line_spacing=1.15)
-    add_link(slide, "veylott.vercel.app", "https://veylott.vercel.app",
+    add_link(slide, "Open the Veylott live demo", APP_URL,
              0.75, 4.62, 4.2, 0.35, size=12)
     add_box(slide, 8.35, 1.3, 4.2, 4.9, fill=BLUE_DARK, line=BLUE_DARK)
     for x, y, size, alpha_color in [(8.85, 1.78, 2.65, RGBColor(63, 95, 224)), (9.25, 2.18, 1.85, RGBColor(84, 114, 236)), (9.65, 2.58, 1.05, BLUE)]:
@@ -240,7 +243,7 @@ def slide_5(prs):
     add_text(slide, "A disconnected user sees only Connect wallet. An address appears only after the provider returns the selected account.", 10.02, 3.58, 2.2, 1.35, size=12, color=MUTED, line_spacing=1.15)
     add_text(slide, "Runtime assurance", 10.02, 5.2, 2.25, 0.32, size=13, bold=True)
     add_text(slide, "Chain, bytecode, and custody bindings are checked before protocol writes.", 10.02, 5.65, 2.2, 0.9, size=11, color=MUTED)
-    add_footer(slide, "Captured from https://veylott.vercel.app · 4 Sep 2026")
+    add_footer(slide, "Captured from the Veylott live demo · 4 Sep 2026")
 
 
 def slide_6(prs):
@@ -343,7 +346,7 @@ def slide_10(prs):
                   0.72, 1.8, 7.8, 1.5, size=38)
     add_text(slide, "Try the live app. Inspect the active Sepolia deployment. Review every invariant and test.",
              0.75, 3.65, 7.1, 0.65, size=17, color=MUTED)
-    add_link(slide, "veylott.vercel.app", "https://veylott.vercel.app", 0.75, 4.65, 4.5, 0.36, size=14)
+    add_link(slide, "Open the Veylott live demo", APP_URL, 0.75, 4.65, 4.5, 0.36, size=14)
     add_link(slide, "github.com/Webghost01-NG/veylott", "https://github.com/Webghost01-NG/veylott", 0.75, 5.18, 6.6, 0.36, size=11)
     add_box(slide, 8.6, 1.55, 3.75, 4.65, fill=BLUE_PALE, line=LINE)
     add_text(slide, "ACTIVE POOL", 8.95, 1.95, 2.8, 0.25, size=8, color=BLUE, bold=True, font=MONO)

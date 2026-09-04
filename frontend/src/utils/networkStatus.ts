@@ -10,10 +10,17 @@ export interface NetworkStatusPresentation {
 }
 
 export function canReadSepoliaContracts(
-  status: WalletConnectionStatus,
-  hasProvider: boolean
+  configuredRpcCount: number
 ): boolean {
-  return hasProvider && status === "connected";
+  return configuredRpcCount >= 2;
+}
+
+export function canUseWalletTransactionRoute(
+  status: WalletConnectionStatus,
+  hasProvider: boolean,
+  hasAddress: boolean
+): boolean {
+  return status === "connected" && hasProvider && hasAddress;
 }
 
 export function getNetworkStatus(
