@@ -25,8 +25,6 @@ export interface DrawExecutedEvent {
   drawId: bigint;
   requestHash: string;
   prizeAmount: bigint;
-  totalWeight: bigint;
-  remainingPrizeReserve: bigint;
   timestamp: number;
   participantCount: number;
   blockNumber: number;

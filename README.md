@@ -37,7 +37,7 @@ Sponsor wallet
   └─ encrypted cUSDC testnet contribution ──► prize reserve
 ```
 
-Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. A new address enters the draw set only after the KMS proves its encrypted position is positive; the amount stays private, stale proofs cannot be replayed, and encrypted-zero callbacks never consume participant capacity. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. The next contract runtime locks balance-changing operations, publicly decrypts only a proof-bound draw-readiness bit, and scales encrypted randomness by the encrypted eligible total. Neither aggregate amount enters finalization calldata or settlement events. The active Sepolia deployment still exposes its exact aggregate snapshot until the documented successor migration. After a round, each saver can privately reveal only their own prize counter. A positive prize is claimed through the same encrypted withdrawal path as principal, so calldata and events do not distinguish a prize claim from an ordinary private withdrawal.
+Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. A new address enters the draw set only after the KMS proves its encrypted position is positive; the amount stays private, stale proofs cannot be replayed, and encrypted-zero callbacks never consume participant capacity. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. The active contract locks balance-changing operations, publicly decrypts only a proof-bound draw-readiness bit, and scales encrypted randomness by the encrypted eligible total. Neither aggregate amount enters finalization calldata or settlement events. After a round, each saver can privately reveal only their own prize counter. A positive prize is claimed through the same encrypted withdrawal path as principal, so calldata and events do not distinguish a prize claim from an ordinary private withdrawal.
 
 The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCMock wraps `0x9b5C...DFfF`, whereas Aave Sepolia’s deployed USDC market uses `0x94a9...E4C8`; treating either a passive token holder or an unrelated Aave position as pool yield would be false. The rejected strategy and production path are documented in [the reserve funding model](docs/operations/reserve-funding.md).
 
@@ -45,7 +45,7 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 | Component | Address |
 | --- | --- |
-| ConfidentialPool | [`0x54FdC46D0EA722EfA4853192678b35fCABFad99C`](https://sepolia.etherscan.io/address/0x54FdC46D0EA722EfA4853192678b35fCABFad99C) |
+| ConfidentialPool | [`0x2150d7D82117b927Dd3253935E34f67D8B37d424`](https://sepolia.etherscan.io/address/0x2150d7D82117b927Dd3253935E34f67D8B37d424) |
 | Official cUSDCMock | [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) |
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |
@@ -111,9 +111,9 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 ## Current Limitations
 
 - Sepolia prizes are funded by voluntary encrypted sponsor contributions, not generated yield. A production deployment should adopt Zama’s audited confidential batching pattern for an ERC-4626 strategy whose underlying asset matches the pool’s cUSDC wrapper.
-- Winner selection remains linear but the next runtime is explicitly capped at 12 active participants from the documented Zama HCU budget.
+- Winner selection remains linear, and the active runtime caps the draw set at 12 participants using the documented Zama HCU budget.
 - KMS-verified participant activation is live. The 12-member ceiling and proof-bound removal lifecycle are implemented in source and require a verified contract/service migration before use.
-- The active Sepolia runtime still reveals aggregate weight and reserve during settlement. The successor source reduces this to one readiness bit and requires a verified contract/service migration.
+- The active Sepolia runtime reveals only the proof-bound readiness bit during settlement; exact eligible weight and reserve remain encrypted.
 - The active Sepolia pool enforces permissionless, fixed-prize, cadence-controlled draw requests; see [the draw policy](docs/operations/draw-policy.md).
 
 ## License

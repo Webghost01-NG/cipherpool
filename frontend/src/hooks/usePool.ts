@@ -181,24 +181,23 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const response = await fetch(DEFAULT_BACKEND_URL + "/api/v1/pool/state");
       if (!response.ok) throw new Error("Backend returned HTTP " + response.status);
       const data = await response.json() as {
-        lastVerifiedTotalEligibleBalance?: string;
+        aggregateDisclosure?: string;
         totalDraws?: number;
         prizeReserveFundingModel?: string;
-        latestDraw?: { remainingPrizeReserve?: string } | null;
+        latestDraw?: { drawId?: string } | null;
       };
       if (typeof data.totalDraws !== "number" || !Number.isSafeInteger(data.totalDraws)) throw new Error("Invalid draw count.");
       if (data.prizeReserveFundingModel !== "sponsor-funded-testnet") throw new Error("Unsupported prize reserve funding model.");
+      if (data.aggregateDisclosure !== "encrypted-only") throw new Error("Unsupported aggregate disclosure model.");
       setBackendStatus("online");
       setPoolStats((current) => ({
         ...current,
-        totalDeposits: data.lastVerifiedTotalEligibleBalance ?? current.totalDeposits,
-        prizeReserve: data.latestDraw?.remainingPrizeReserve ?? current.prizeReserve,
         totalDraws: data.totalDraws!,
       }));
       setMetricFreshness((current) => ({
         ...current,
-        totalDeposits: data.latestDraw ? "stale" : "pending",
-        prizeReserve: data.latestDraw ? "stale" : "pending",
+        totalDeposits: "unavailable",
+        prizeReserve: "unavailable",
         totalDraws: "fresh",
       }));
     } catch {

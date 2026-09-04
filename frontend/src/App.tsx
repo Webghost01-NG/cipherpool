@@ -307,6 +307,8 @@ export const App: React.FC = () => {
               value={totalDeposits + " " + asset.symbol}
               subtext={metricFreshness.totalDeposits === "pending"
                 ? "New pool; appears after the first finalized draw"
+                : activeRuntimeVersion === "readiness-v2"
+                  ? "Encrypted by design; no public aggregate is collected"
                 : "Aggregate only; individual positions stay encrypted"}
               status={metricFreshness.totalDeposits}
             />
@@ -315,6 +317,8 @@ export const App: React.FC = () => {
               value={prizeReserve + " " + asset.symbol}
               subtext={metricFreshness.prizeReserve === "pending"
                 ? "New pool; appears after the first finalized draw"
+                : activeRuntimeVersion === "readiness-v2"
+                  ? "Encrypted by design; only reserve sufficiency is revealed"
                 : "Sponsor-funded on Sepolia; last KMS-verified snapshot"}
               status={metricFreshness.prizeReserve}
             />

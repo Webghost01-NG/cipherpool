@@ -6,14 +6,14 @@ The active pool uses the official Zama `cUSDCMock` ERC-7984 wrapper on Ethereum 
 
 | Component | Address | Block | Transaction | Runtime code hash |
 | --- | --- | ---: | --- | --- |
-| ConfidentialPool | `0x54FdC46D0EA722EfA4853192678b35fCABFad99C` | `11635883` | [`0xdc1625...`](https://sepolia.etherscan.io/tx/0xdc16256211b0bce6e01baea5a421e9d421d9ec0a776057dc723fc731c0531d88) | `0x9568c86d6d8a2ed93bcb6b229b3c3c0bc3ad8468cde60abc2ce671bc73a397a5` |
+| ConfidentialPool | `0x2150d7D82117b927Dd3253935E34f67D8B37d424` | `11636641` | [`0x89f75d...`](https://sepolia.etherscan.io/tx/0x89f75d0986b7d4bd5000a5e72acec640cfd32d00c09f78f96a060087f48a19f0) | `0x38dcfee7fcbecb12f8be9c4d73c596e7f9bc1b0a3d910e49cc8d8a3cc7af4ed4` |
 | Official cUSDCMock | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` | Zama-managed | [Contract](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) | Upgradeable proxy |
 
 Verified initial state:
 
 - Owner: `0xF19125e08AFC9502DCde60703c1E24C334902356`
 - Custody asset: official cUSDCMock address above
-- Runtime size: `12,756` bytes
+- Runtime size: `14,855` bytes
 - Cancellation delay: `86,400` seconds
 - Draw interval: `604,800` seconds; fixed prize: `500,000` base units
 - Paused: `false`; draw count and participant count: `0`
@@ -51,9 +51,9 @@ Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow b
 
 ## Runtime Activation
 
-The backend uses `INDEXER_START_BLOCK=11635883` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation is active in this runtime.
+The backend uses `INDEXER_START_BLOCK=11636641` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation and zero-balance slot reclamation are active in this runtime.
 
-Frontend public reads use the comma-separated `VITE_SEPOLIA_RPC_URLS` list and require at least two HTTPS endpoints. These endpoints are independent of the injected wallet. The reviewed `VITE_POOL_RUNTIME_CODE_HASH` selects the configured `VITE_POOL_RUNTIME_VERSION`; unknown bytecode fails closed instead of trying an assumed ABI. A connected wallet must independently see the same runtime on chain ID `11155111` before transactions are enabled.
+Frontend public reads use the comma-separated `VITE_SEPOLIA_RPC_URLS` list and require at least two HTTPS endpoints. These endpoints are independent of the injected wallet. The reviewed `VITE_POOL_RUNTIME_CODE_HASH` selects the `readiness-v2` ABI; unknown bytecode fails closed instead of trying an assumed ABI. A connected wallet must independently see the same runtime on chain ID `11155111` before transactions are enabled. The deployed creation input exactly matches the local initcode plus constructor arguments, and four independent RPCs returned the same runtime hash.
 
 ## Rollback
 

@@ -8,8 +8,8 @@ const POOL_EVENTS_ABI = [
   "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
   "event ParticipantActivationRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, bytes32 eligibilityHandle)",
   "event ParticipantActivationFinalized(address indexed user, bytes32 indexed requestHash, bool eligible, uint256 participantCount)",
-  "event DrawSkipped(bytes32 indexed requestHash, uint64 totalWeight, uint64 prizeReserve, uint64 requiredPrizeAmount, uint256 timestamp)",
-  "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
+  "event DrawSkipped(bytes32 indexed requestHash, uint64 prizeAmount, uint256 timestamp)",
+  "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
 ];
 
 export class BlockchainIndexer {
@@ -87,8 +87,6 @@ export class BlockchainIndexer {
             drawId: BigInt(parsed.args.drawId),
             requestHash: parsed.args.requestHash,
             prizeAmount: BigInt(parsed.args.prizeAmount),
-            totalWeight: BigInt(parsed.args.totalWeight),
-            remainingPrizeReserve: BigInt(parsed.args.remainingPrizeReserve),
             timestamp: Number(parsed.args.timestamp),
             participantCount: Number(parsed.args.participantCount),
             blockNumber: log.blockNumber,

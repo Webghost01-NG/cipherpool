@@ -24,9 +24,10 @@ describe("Typed REST API integration", () => {
     assert.equal(res.body.confidentialWithdrawalEvents, "0");
     assert.equal(res.body.prizeReserveFundingEvents, "0");
     assert.equal(res.body.prizeReserveFundingModel, "sponsor-funded-testnet");
-    assert.equal(res.body.lastVerifiedTotalEligibleBalance, "0");
+    assert.equal(res.body.aggregateDisclosure, "encrypted-only");
     assert.equal(res.body.totalDraws, 0);
     assert.equal("totalDeposits" in res.body, false);
+    assert.equal("lastVerifiedTotalEligibleBalance" in res.body, false);
   });
 
   test("GET /api/v1/users/:address/deposit refuses to expose a private balance", async () => {
