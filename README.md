@@ -91,8 +91,8 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
-Set `RPC_URL` to a real Sepolia RPC endpoint. Frontend deployment addresses and service URLs are environment configuration; the application intentionally refuses transaction flows when required values are missing.
-`INDEXER_START_BLOCK` must be the pool deployment block so restarts reconstruct all indexed state.
+Set `RPC_URL` to a real Sepolia RPC endpoint and `DATABASE_URL` to a PostgreSQL connection URL. Frontend deployment addresses and service URLs are environment configuration; the application intentionally refuses transaction flows when required values are missing.
+`INDEXER_START_BLOCK` must be the pool deployment block. On first start, the backend replays from that block; subsequent starts restore the namespaced PostgreSQL checkpoint and resume at the next unprocessed block.
 
 ### Run Tests
 ```bash

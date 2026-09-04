@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { verifyPoolDeployment } from "./config/deployment.js";
 import { loadConfig } from "./config/env.js";
 import { BlockchainIndexer } from "./indexer/indexer.js";
+import { PostgresIndexerPersistence } from "./indexer/persistence.js";
 import { IndexerStore } from "./indexer/store.js";
 import { KMSClient } from "./relayer/kms.js";
 import { KMSRelayerService } from "./relayer/relayer.js";
@@ -32,7 +33,13 @@ async function main() {
     poolRuntimeCodeHash: evidence.poolRuntimeCodeHash,
   });
 
-  const store = new IndexerStore();
+  const persistence = new PostgresIndexerPersistence(
+    config.DATABASE_URL,
+    `${config.CHAIN_ID}:${config.POOL_CONTRACT_ADDRESS.toLowerCase()}`
+  );
+  await persistence.initialize();
+  const checkpoint = await persistence.load();
+  const store = checkpoint ? IndexerStore.fromSnapshot(checkpoint.snapshot) : new IndexerStore();
   const indexer = new BlockchainIndexer(store);
   const kmsClient = new KMSClient(config.RPC_URL, config.RELAYER_URL);
   const relayer = new KMSRelayerService(store, kmsClient, {
@@ -40,9 +47,14 @@ async function main() {
     baseBackoffMs: 1000,
   });
   const readContract = new ethers.Contract(config.POOL_CONTRACT_ADDRESS, POOL_ABI, provider);
-  let lastPolledBlock = config.INDEXER_START_BLOCK;
+  let lastPolledBlock = checkpoint
+    ? Math.max(config.INDEXER_START_BLOCK, checkpoint.nextBlockNumber)
+    : config.INDEXER_START_BLOCK;
+  defaultLogger.info(checkpoint ? "Restored durable indexer checkpoint" : "No durable checkpoint found; replaying from deployment block", {
+    nextBlockNumber: lastPolledBlock,
+  });
 
-  const pollLogs = async () => {
+  const runPoll = async () => {
     try {
       const currentBlock = await provider.getBlockNumber();
       if (currentBlock < lastPolledBlock) return;
@@ -72,12 +84,24 @@ async function main() {
           });
         }
       }
-      lastPolledBlock = queryToBlock + 1;
+      const nextBlockNumber = queryToBlock + 1;
+      await persistence.save(nextBlockNumber, store.toSnapshot());
+      lastPolledBlock = nextBlockNumber;
     } catch (error) {
       defaultLogger.debug("Polling logs error", {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  };
+
+  let activePoll: Promise<void> | null = null;
+  const pollLogs = () => {
+    if (!activePoll) {
+      activePoll = runPoll().finally(() => {
+        activePoll = null;
+      });
+    }
+    return activePoll;
   };
 
   await pollLogs();
@@ -97,9 +121,18 @@ async function main() {
   const gracefulShutdown = (signal: string) => {
     defaultLogger.info(`Received ${signal}. Gracefully shutting down HTTP server...`);
     clearInterval(pollInterval);
-    server.close(() => {
-      defaultLogger.info("HTTP server closed. Exiting process.");
-      process.exit(0);
+    server.close(async () => {
+      try {
+        await activePoll;
+        await persistence.close();
+        defaultLogger.info("HTTP server and database pool closed. Exiting process.");
+        process.exit(0);
+      } catch (error) {
+        defaultLogger.error("Failed to close database pool cleanly", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        process.exit(1);
+      }
     });
   };
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));

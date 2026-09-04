@@ -33,6 +33,7 @@ describe("Backend Core & Health Tests", () => {
       PORT: "4000",
       NODE_ENV: "test",
       RPC_URL: "http://localhost:8545",
+      DATABASE_URL: "postgresql://cipherpool:secret@localhost:5432/cipherpool",
       POOL_CONTRACT_ADDRESS: "0x2222222222222222222222222222222222222222",
       CUSTODY_ASSET_ADDRESS: "0x3333333333333333333333333333333333333333",
       POOL_RUNTIME_CODE_HASH: "0x" + "ab".repeat(32),

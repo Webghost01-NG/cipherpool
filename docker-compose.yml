@@ -9,6 +9,7 @@ services:
       - PORT=3001
       - NODE_ENV=production
       - RPC_URL=${RPC_URL}
+      - DATABASE_URL=${DATABASE_URL}
       - CHAIN_ID=11155111
       - POOL_CONTRACT_ADDRESS=${POOL_CONTRACT_ADDRESS}
       - RELAYER_URL=${RELAYER_URL:-}

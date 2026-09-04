@@ -7,6 +7,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   RPC_URL: z.string().url(),
+  DATABASE_URL: z.string().refine(
+    (value) => value.startsWith("postgres://") || value.startsWith("postgresql://"),
+    "Must be a PostgreSQL connection URL"
+  ),
   CHAIN_ID: z.coerce.number().default(11155111),
   POOL_CONTRACT_ADDRESS: z
     .string()

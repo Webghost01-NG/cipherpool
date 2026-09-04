@@ -5,6 +5,48 @@ import {
   WithdrawalCancelledEvent,
   DrawExecutedEvent,
 } from "./types.js";
+import { z } from "zod";
+
+const unsignedIntegerSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
+const indexedEventSchema = z.object({
+  user: z.string().min(1),
+  blockNumber: z.number().int().nonnegative(),
+  transactionHash: z.string().min(1),
+}).strict();
+
+export const indexerStoreSnapshotSchema = z.object({
+  version: z.literal(1),
+  deposits: z.array(z.tuple([z.string().min(1), unsignedIntegerSchema])),
+  totalAccountedBalance: unsignedIntegerSchema,
+  withdrawals: z.array(indexedEventSchema.extend({
+    nonce: unsignedIntegerSchema,
+    requestHash: z.string().min(1),
+    requestedAmount: unsignedIntegerSchema,
+    handle: z.string().min(1),
+    timestamp: z.number().int().positive(),
+    status: z.enum(["PENDING", "FINALIZED", "CANCELLED"]),
+  }).strict()),
+  finalizedWithdrawals: z.array(indexedEventSchema.extend({
+    requestHash: z.string().min(1),
+    cleartextAmount: unsignedIntegerSchema,
+  }).strict()),
+  cancelledWithdrawalHashes: z.array(z.string().min(1)),
+  draws: z.array(z.object({
+    drawId: unsignedIntegerSchema,
+    prizeAmount: unsignedIntegerSchema,
+    timestamp: z.number().int().positive(),
+    participantCount: z.number().int().nonnegative(),
+    blockNumber: z.number().int().nonnegative(),
+    transactionHash: z.string().min(1),
+  }).strict()),
+  seenEventKeys: z.array(z.string().min(1)),
+}).strict();
+
+export type IndexerStoreSnapshot = z.infer<typeof indexerStoreSnapshotSchema>;
+
+export function parseIndexerStoreSnapshot(value: unknown): IndexerStoreSnapshot {
+  return indexerStoreSnapshotSchema.parse(value);
+}
 
 export class IndexerStore {
   public lastIndexedBlock: number = 0;
@@ -16,6 +58,63 @@ export class IndexerStore {
   private cancelledWithdrawals: Set<string> = new Set();
   private draws: DrawExecutedEvent[] = [];
   private seenTxHashes: Set<string> = new Set();
+
+  public static fromSnapshot(value: unknown): IndexerStore {
+    const snapshot = parseIndexerStoreSnapshot(value);
+    const store = new IndexerStore();
+
+    store.deposits = new Map(snapshot.deposits.map(([user, amount]) => [user, BigInt(amount)]));
+    store.totalAccountedBalance = BigInt(snapshot.totalAccountedBalance);
+    for (const serialized of snapshot.withdrawals) {
+      const withdrawal: WithdrawalRequestedEvent = {
+        ...serialized,
+        nonce: BigInt(serialized.nonce),
+        requestedAmount: BigInt(serialized.requestedAmount),
+      };
+      store.pendingWithdrawalsByHash.set(withdrawal.requestHash, withdrawal);
+      if (withdrawal.status === "PENDING") {
+        store.pendingWithdrawalsByUser.set(withdrawal.user.toLowerCase(), withdrawal);
+      }
+    }
+    for (const serialized of snapshot.finalizedWithdrawals) {
+      store.finalizedWithdrawals.set(serialized.requestHash, {
+        ...serialized,
+        cleartextAmount: BigInt(serialized.cleartextAmount),
+      });
+    }
+    store.cancelledWithdrawals = new Set(snapshot.cancelledWithdrawalHashes);
+    store.draws = snapshot.draws.map((draw) => ({
+      ...draw,
+      drawId: BigInt(draw.drawId),
+      prizeAmount: BigInt(draw.prizeAmount),
+    }));
+    store.seenTxHashes = new Set(snapshot.seenEventKeys);
+    return store;
+  }
+
+  public toSnapshot(): IndexerStoreSnapshot {
+    return {
+      version: 1,
+      deposits: Array.from(this.deposits, ([user, amount]) => [user, amount.toString()]),
+      totalAccountedBalance: this.totalAccountedBalance.toString(),
+      withdrawals: Array.from(this.pendingWithdrawalsByHash.values(), (withdrawal) => ({
+        ...withdrawal,
+        nonce: withdrawal.nonce.toString(),
+        requestedAmount: withdrawal.requestedAmount.toString(),
+      })),
+      finalizedWithdrawals: Array.from(this.finalizedWithdrawals.values(), (withdrawal) => ({
+        ...withdrawal,
+        cleartextAmount: withdrawal.cleartextAmount.toString(),
+      })),
+      cancelledWithdrawalHashes: Array.from(this.cancelledWithdrawals),
+      draws: this.draws.map((draw) => ({
+        ...draw,
+        drawId: draw.drawId.toString(),
+        prizeAmount: draw.prizeAmount.toString(),
+      })),
+      seenEventKeys: Array.from(this.seenTxHashes),
+    };
+  }
 
   public addDeposit(event: DepositedEvent) {
     const key = `${event.transactionHash}-${event.nonce}`;
