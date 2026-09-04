@@ -22,6 +22,16 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.ok(content.includes(":focus-visible"), "Visible focus ring defined");
   });
 
+  test("document declares repository-owned SVG and ICO favicons", () => {
+    const html = fs.readFileSync(path.join(process.cwd(), "frontend/index.html"), "utf-8");
+    const publicDirectory = path.join(process.cwd(), "frontend/public");
+
+    assert.match(html, /href="\/favicon\.svg" type="image\/svg\+xml"/);
+    assert.match(html, /href="\/favicon\.ico" sizes="any"/);
+    assert.equal(fs.existsSync(path.join(publicDirectory, "favicon.svg")), true);
+    assert.equal(fs.existsSync(path.join(publicDirectory, "favicon.ico")), true);
+  });
+
   test("App presents live state and primary savings actions in an app-first layout", () => {
     const appPath = path.join(process.cwd(), "frontend/src/App.tsx");
     const content = fs.readFileSync(appPath, "utf-8");
