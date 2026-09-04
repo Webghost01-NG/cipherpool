@@ -19,7 +19,7 @@ import { TxStatusModal } from "./components/common/TxStatusModal.js";
 import { useWallet } from "./hooks/useWallet.js";
 import { usePool, TransactionCallbacks } from "./hooks/usePool.js";
 import { useLegacyExit } from "./hooks/useLegacyExit.js";
-import { useTxLifecycle } from "./hooks/useTxLifecycle.js";
+import { useTxLifecycle, type TxTarget } from "./hooks/useTxLifecycle.js";
 import {
   configurationErrors,
   DEFAULT_LEGACY_POOL_ADDRESS,
@@ -27,6 +27,7 @@ import {
   runtimeConfig,
 } from "./contracts/config.js";
 import { formatTokenAmount } from "./utils/format.js";
+import { getPoolStatus } from "./utils/poolStatus.js";
 
 interface PrivateRevealFeedback {
   start: (title: string, details?: string) => void;
@@ -97,10 +98,15 @@ export const App: React.FC = () => {
   const runAction = async (
     title: string,
     action: () => Promise<{ txHash: string }>,
-    successMessage: string
+    successMessage: string,
+    expectedTarget: TxTarget
   ) => {
     try {
-      startTx(title);
+      startTx(
+        title,
+        "Review the exact contract target below, then approve the request in your wallet.",
+        expectedTarget
+      );
       await action();
       setConfirmed(successMessage);
     } catch (error) {
@@ -110,12 +116,7 @@ export const App: React.FC = () => {
 
   const totalDeposits = formatTokenAmount(poolStats.totalDeposits, asset.decimals);
   const prizeReserve = formatTokenAmount(poolStats.prizeReserve, asset.decimals);
-  const poolStateStatus = metricFreshness.prizeReserve;
-  const poolStatusLabel = poolStateStatus === "loading"
-    ? "Pool checking"
-    : poolStateStatus === "unavailable"
-      ? "Pool unavailable"
-      : `Pool ${poolStats.isPaused ? "paused" : "unpaused"}${poolStateStatus === "stale" ? " (stale)" : ""}`;
+  const poolStatus = getPoolStatus(deploymentVerification.status, poolStats.isPaused);
   const hasDrawCount = metricFreshness.totalDraws === "fresh" || metricFreshness.totalDraws === "stale";
   const runBalanceReveal = () => revealBalanceWithFeedback(revealBalance, {
     start: startTx,
@@ -214,8 +215,8 @@ export const App: React.FC = () => {
                 Indexer {backendStatus}
               </span>
               <span className="status-item">
-                <span className={"status-dot " + (poolStateStatus === "fresh" && !poolStats.isPaused ? "status-dot--ok" : "status-dot--warn")} />
-                {poolStatusLabel}
+                <span className={"status-dot " + (poolStatus.isHealthy ? "status-dot--ok" : "status-dot--warn")} />
+                {poolStatus.label}
               </span>
               <span className="status-item"><LockKeyhole size={13} /> Ethereum Sepolia</span>
               <span className="status-item">
@@ -267,7 +268,8 @@ export const App: React.FC = () => {
                   runAction(
                     "Encrypted deposit",
                     () => deposit(amount, transactionCallbacks),
-                    "Deposit confirmed on Ethereum Sepolia."
+                    "Deposit confirmed on Ethereum Sepolia.",
+                    { label: "Official cUSDC", address: asset.address }
                   )
                 }
                 isLoading={isLoading}
@@ -281,7 +283,8 @@ export const App: React.FC = () => {
                   runAction(
                     "Encrypted withdrawal",
                     () => withdraw(amount, transactionCallbacks),
-                    "Confidential cUSDC withdrawal confirmed on Ethereum Sepolia."
+                    "Confidential cUSDC withdrawal confirmed on Ethereum Sepolia.",
+                    { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
                   )
                 }
                 isLoading={isLoading}
@@ -318,14 +321,16 @@ export const App: React.FC = () => {
                 runAction(
                   "Finalize archived withdrawal",
                   () => legacyExit.finalizeWithdrawal(transactionCallbacks),
-                  "Archived withdrawal finalized on Ethereum Sepolia."
+                  "Archived withdrawal finalized on Ethereum Sepolia.",
+                  { label: "Legacy ConfidentialPool", address: DEFAULT_LEGACY_POOL_ADDRESS }
                 )
               }
               onCancelWithdrawal={() =>
                 runAction(
                   "Cancel archived withdrawal",
                   () => legacyExit.cancelWithdrawal(transactionCallbacks),
-                  "Archived withdrawal request cancelled on Ethereum Sepolia."
+                  "Archived withdrawal request cancelled on Ethereum Sepolia.",
+                  { label: "Legacy ConfidentialPool", address: DEFAULT_LEGACY_POOL_ADDRESS }
                 )
               }
             />
@@ -348,14 +353,16 @@ export const App: React.FC = () => {
                   runAction(
                     "Sponsor prize reserve",
                     () => fundPrizeReserve(amount, transactionCallbacks),
-                    "Encrypted sponsor contribution confirmed on Ethereum Sepolia."
+                    "Encrypted sponsor contribution confirmed on Ethereum Sepolia.",
+                    { label: "Official cUSDC", address: asset.address }
                   )
                 }
                 onExecuteDraw={(amount) =>
                   runAction(
                     "Confidential prize draw",
                     () => drawLottery(amount, transactionCallbacks),
-                    "Prize round confirmed on Ethereum Sepolia."
+                    "Prize round confirmed on Ethereum Sepolia.",
+                    { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
                   )
                 }
                 isLoading={isLoading}

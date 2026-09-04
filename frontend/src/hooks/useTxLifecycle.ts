@@ -9,12 +9,18 @@ export type TxPhase =
   | "CONFIRMED"
   | "FAILED";
 
+export interface TxTarget {
+  label: string;
+  address: string;
+}
+
 export interface TxState {
   phase: TxPhase;
   actionTitle: string;
   txHash: string | null;
   errorMessage: string | null;
   details?: string | null;
+  expectedTarget?: TxTarget | null;
 }
 
 export const useTxLifecycle = () => {
@@ -24,15 +30,17 @@ export const useTxLifecycle = () => {
     txHash: null,
     errorMessage: null,
     details: null,
+    expectedTarget: null,
   });
 
-  const startTx = useCallback((actionTitle: string, details?: string) => {
+  const startTx = useCallback((actionTitle: string, details?: string, expectedTarget?: TxTarget) => {
     setTxState({
       phase: "PROMPTED",
       actionTitle,
       txHash: null,
       errorMessage: null,
       details: details ?? "Please approve the transaction request in your connected wallet.",
+      expectedTarget: expectedTarget ?? null,
     });
   }, []);
 
@@ -86,6 +94,7 @@ export const useTxLifecycle = () => {
       txHash: null,
       errorMessage: null,
       details: null,
+      expectedTarget: null,
     });
   }, []);
 

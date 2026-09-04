@@ -16,6 +16,7 @@ import { Button } from "./UIPrimitives.js";
 export interface TxStatusModalProps {
   state: TxState;
   onClose: () => void;
+  explorerUrl?: string;
 }
 
 const phaseCopy: Record<TxState["phase"], string> = {
@@ -28,15 +29,20 @@ const phaseCopy: Record<TxState["phase"], string> = {
   FAILED: "The action did not complete. No success state has been recorded.",
 };
 
-export const TxStatusModal: React.FC<TxStatusModalProps> = ({ state, onClose }) => {
+export const TxStatusModal: React.FC<TxStatusModalProps> = ({ state, onClose, explorerUrl }) => {
   const isOpen = state.phase !== "IDLE";
   const isPending = ["PROMPTED", "BROADCASTING", "MINING", "WAITING_KMS"].includes(state.phase);
   const isSuccess = state.phase === "CONFIRMED";
   const dialogRef = useModalFocus({ isOpen, onDismiss: onClose, canDismiss: !isPending });
   if (!isOpen) return null;
+  const explorerBaseUrl = explorerUrl ?? runtimeConfig.explorerUrl;
   const explorerHref =
-    state.txHash && runtimeConfig.explorerUrl
-      ? runtimeConfig.explorerUrl + "/tx/" + state.txHash
+    state.txHash && explorerBaseUrl
+      ? explorerBaseUrl + "/tx/" + state.txHash
+      : "";
+  const targetExplorerHref =
+    state.expectedTarget && explorerBaseUrl
+      ? explorerBaseUrl + "/address/" + state.expectedTarget.address
       : "";
 
   return (
@@ -76,6 +82,18 @@ export const TxStatusModal: React.FC<TxStatusModalProps> = ({ state, onClose }) 
         </div>
         <h2 id="tx-modal-title">{state.actionTitle || "Transaction status"}</h2>
         <p id="tx-modal-description">{state.details || state.errorMessage || phaseCopy[state.phase]}</p>
+        {state.expectedTarget && (
+          <div className="tx-target" aria-label={`Expected ${state.expectedTarget.label} contract`}>
+            <span className="tx-target__label">Expected contract · {state.expectedTarget.label}</span>
+            <span className="mono tx-target__address">{state.expectedTarget.address}</span>
+            {targetExplorerHref && (
+              <a href={targetExplorerHref} target="_blank" rel="noreferrer">
+                Verify on Sepolia Etherscan <ExternalLink size={13} />
+              </a>
+            )}
+            <small>Cancel the wallet request if its target does not match this address.</small>
+          </div>
+        )}
         {state.txHash && (
           <div className="tx-evidence">
             <span className="mono">{shortenHex(state.txHash, 10, 8)}</span>

@@ -537,6 +537,12 @@ a { color: inherit; }
 .tx-icon--error { background: var(--accent-rose-subtle); color: var(--accent-rose); }
 .tx-modal h2 { font-size: 1.25rem; letter-spacing: -0.04em; }
 .tx-modal > p { margin: 0.5rem auto 1.1rem; color: var(--text-secondary); font-size: 0.8125rem; line-height: 1.6; }
+.tx-target { display: grid; gap: 0.45rem; margin-bottom: 0.9rem; border: 1px solid var(--border-subtle); border-radius: 0.55rem; background: var(--bg-tertiary); padding: 0.75rem; text-align: left; }
+.tx-target__label { color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; }
+.tx-target__address { overflow-wrap: anywhere; color: var(--text-primary); font-size: 0.75rem; }
+.tx-target a { display: inline-flex; min-height: 2.75rem; align-items: center; gap: 0.3rem; color: var(--accent-blue); font-size: 0.75rem; font-weight: 700; text-decoration: none; }
+.tx-target a:hover { text-decoration: underline; }
+.tx-target small { color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; }
 .tx-evidence { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.9rem; border-radius: 0.55rem; background: var(--bg-tertiary); padding: 0.75rem; font-size: 0.75rem; }
 .tx-evidence a { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--accent-blue); text-decoration: none; }
 
