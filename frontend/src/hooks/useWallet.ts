@@ -1,7 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 export const TARGET_CHAIN_ID = 11155111;
 export const TARGET_CHAIN_NAME = "Ethereum Sepolia";
+export const WALLET_DISCONNECT_SESSION_KEY = "cipherpool_wallet_disconnected";
 
 export type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -36,15 +37,35 @@ function parseChainId(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+export function readWalletDisconnectPreference(
+  storage: Pick<Storage, "getItem"> | null | undefined
+): boolean {
+  try {
+    return storage?.getItem(WALLET_DISCONNECT_SESSION_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [status, setStatus] = useState<WalletStatus>("disconnected");
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isManuallyDisconnected, setIsManuallyDisconnected] = useState(() => (
+    readWalletDisconnectPreference(
+      typeof window === "undefined" ? undefined : window.sessionStorage
+    )
+  ));
+  const addressRef = useRef(address);
+  const chainIdRef = useRef(chainId);
+  const manuallyDisconnectedRef = useRef(isManuallyDisconnected);
   const isCorrectNetwork = chainId === TARGET_CHAIN_ID;
 
   const applyWalletState = useCallback((accounts: unknown, nextChainId: number | null) => {
     const nextAddress = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
+    addressRef.current = nextAddress;
+    chainIdRef.current = nextChainId;
     setAddress(nextAddress);
     setChainId(nextChainId);
     setStatus(nextAddress ? (nextChainId === TARGET_CHAIN_ID ? "connected" : "wrong_network") : "disconnected");
@@ -52,33 +73,40 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const ethereum = window.ethereum;
-    if (!ethereum) return;
+    if (!ethereum || isManuallyDisconnected) return;
+    let isActive = true;
 
     Promise.all([
       ethereum.request({ method: "eth_accounts" }),
       ethereum.request({ method: "eth_chainId" }),
     ])
-      .then(([accounts, currentChain]) => applyWalletState(accounts, parseChainId(currentChain)))
-      .catch(() => applyWalletState([], null));
+      .then(([accounts, currentChain]) => {
+        if (isActive && !manuallyDisconnectedRef.current) {
+          applyWalletState(accounts, parseChainId(currentChain));
+        }
+      })
+      .catch(() => {
+        if (isActive && !manuallyDisconnectedRef.current) applyWalletState([], null);
+      });
 
     const handleAccountsChanged = (accounts: unknown) => {
-      const nextAddress = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
-      setAddress(nextAddress);
-      setStatus(nextAddress ? (chainId === TARGET_CHAIN_ID ? "connected" : "wrong_network") : "disconnected");
+      if (manuallyDisconnectedRef.current) return;
+      applyWalletState(accounts, chainIdRef.current);
     };
     const handleChainChanged = (value: unknown) => {
+      if (manuallyDisconnectedRef.current) return;
       const nextChainId = parseChainId(value);
-      setChainId(nextChainId);
-      setStatus(address ? (nextChainId === TARGET_CHAIN_ID ? "connected" : "wrong_network") : "disconnected");
+      applyWalletState(addressRef.current ? [addressRef.current] : [], nextChainId);
     };
 
     ethereum.on?.("accountsChanged", handleAccountsChanged);
     ethereum.on?.("chainChanged", handleChainChanged);
     return () => {
+      isActive = false;
       ethereum.removeListener?.("accountsChanged", handleAccountsChanged);
       ethereum.removeListener?.("chainChanged", handleChainChanged);
     };
-  }, [address, applyWalletState, chainId]);
+  }, [applyWalletState, isManuallyDisconnected]);
 
   const connect = useCallback(async () => {
     const ethereum = window.ethereum;
@@ -95,6 +123,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ethereum.request({ method: "eth_requestAccounts" }),
         ethereum.request({ method: "eth_chainId" }),
       ]);
+      manuallyDisconnectedRef.current = false;
+      setIsManuallyDisconnected(false);
+      try {
+        window.sessionStorage.removeItem(WALLET_DISCONNECT_SESSION_KEY);
+      } catch {
+        // Session storage is optional; the in-memory preference remains authoritative.
+      }
       applyWalletState(accounts, parseChainId(currentChain));
     } catch (error) {
       setStatus("disconnected");
@@ -105,10 +140,19 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [applyWalletState]);
 
   const disconnect = useCallback(() => {
+    manuallyDisconnectedRef.current = true;
+    setIsManuallyDisconnected(true);
+    addressRef.current = null;
+    chainIdRef.current = null;
     setAddress(null);
     setChainId(null);
     setStatus("disconnected");
     setErrorMessage(null);
+    try {
+      window.sessionStorage.setItem(WALLET_DISCONNECT_SESSION_KEY, "true");
+    } catch {
+      // Session storage is optional; the in-memory preference still prevents reconnection.
+    }
   }, []);
 
   const switchNetwork = useCallback(async () => {
@@ -120,15 +164,16 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         method: "wallet_switchEthereumChain",
         params: [{ chainId: "0xaa36a7" }],
       });
+      chainIdRef.current = TARGET_CHAIN_ID;
       setChainId(TARGET_CHAIN_ID);
-      setStatus(address ? "connected" : "disconnected");
+      setStatus(addressRef.current ? "connected" : "disconnected");
       setErrorMessage(null);
     } catch (error) {
       const message = "Add Ethereum Sepolia to your wallet, then try again.";
       setErrorMessage(message);
       throw new Error(message, { cause: error });
     }
-  }, [address]);
+  }, []);
 
   const value = useMemo(
     () => ({ status, address, chainId, isCorrectNetwork, errorMessage, connect, disconnect, switchNetwork }),
