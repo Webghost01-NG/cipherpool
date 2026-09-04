@@ -35,10 +35,10 @@ This is one transaction. The active pool has no plaintext withdrawal request, ba
 
 1. A sponsor encrypts a cUSDC amount for the custody token and submits `confidentialTransferAndCall` with `CIPHERPOOL_PRIZE_RESERVE_V1`.
 2. The pool credits only the token-returned ciphertext to the prize reserve. Sepolia copy must describe this as sponsor funding, not generated yield.
-3. The owner submits a public prize size with `requestDraw`.
+3. Once the immutable cadence opens, any wallet submits the exact on-chain `drawPrizeAmount()` with `requestDraw`.
 4. The pool marks aggregate position and reserve handles publicly decryptable and locks deposits and withdrawals.
 5. The client asks the Zama KMS to decrypt those two aggregates.
-6. In the updated contract source, any keeper submits `finalizeDraw(total, reserve, proof)`. The KMS proof is bound to the active request's stored handles, and the request already fixes the prize amount, so the relayer cannot substitute settlement state. The currently documented Sepolia deployment predates this change and remains owner-gated until migration.
+6. Any keeper submits `finalizeDraw(total, reserve, proof)`. The KMS proof is bound to the active request's stored handles, and the immutable policy fixes the prize amount, so the relayer cannot substitute settlement state. A verified insufficient reserve emits `DrawSkipped` and releases the lock without awarding a prize.
 7. The pool verifies both stored handles, creates a bounded encrypted random ticket, and evaluates encrypted cumulative balance intervals.
 8. Exactly one encrypted interval receives the encrypted prize credit; the reserve is reduced homomorphically.
 9. Each saver may authorize a private KMS reveal of only their own prize counter.

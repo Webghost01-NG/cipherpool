@@ -13,6 +13,13 @@ interface IPoolEvents {
         bytes32 reserveHandle
     );
     event DrawCancelled(bytes32 indexed requestHash);
+    event DrawSkipped(
+        bytes32 indexed requestHash,
+        uint64 totalWeight,
+        uint64 prizeReserve,
+        uint64 requiredPrizeAmount,
+        uint256 timestamp
+    );
     event DrawExecuted(
         uint256 indexed drawId,
         bytes32 indexed requestHash,

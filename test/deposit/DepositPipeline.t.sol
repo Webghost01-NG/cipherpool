@@ -13,12 +13,27 @@ contract DepositPipelineTest is ConfidentialPoolTestBase, IPoolErrors {
 
     function test_RevertWhen_InvalidAssetAddress() public {
         vm.expectRevert(InvalidAssetAddress.selector);
-        new ConfidentialPool(address(0), DELAY);
+        new ConfidentialPool(address(0), DELAY, DRAW_INTERVAL, DRAW_PRIZE);
     }
 
     function test_RevertWhen_InvalidCancellationDelay() public {
         vm.expectRevert(InvalidCancellationDelay.selector);
-        new ConfidentialPool(address(token), 0);
+        new ConfidentialPool(address(token), 0, DRAW_INTERVAL, DRAW_PRIZE);
+    }
+
+    function test_RevertWhen_DrawIntervalCannotGuaranteeRecoveryWindow() public {
+        uint64 unsafeInterval = (DELAY * 2) - 1;
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidDrawInterval.selector,
+            uint256(unsafeInterval),
+            uint256(DELAY) * 2
+        ));
+        new ConfidentialPool(address(token), DELAY, unsafeInterval, DRAW_PRIZE);
+    }
+
+    function test_RevertWhen_FixedPrizeIsZero() public {
+        vm.expectRevert(ZeroPrizeAmount.selector);
+        new ConfidentialPool(address(token), DELAY, DRAW_INTERVAL, 0);
     }
 
     function test_DepositCreditsOnlyTokenReturnedEncryptedAmount() public {

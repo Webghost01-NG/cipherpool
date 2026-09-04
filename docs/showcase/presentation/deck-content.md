@@ -36,6 +36,7 @@ The white-and-blue console shows public pool health without exposing private pos
 - Winner credits enter both the encrypted position and aggregate liability during draw finalization; compounding only clears the separate prize counter.
 - Withdrawals debit accounting by the token-returned encrypted transfer result.
 - KMS proofs are bound to the stored aggregate and reserve handles; anyone can cancel a stale draw lock after 24 hours.
+- Immutable prize and cadence parameters let any wallet request an eligible round without operator discretion or repeated lock spam.
 
 ## 8. Verified full Sepolia lifecycle
 

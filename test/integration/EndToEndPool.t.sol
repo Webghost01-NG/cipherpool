@@ -20,12 +20,12 @@ contract EndToEndPoolTest is ConfidentialPoolTestBase {
         assertEq(pool.getParticipantCount(), USER_COUNT);
 
         _fundReserve(address(0xBEEF), 4_000);
-        _requestAndFinalizeDraw(1_000, 100_000, 4_000);
-        _requestAndFinalizeDraw(2_500, 101_000, 3_000);
-        _requestAndFinalizeDraw(500, 103_500, 500);
+        _requestAndFinalizeDraw(100_000, 4_000);
+        _requestAndFinalizeDraw(100_500, 3_500);
+        _requestAndFinalizeDraw(101_000, 3_000);
         assertEq(pool.currentDrawId(), 3);
-        assertEq(pool.lastVerifiedTotalAccountedBalance(), 104_000);
-        assertEq(pool.lastVerifiedPrizeReserve(), 0);
+        assertEq(pool.lastVerifiedTotalAccountedBalance(), 101_500);
+        assertEq(pool.lastVerifiedPrizeReserve(), 2_500);
 
         _withdraw(users[0], 4_000);
         _withdraw(users[1], 10_000);

@@ -98,6 +98,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - Invalid callback actions are rejected by returning an encrypted `false`, allowing ERC-7984 to refund.
 - Draw proofs are bound to both encrypted aggregate handles stored by the pool.
 - Any keeper can relay a valid proof for an active draw; the caller cannot change its committed handles or prize amount.
+- Draw requests use an immutable prize and minimum cadence; any wallet may request the next eligible round without owner-set timing or prize size.
 - A stale draw can be cancelled permissionlessly after 24 hours.
 - Protocol writes fail closed when deployment evidence does not match configuration.
 - Secrets, private keys, RPC credentials, and deployment tokens must never be committed.
@@ -108,6 +109,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
 - ERC-7984 can return an encrypted zero transfer; zero-value callbacks may add addresses to the participant list. This requires a positive-position activation proof before production use.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
+- The permissionless request policy is implemented in source but requires a verified Sepolia redeployment before activation; see [the draw policy](docs/operations/draw-policy.md).
 
 ## License
 

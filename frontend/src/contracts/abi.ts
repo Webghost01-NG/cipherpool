@@ -15,12 +15,16 @@ export const POOL_ABI = [
   "function currentDrawId() external view returns (uint256)",
   "function custodyAsset() external view returns (address)",
   "function drawCancellationDelay() external view returns (uint64)",
+  "function drawInterval() external view returns (uint64)",
+  "function drawPrizeAmount() external view returns (uint64)",
+  "function nextDrawRequestTimestamp() external view returns (uint64)",
   "function owner() external view returns (address)",
   "function paused() external view returns (bool)",
   "event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
   "event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
   "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
   "event DrawRequested(uint256 indexed nonce, bytes32 indexed requestHash, uint64 prizeAmount, bytes32 totalHandle, bytes32 reserveHandle)",
+  "event DrawSkipped(bytes32 indexed requestHash, uint64 totalWeight, uint64 prizeReserve, uint64 requiredPrizeAmount, uint256 timestamp)",
   "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
 ];
 

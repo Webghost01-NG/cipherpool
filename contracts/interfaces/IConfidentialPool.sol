@@ -15,6 +15,9 @@ interface IConfidentialPool is IPoolTypes, IPoolEvents, IPoolErrors {
     function compoundPrizes() external;
     function getPendingDraw() external view returns (DrawRequest memory);
     function drawCancellationDelay() external view returns (uint64);
+    function drawInterval() external view returns (uint64);
+    function drawPrizeAmount() external view returns (uint64);
+    function nextDrawRequestTimestamp() external view returns (uint64);
     function getBalanceHandle(address user) external view returns (bytes32);
     function getPrizeHandle(address user) external view returns (bytes32);
     function getTotalAccountedBalanceHandle() external view returns (bytes32);

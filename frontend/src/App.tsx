@@ -87,7 +87,6 @@ export const App: React.FC = () => {
     metricFreshness,
     deploymentVerification,
     writesEnabled,
-    isOwner,
     deposit,
     withdraw,
     fundPrizeReserve,
@@ -127,7 +126,7 @@ export const App: React.FC = () => {
 
   const runAction = async (
     title: string,
-    action: () => Promise<{ txHash: string }>,
+    action: () => Promise<{ txHash: string; successMessage?: string }>,
     successMessage: string,
     expectedTarget: TxTarget
   ) => {
@@ -137,8 +136,8 @@ export const App: React.FC = () => {
         "Review the exact contract target below, then approve the request in your wallet.",
         expectedTarget
       );
-      await action();
-      setConfirmed(successMessage);
+      const result = await action();
+      setConfirmed(result.successMessage ?? successMessage);
     } catch (error) {
       setFailed(error instanceof Error ? error : String(error));
     }
@@ -424,12 +423,15 @@ export const App: React.FC = () => {
           <div className="tab-stage">
             <div className="section-heading">
               <div><p className="eyebrow">Prize operations</p><h2>Confidential rounds</h2></div>
-              <p>Only the pool owner can execute a draw. KMS verifies aggregate weight and reserve without revealing any individual position.</p>
+              <p>Any Sepolia wallet can request a policy-sized draw when the on-chain cadence opens. KMS verifies aggregate weight and reserve without revealing any individual position.</p>
             </div>
             <section className="workspace" aria-label="Prize round">
               <LotteryDrawCard
                 prizeReserve={poolStats.prizeReserve}
                 totalDraws={poolStats.totalDraws}
+                drawPrizeAmount={poolStats.drawPrizeAmount}
+                drawIntervalSeconds={poolStats.drawInterval}
+                nextDrawRequestTimestamp={poolStats.nextDrawRequestTimestamp}
                 prizeReserveStatus={metricFreshness.prizeReserve}
                 totalDrawsStatus={metricFreshness.totalDraws}
                 onFundReserve={(amount) =>
@@ -440,16 +442,15 @@ export const App: React.FC = () => {
                     { label: "Official cUSDC", address: asset.address }
                   )
                 }
-                onExecuteDraw={(amount) =>
+                onExecuteDraw={() =>
                   runAction(
                     "Confidential prize draw",
-                    () => drawLottery(amount, transactionCallbacks),
+                    () => drawLottery(transactionCallbacks),
                     "Prize round confirmed on Ethereum Sepolia.",
                     { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
                   )
                 }
                 isLoading={isLoading}
-                isOwner={isOwner && !poolStats.isPaused}
                 walletConnected={walletReady && !poolStats.isPaused}
                 walletStatus={status}
                 onWalletAction={() => setIsWalletModalOpen(true)}

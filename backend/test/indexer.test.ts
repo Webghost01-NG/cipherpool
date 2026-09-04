@@ -8,6 +8,7 @@ const POOL_EVENTS_ABI = [
   "event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
   "event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
   "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
+  "event DrawSkipped(bytes32 indexed requestHash, uint64 totalWeight, uint64 prizeReserve, uint64 requiredPrizeAmount, uint256 timestamp)",
   "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
 ];
 
@@ -74,5 +75,16 @@ describe("Confidential pool indexer", () => {
     assert.equal(store.getLatestDraw()?.requestHash, requestHash);
     assert.equal(store.getLatestDraw()?.remainingPrizeReserve, 10_000n);
     assert.equal(store.getTotalAccountedBalance(), 55_000n);
+  });
+
+  test("accepts a skipped draw without recording a confirmed round", () => {
+    const store = new IndexerStore();
+    const indexer = new BlockchainIndexer(store);
+    const requestHash = ethers.id("skipped-draw");
+
+    process(indexer, "DrawSkipped", [requestHash, 50_000n, 100n, 5_000n, 1_700_000_100], "0xskip");
+
+    assert.equal(store.getDrawCount(), 0);
+    assert.equal(store.getLatestDraw(), undefined);
   });
 });
