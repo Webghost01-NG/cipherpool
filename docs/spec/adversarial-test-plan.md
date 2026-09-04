@@ -41,7 +41,7 @@ The matrix below establishes 15 primary exploit test vectors spanning all core c
 | **ADV-12** | Paused Escape Valve | `finalizeWithdrawal`, `cancelWithdrawal` | User attempts to finalize pending KMS proof or cancel stale request while paused. | **ALLOWED (BY DESIGN)** to preserve non-custodial asset escape rights. |
 | **ADV-13** | Deposit Credit Inflation | `deposit` | Attacker invokes the removed three-argument selector with an encrypted value larger than the custody amount. | Rejected at the ABI boundary; the sole `amount` now drives custody, plaintext accounting, and encrypted credit. |
 | **ADV-14** | Repeated Prize Allocation | `draw` | Owner executes multiple draws against the same custody yield. | Each draw increments `reservedPrizesPlain`; requests above `availableYieldPlain` revert with `InsufficientPrizeYield`. |
-| **ADV-15** | Compounded Prize Underflow | `compoundPrizes`, `finalizeWithdrawal` | A winner compounds and withdraws more than the remaining base-deposit tranche. | Aggregate prize liabilities are consumed first, preventing base-counter underflow without revealing the winner. |
+| **ADV-15** | Prize Withdrawal Underflow | `withdraw` | A winner withdraws more than the remaining prize tranche. | The token-returned encrypted transfer is debited from prize credit first and then principal, preventing base-counter underflow without publishing the split. |
 
 ---
 
@@ -79,7 +79,7 @@ At every successful draw boundary, principal and allocated prizes cannot exceed 
 
 $$\text{totalDepositsPlain} + \text{reservedPrizesPlain} \le \text{custodyAsset.balanceOf(pool)}$$
 
-Compounding preserves the aggregate liability exactly:
+The retained `compoundPrizes()` compatibility method clears only encrypted prize metadata and preserves aggregate liability exactly. Clients should use the ordinary encrypted withdrawal path for claims so the public selector does not label winner behavior:
 
 $$\Delta\text{totalAccountedBalancePlain}(\text{compoundPrizes}) = 0$$
 

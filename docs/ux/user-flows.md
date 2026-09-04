@@ -42,7 +42,7 @@ This is one transaction. The active pool has no plaintext withdrawal request, ba
 7. The pool verifies both stored handles, creates a bounded encrypted random ticket, and evaluates encrypted cumulative balance intervals.
 8. Exactly one encrypted interval receives the encrypted prize credit; the reserve is reduced homomorphically.
 9. Each saver may authorize a private KMS reveal of only their own prize counter.
-10. A saver with a positive prize calls `compoundPrizes()` to clear the encrypted prize notification while the credited funds remain in their encrypted, withdrawable position.
+10. A saver with a positive prize re-encrypts that amount and submits the ordinary `withdraw(bytes32, bytes)` call. The ERC-7984 transfer result consumes prize credit first without labeling the public transaction as a prize claim.
 11. If KMS settlement stalls beyond 24 hours, anyone may call `cancelDraw` to release the lock.
 
 Only aggregate weight, reserve, prize size, timestamp, and participant count become public. Individual balances, prize counters, and the winner remain encrypted.

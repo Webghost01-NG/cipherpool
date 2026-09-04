@@ -396,26 +396,14 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   }, []);
 
   const claimPrize = useCallback(async (callbacks: TransactionCallbacks = {}) => {
-    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
-    requireVerifiedWrites();
     if (revealedPrize === null || BigInt(revealedPrize) <= 0n) {
       throw new Error("Reveal a positive unclaimed prize before claiming it.");
     }
-    setIsLoading(true);
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
-      const transaction = await pool.compoundPrizes();
-      callbacks.onBroadcast?.(transaction.hash);
-      const receipt = ensureReceipt(await transaction.wait());
-      setRevealedPrize("0");
-      setIsPrizeRevealed(true);
-      await refreshPoolData();
-      return { txHash: receipt.hash };
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, revealedPrize, status]);
+    const result = await withdraw(BigInt(revealedPrize), callbacks);
+    setRevealedPrize("0");
+    setIsPrizeRevealed(true);
+    return result;
+  }, [revealedPrize, withdraw]);
 
   const drawLottery = useCallback(async (prizeAmount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the owner wallet first.");

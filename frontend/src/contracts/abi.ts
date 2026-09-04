@@ -3,7 +3,6 @@ export const POOL_ABI = [
   "function requestDraw(uint64 prizeAmount) external",
   "function finalizeDraw(uint64 totalAccountedBalance, uint64 prizeReserve, bytes calldata decryptionProof) external",
   "function cancelDraw() external",
-  "function compoundPrizes() external",
   "function getPendingDraw() external view returns (tuple(bytes32 totalHandle, bytes32 reserveHandle, uint64 prizeAmount, uint64 timestamp, bool active, bytes32 requestHash))",
   "function getBalanceHandle(address user) external view returns (bytes32)",
   "function getPrizeHandle(address user) external view returns (bytes32)",

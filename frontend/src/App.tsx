@@ -434,7 +434,7 @@ export const App: React.FC = () => {
                   runAction(
                     "Claim private prize",
                     () => claimPrize(transactionCallbacks),
-                    "Prize claimed into your encrypted savings position on Ethereum Sepolia.",
+                    "Prize paid confidentially to your cUSDC wallet on Ethereum Sepolia.",
                     { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
                   )
                 }
