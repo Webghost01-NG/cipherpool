@@ -37,13 +37,14 @@ The white-and-blue console shows public pool health without exposing private pos
 - Withdrawals debit accounting by the token-returned encrypted transfer result.
 - KMS proofs are bound to the stored aggregate and reserve handles; anyone can cancel a stale draw lock after 24 hours.
 
-## 8. Verified cUSDC Sepolia evidence
+## 8. Verified full Sepolia lifecycle
 
-- Deposit: `0x36f81f…fa87`
-- Direct withdrawal: `0x8ee0e4…8429`
-- Sponsor reserve: `0x07b797…7eaa`
+- Deposit: `0xe36db7…b39f`
+- Draw finalization: `0x504862…ce6c`
+- Private prize claim: `0x5763be…c969`
+- Principal withdrawal: `0x767d89…5262`
 
-All three receipts succeeded. Authorized KMS verification confirmed that the round trip restored the test wallet to 10 cUSDC; the later sponsor contribution moved 1 cUSDC into the encrypted reserve.
+All receipts succeeded on the corrected active pool. Zama KMS finalized draw 1 with a verified 0.5 cUSDC weight and prize. The winner privately detected and claimed the prize through the ordinary withdrawal path; post-settlement KMS verification returned zero position and prize balances.
 
 ## 9. Engineering evidence
 

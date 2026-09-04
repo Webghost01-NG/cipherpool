@@ -44,6 +44,10 @@ Sepolia has no verified external yield venue whose underlying asset matches the 
 
 The predecessor pool accepted a real 8 cUSDC deposit and draw request, but finalization reverted because the prior bounded-randomness implementation required a power-of-two total. The corrected active deployment replaces that implementation with unbiased scaling over an unbounded encrypted `uint64`. The predecessor remains excluded from active configuration; its stale draw can be cancelled permissionlessly after the configured delay.
 
+## Active Full Prize Lifecycle
+
+The corrected pool subsequently completed the full real flow: encrypted 0.5 cUSDC deposit, KMS-verified draw request and finalization, private winner check, prize claim through the ordinary withdrawal path, and principal withdrawal. Draw 1 finalized in block `11634933` with total weight `500,000`, prize `500,000`, and zero remaining reserve. Post-settlement authorized KMS verification returned a zero private position and zero prize counter. See the [phase-by-phase evidence](live-prize-lifecycle.md) for every confirmed transaction.
+
 ## Runtime Activation
 
 The backend must use `INDEXER_START_BLOCK=11634672` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks.

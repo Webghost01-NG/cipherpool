@@ -23,8 +23,8 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 ## Evidence
 
 - The active runtime is 19,509 bytes and matches hash `0x5f642b23de77a3c7e20735fb0f43ab4e23f346d41624b7eef0565ecfeb35f8c7`.
-- A real encrypted 1 cUSDC deposit and withdrawal completed on the predecessor Sepolia deployment; the corrected active pool has confirmed sponsor funding but no finalized live round yet.
-- Authorized KMS decryption after settlement verified a zero pool position and restored 10 cUSDC wallet balance.
+- The corrected active pool completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal.
+- Draw 1 finalized with verified weight and prize of 500,000 base units; authorized post-settlement KMS decryption returned a zero private position and zero prize counter.
 - Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).
 
 ## Data Integrity
