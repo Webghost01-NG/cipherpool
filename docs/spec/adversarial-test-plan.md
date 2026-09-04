@@ -39,9 +39,10 @@ The matrix below establishes 15 primary exploit test vectors spanning all core c
 | **ADV-10** | Vault Principal Overdraw | `withdrawFromStrategy` | Pool or owner attempts to withdraw more assets than `principalDeposited`. | Reverts with `InsufficientCustodyBalance(requested, principal)`. |
 | **ADV-11** | Circuit Breaker Ingress | `deposit`, `requestWithdrawal` | User attempts to deposit or request withdrawal while contract is paused. | Reverts with `EnforcedPause()`. |
 | **ADV-12** | Paused Escape Valve | `finalizeWithdrawal`, `cancelWithdrawal` | User attempts to finalize pending KMS proof or cancel stale request while paused. | **ALLOWED (BY DESIGN)** to preserve non-custodial asset escape rights. |
-| **ADV-13** | Deposit Credit Inflation | `deposit` | Attacker invokes the removed three-argument selector with an encrypted value larger than the custody amount. | Rejected at the ABI boundary; the sole `amount` now drives custody, plaintext accounting, and encrypted credit. |
+| **ADV-13** | Deposit Credit Inflation | `onConfidentialTransferReceived` | Attacker supplies an arbitrary encrypted amount without moving custody. | Rejected because only the configured ERC-7984 asset may invoke the callback; the pool credits only its actual encrypted transfer result. |
 | **ADV-14** | Repeated Prize Allocation | `draw` | Owner executes multiple draws against the same custody yield. | Each draw increments `reservedPrizesPlain`; requests above `availableYieldPlain` revert with `InsufficientPrizeYield`. |
 | **ADV-15** | Prize Withdrawal Underflow | `withdraw` | A winner withdraws more than the remaining prize tranche. | The token-returned encrypted transfer is debited from prize credit first and then principal, preventing base-counter underflow without publishing the split. |
+| **ADV-16** | Zero-Callback Sybil | `finalizeParticipantActivation` | An encrypted-zero transfer tries to consume permanent participant capacity, or a stale positive proof is replayed after balance mutation. | A KMS-verified positive predicate gates admission. Zero clears without admission; every balance mutation rotates the stored handle and invalidates stale proofs. |
 
 ---
 

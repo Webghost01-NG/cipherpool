@@ -80,7 +80,7 @@ graph TD
 
 | Adversary Class | Resources & Access | Objective | Protocol Defense Mechanism |
 | :--- | :--- | :--- | :--- |
-| **A1: Malicious Depositor** | Can submit arbitrary calldata and transactions. | Inflate an encrypted balance beyond deposited custody or overdraft the pool. | - One `uint64 amount` drives both custody transfer and `FHE.asEuint64` credit.<br>- `FHE.select` balance sufficiency gating.<br>- Storage-anchored handle verification. |
+| **A1: Malicious Depositor** | Can submit arbitrary calldata and transactions. | Inflate an encrypted balance, enter through an encrypted-zero callback, or expand the draw set. | - The trusted ERC-7984 callback supplies the actual encrypted transfer result.<br>- KMS-verified positive-position activation gates draw membership.<br>- Storage-anchored handles and encrypted sufficiency checks. |
 | **A2: MEV Searcher / Front-Runner** | Can monitor public mempool, reorder, or front-run transactions. | Front-run withdrawal finalization or steal in-flight payouts. | - `pendingWithdrawals[msg.sender]` restricts finalization to caller.<br>- `CANCELLATION_DELAY = 1 days` prevents cancellation front-running. |
 | **A3: Byzantine Relayer** | Controls off-chain KMS proof transport; can censor or delay proofs. | Extort users, censor withdrawals, or forge decrypted amounts. | - Calldata tampering invalidates EIP-712 KMS digest.<br>- User can cancel stale requests after `CANCELLATION_DELAY`.<br>- Anyone (user or relayer) can submit valid proofs. |
 | **A4: Malicious Peer Contract** | Deployed on same chain; shares the same `KMSVerifier` and coprocessor. | Substitute handles across contracts to claim unauthorized funds. | - Deposit credits are created internally, not accepted as caller-supplied handles.<br>- Finalization reads handles strictly from internal storage.<br>- FHE ACLs restrict handle use. |
@@ -93,9 +93,9 @@ graph TD
 ### 4.1 Handle Provenance & Cross-Contract Re-Use
 - **Threat Vector:** Can an attacker submit or substitute a ciphertext handle created outside the pool to obtain an unbacked balance or withdrawal?
 - **Root Mitigation:**
-  1. **Contract-Derived Deposits:** `deposit(uint64 amount)` creates the encrypted credit with `FHE.asEuint64(amount)`; calldata has no ciphertext-handle field.
-  2. **Single Amount Source:** The same `amount` is used for the encrypted credit, plaintext accounting, and custody transfer.
-  3. **Storage Anchoring:** `finalizeWithdrawal` constructs `handles[0]` exclusively from `pendingWithdrawals[msg.sender].handle` in storage. Calldata cannot supply or alter the handle.
+  1. **Token-Derived Deposits:** Only the configured ERC-7984 asset can invoke the callback, and the pool credits its actual encrypted transfer result rather than a caller-selected clear amount.
+  2. **Positive-Position Admission:** Non-participants receive an encrypted `position > 0` predicate. Only a KMS-verified `true` result adds the wallet to the draw set; encrypted zero remains excluded.
+  3. **Storage Anchoring:** Activation and draw finalization construct their handle arrays exclusively from current internal storage. Calldata cannot supply or replace those handles.
 
 ---
 

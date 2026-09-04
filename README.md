@@ -23,7 +23,8 @@ Official cUSDCMock (ERC-7984)
   ▼
 ConfidentialPool
   ├─ encrypted user positions and prize counters
-  ├─ encrypted aggregate liability and prize reserve
+  ├─ encrypted aggregate liability, eligible draw weight, and prize reserve
+  ├─ KMS-verified positive-position participant activation
   ├─ direct confidential withdrawals
   └─ two-step, KMS-verified weighted draws
           │
@@ -34,7 +35,7 @@ Sponsor wallet
   └─ encrypted cUSDC testnet contribution ──► prize reserve
 ```
 
-Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. Draws temporarily lock balance-changing operations, publicly decrypt only the aggregate weight and reserve, verify both storage-bound handles with `FHE.checkSignatures`, then select a winner over encrypted cumulative balances with `FHE.randEuint64`. After a round, each saver can privately reveal only their own prize counter. A positive prize is claimed through the same encrypted withdrawal path as principal, so calldata and events do not distinguish a prize claim from an ordinary private withdrawal.
+Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. A new address enters the draw set only after the KMS proves its encrypted position is positive; the amount stays private, stale proofs cannot be replayed, and encrypted-zero callbacks never consume participant capacity. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. Draws temporarily lock balance-changing operations, publicly decrypt only the eligible aggregate weight and reserve, verify both storage-bound handles with `FHE.checkSignatures`, then select a winner over encrypted cumulative balances with `FHE.randEuint64`. After a round, each saver can privately reveal only their own prize counter. A positive prize is claimed through the same encrypted withdrawal path as principal, so calldata and events do not distinguish a prize claim from an ordinary private withdrawal.
 
 The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCMock wraps `0x9b5C...DFfF`, whereas Aave Sepolia’s deployed USDC market uses `0x94a9...E4C8`; treating either a passive token holder or an unrelated Aave position as pool yield would be false. The rejected strategy and production path are documented in [the reserve funding model](docs/operations/reserve-funding.md).
 
@@ -42,7 +43,7 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 | Component | Address |
 | --- | --- |
-| ConfidentialPool | [`0x63bA2DF59b43801492060f2cc5D071155C45dD47`](https://sepolia.etherscan.io/address/0x63bA2DF59b43801492060f2cc5D071155C45dD47) |
+| ConfidentialPool | [`0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8`](https://sepolia.etherscan.io/address/0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8) |
 | Official cUSDCMock | [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) |
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |
@@ -97,6 +98,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 - The token callback is accepted only from the configured cUSDC contract.
 - Invalid callback actions are rejected by returning an encrypted `false`, allowing ERC-7984 to refund.
 - Draw proofs are bound to both encrypted aggregate handles stored by the pool.
+- An address enters the draw set only after a storage-bound KMS proof verifies its encrypted position is positive.
 - Any keeper can relay a valid proof for an active draw; the caller cannot change its committed handles or prize amount.
 - Draw requests use an immutable prize and minimum cadence; any wallet may request the next eligible round without owner-set timing or prize size.
 - A stale draw can be cancelled permissionlessly after 24 hours.
@@ -107,9 +109,9 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 
 - Sepolia prizes are funded by voluntary encrypted sponsor contributions, not generated yield. A production deployment should adopt Zama’s audited confidential batching pattern for an ERC-4626 strategy whose underlying asset matches the pool’s cUSDC wrapper.
 - Winner selection is linear in participant count and is intended for a bounded prototype pool.
-- ERC-7984 can return an encrypted zero transfer; zero-value callbacks may add addresses to the participant list. This requires a positive-position activation proof before production use.
+- Participant activation is implemented in source but requires a new verified deployment before the live application can use it. Activated addresses remain in the linear participant set after later full withdrawals; scalable membership lifecycle is tracked separately.
 - Aggregate weight and reserve become public when a draw is requested; individual positions and the winner remain encrypted.
-- The permissionless request policy is implemented in source but requires a verified Sepolia redeployment before activation; see [the draw policy](docs/operations/draw-policy.md).
+- The active Sepolia pool enforces permissionless, fixed-prize, cadence-controlled draw requests; see [the draw policy](docs/operations/draw-policy.md).
 
 ## License
 

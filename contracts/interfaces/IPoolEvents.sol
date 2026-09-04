@@ -5,6 +5,18 @@ interface IPoolEvents {
     event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle);
     event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle);
     event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle);
+    event ParticipantActivationRequested(
+        address indexed user,
+        uint256 indexed nonce,
+        bytes32 indexed requestHash,
+        bytes32 eligibilityHandle
+    );
+    event ParticipantActivationFinalized(
+        address indexed user,
+        bytes32 indexed requestHash,
+        bool eligible,
+        uint256 participantCount
+    );
     event DrawRequested(
         uint256 indexed nonce,
         bytes32 indexed requestHash,

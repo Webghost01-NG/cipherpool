@@ -27,6 +27,12 @@ export interface PoolStats {
     timestamp: number;
     requestHash: string;
   };
+  pendingActivation: {
+    active: boolean;
+    timestamp: number;
+    requestHash: string;
+    eligibilityHandle: string;
+  };
 }
 
 export interface AssetMetadata {
@@ -57,7 +63,7 @@ export interface DeploymentVerification {
   message: string;
 }
 
-export type MetricFreshness = "loading" | "fresh" | "stale" | "unavailable";
+export type MetricFreshness = "loading" | "pending" | "fresh" | "stale" | "unavailable";
 export interface PoolMetricFreshness {
   totalDeposits: MetricFreshness;
   prizeReserve: MetricFreshness;
@@ -85,6 +91,13 @@ function readClearValue(clearValues: Record<string, bigint>, handle: string): bi
   return value;
 }
 
+function readClearBoolean(clearValues: Record<string, unknown>, handle: string): boolean {
+  const value = Object.entries(clearValues).find(([key]) => key.toLowerCase() === handle.toLowerCase())?.[1];
+  if (typeof value === "boolean") return value;
+  if (typeof value === "bigint") return value !== 0n;
+  throw new Error("Zama KMS returned an invalid participant eligibility value.");
+}
+
 export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   const { address, status } = useWallet();
   const [poolStats, setPoolStats] = useState<PoolStats>({
@@ -103,6 +116,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       prizeAmount: "0",
       timestamp: 0,
       requestHash: ZERO_HASH,
+    },
+    pendingActivation: {
+      active: false,
+      timestamp: 0,
+      requestHash: ZERO_HASH,
+      eligibilityHandle: ZERO_HASH,
     },
   });
   const [asset, setAsset] = useState<AssetMetadata>({
@@ -149,7 +168,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const response = await fetch(DEFAULT_BACKEND_URL + "/api/v1/pool/state");
       if (!response.ok) throw new Error("Backend returned HTTP " + response.status);
       const data = await response.json() as {
-        lastVerifiedTotalAccountedBalance?: string;
+        lastVerifiedTotalEligibleBalance?: string;
         totalDraws?: number;
         prizeReserveFundingModel?: string;
         latestDraw?: { remainingPrizeReserve?: string } | null;
@@ -159,14 +178,14 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setBackendStatus("online");
       setPoolStats((current) => ({
         ...current,
-        totalDeposits: data.lastVerifiedTotalAccountedBalance ?? current.totalDeposits,
+        totalDeposits: data.lastVerifiedTotalEligibleBalance ?? current.totalDeposits,
         prizeReserve: data.latestDraw?.remainingPrizeReserve ?? current.prizeReserve,
         totalDraws: data.totalDraws!,
       }));
       setMetricFreshness((current) => ({
         ...current,
-        totalDeposits: data.latestDraw ? "stale" : "unavailable",
-        prizeReserve: data.latestDraw ? "stale" : "unavailable",
+        totalDeposits: data.latestDraw ? "stale" : "pending",
+        prizeReserve: data.latestDraw ? "stale" : "pending",
         totalDraws: "fresh",
       }));
     } catch {
@@ -182,6 +201,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setLastUpdatedAt(Date.now());
       return;
     }
+    if (!address) return;
 
     try {
       const { ethers } = await import("../utils/walletRuntime.js");
@@ -213,8 +233,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         owner,
         custodyAddress,
         pendingDraw,
+        pendingActivation,
       ] = await Promise.all([
-        pool.lastVerifiedTotalAccountedBalance() as Promise<bigint>,
+        pool.lastVerifiedTotalEligibleBalance() as Promise<bigint>,
         pool.lastVerifiedPrizeReserve() as Promise<bigint>,
         pool.lastDrawVerificationTimestamp() as Promise<bigint>,
         pool.currentDrawId() as Promise<bigint>,
@@ -231,12 +252,18 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
           active: boolean;
           requestHash: string;
         }>,
+        pool.getPendingParticipantActivation(address) as Promise<{
+          eligibilityHandle: string;
+          timestamp: bigint;
+          active: boolean;
+          requestHash: string;
+        }>,
       ]);
       const token = new ethers.Contract(custodyAddress, ERC7984_ABI, provider);
       const [decimals, symbol, aggregateHandle] = await Promise.all([
         token.decimals() as Promise<bigint>,
         token.symbol() as Promise<string>,
-        pool.getTotalAccountedBalanceHandle() as Promise<string>,
+        pool.getTotalEligibleBalanceHandle() as Promise<string>,
       ]);
       const verificationErrors = validateDeploymentEvidence(
         {
@@ -278,10 +305,16 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
           timestamp: Number(pendingDraw.timestamp),
           requestHash: pendingDraw.requestHash,
         },
+        pendingActivation: {
+          active: pendingActivation.active,
+          timestamp: Number(pendingActivation.timestamp),
+          requestHash: pendingActivation.requestHash,
+          eligibilityHandle: pendingActivation.eligibilityHandle,
+        },
       });
       setMetricFreshness({
-        totalDeposits: hasSnapshot ? "stale" : "unavailable",
-        prizeReserve: hasSnapshot ? "stale" : "unavailable",
+        totalDeposits: hasSnapshot ? "stale" : "pending",
+        prizeReserve: hasSnapshot ? "stale" : "pending",
         totalDraws: "fresh",
         participantCount: "fresh",
       });
@@ -294,7 +327,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setDataError(message);
       setLastUpdatedAt(Date.now());
     }
-  }, [contractAddress, status]);
+  }, [address, contractAddress, status]);
 
   useEffect(() => {
     void refreshPoolData();
@@ -308,6 +341,42 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     if (poolStats.isPaused) throw new Error("Protocol writes are disabled while the pool is paused.");
     if (poolStats.pendingDraw.active) throw new Error("Protocol writes are locked while a prize draw awaits settlement or cancellation.");
   }, [deploymentVerification.status, poolStats.isPaused, poolStats.pendingDraw.active]);
+
+  const activateParticipant = useCallback(async (callbacks: TransactionCallbacks = {}) => {
+    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
+    requireVerifiedWrites();
+    setIsLoading(true);
+    try {
+      const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
+      const pending = await pool.getPendingParticipantActivation(address) as {
+        eligibilityHandle: string;
+        active: boolean;
+        requestHash: string;
+      };
+      if (!pending.active) throw new Error("No participant activation is pending for this wallet.");
+      callbacks.onProofRequested?.(pending.requestHash);
+      const result = await (await getBrowserFhevmInstance()).publicDecrypt([pending.eligibilityHandle]);
+      const eligible = readClearBoolean(result.clearValues, pending.eligibilityHandle);
+      const transaction = await pool.finalizeParticipantActivation(address, eligible, result.decryptionProof);
+      callbacks.onBroadcast?.(transaction.hash);
+      const receipt = ensureReceipt(await transaction.wait());
+      return {
+        txHash: receipt.hash,
+        eligible,
+        successMessage: eligible
+          ? "KMS-verified positive position activated for prize draws."
+          : "The encrypted transfer settled at zero, so no draw entry was created.",
+      };
+    } finally {
+      await refreshPoolData();
+      setIsLoading(false);
+    }
+  }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
 
   const deposit = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
@@ -324,13 +393,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [ethers.id("CIPHERPOOL_DEPOSIT_V1")]);
       const transaction = await token.confidentialTransferAndCall(contractAddress, encrypted.handle, encrypted.inputProof, actionData);
       callbacks.onBroadcast?.(transaction.hash);
-      const receipt = ensureReceipt(await transaction.wait());
-      await refreshPoolData();
-      return { txHash: receipt.hash };
+      ensureReceipt(await transaction.wait());
+      return await activateParticipant(callbacks);
     } finally {
       setIsLoading(false);
     }
-  }, [address, asset.address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
+  }, [activateParticipant, address, asset.address, contractAddress, requireVerifiedWrites, status]);
 
   const withdraw = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
@@ -539,6 +607,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       !poolStats.isPaused &&
       !poolStats.pendingDraw.active,
     deposit,
+    activateParticipant,
     withdraw,
     fundPrizeReserve,
     revealBalance,

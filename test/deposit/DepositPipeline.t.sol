@@ -37,12 +37,18 @@ contract DepositPipelineTest is ConfidentialPoolTestBase, IPoolErrors {
     }
 
     function test_DepositCreditsOnlyTokenReturnedEncryptedAmount() public {
-        _deposit(alice, 25_000);
+        _depositWithoutActivation(alice, 25_000);
         assertEq(pool.userDepositNonces(alice), 1);
+        assertEq(pool.getParticipantCount(), 0);
+        assertFalse(pool.isParticipant(alice));
+        assertTrue(pool.getPendingParticipantActivation(alice).active);
+        assertTrue(pool.getBalanceHandle(alice) != bytes32(0));
+        assertEq(pool.getTotalEligibleBalanceHandle(), bytes32(0));
+
+        _finalizeParticipantActivation(alice, true);
         assertEq(pool.getParticipantCount(), 1);
         assertTrue(pool.isParticipant(alice));
-        assertTrue(pool.getBalanceHandle(alice) != bytes32(0));
-        assertTrue(pool.getTotalAccountedBalanceHandle() != bytes32(0));
+        assertTrue(pool.getTotalEligibleBalanceHandle() != bytes32(0));
     }
 
     function test_LegacyPlaintextDepositEntryPointDoesNotExist() public {

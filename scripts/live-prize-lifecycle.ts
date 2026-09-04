@@ -17,15 +17,19 @@ const POOL_ABI = [
   "function nextDrawRequestTimestamp() view returns (uint64)",
   "function participants(uint256) view returns (address)",
   "function getPendingDraw() view returns (tuple(bytes32 totalHandle,bytes32 reserveHandle,uint64 prizeAmount,uint64 timestamp,bool active,bytes32 requestHash))",
+  "function getPendingParticipantActivation(address) view returns (tuple(bytes32 eligibilityHandle,uint64 timestamp,bool active,bytes32 requestHash))",
   "function getBalanceHandle(address) view returns (bytes32)",
   "function getPrizeHandle(address) view returns (bytes32)",
-  "function getTotalAccountedBalanceHandle() view returns (bytes32)",
+  "function getTotalEligibleBalanceHandle() view returns (bytes32)",
   "function getPrizeReserveHandle() view returns (bytes32)",
   "function withdraw(bytes32 encryptedAmount,bytes inputProof)",
+  "function finalizeParticipantActivation(address user,bool eligible,bytes decryptionProof)",
   "function requestDraw(uint64 prizeAmount)",
-  "function finalizeDraw(uint64 totalAccountedBalance,uint64 prizeReserve,bytes decryptionProof)",
+  "function finalizeDraw(uint64 totalEligibleBalance,uint64 prizeReserve,bytes decryptionProof)",
   "event Deposited(address indexed user,uint256 indexed nonce,bytes32 indexed encryptedAmountHandle)",
   "event Withdrawn(address indexed user,uint256 indexed nonce,bytes32 indexed encryptedAmountHandle)",
+  "event ParticipantActivationRequested(address indexed user,uint256 indexed nonce,bytes32 indexed requestHash,bytes32 eligibilityHandle)",
+  "event ParticipantActivationFinalized(address indexed user,bytes32 indexed requestHash,bool eligible,uint256 participantCount)",
   "event DrawRequested(uint256 indexed nonce,bytes32 indexed requestHash,uint64 prizeAmount,bytes32 totalHandle,bytes32 reserveHandle)",
   "event DrawSkipped(bytes32 indexed requestHash,uint64 totalWeight,uint64 prizeReserve,uint64 requiredPrizeAmount,uint256 timestamp)",
   "event DrawExecuted(uint256 indexed drawId,bytes32 indexed requestHash,uint64 prizeAmount,uint64 totalWeight,uint64 remainingPrizeReserve,uint256 timestamp,uint256 participantCount)",
@@ -92,6 +96,13 @@ export function readClearValue(clearValues: Record<string, bigint>, handle: stri
   const entry = Object.entries(clearValues).find(([key]) => key.toLowerCase() === handle.toLowerCase());
   if (typeof entry?.[1] !== "bigint") throw new Error(`Zama KMS did not return a value for handle ${handle}.`);
   return entry[1];
+}
+
+export function readClearBoolean(clearValues: Record<string, unknown>, handle: string): boolean {
+  const entry = Object.entries(clearValues).find(([key]) => key.toLowerCase() === handle.toLowerCase());
+  if (typeof entry?.[1] === "boolean") return entry[1];
+  if (typeof entry?.[1] === "bigint") return entry[1] !== 0n;
+  throw new Error(`Zama KMS did not return a boolean for handle ${handle}.`);
 }
 
 function requiredEnvironment(key: string): string {
@@ -284,7 +295,7 @@ async function main(): Promise<void> {
   const walletBalanceHandle = await readPublic("wallet balance handle", () => token.confidentialBalanceOf(actorAddress) as Promise<string>);
   const poolPositionHandle = await readPublic("pool position handle", () => pool.getBalanceHandle(actorAddress) as Promise<string>);
   const prizeHandle = await readPublic("prize handle", () => pool.getPrizeHandle(actorAddress) as Promise<string>);
-  const aggregateHandle = await readPublic("aggregate handle", () => pool.getTotalAccountedBalanceHandle() as Promise<string>);
+  const aggregateHandle = await readPublic("eligible aggregate handle", () => pool.getTotalEligibleBalanceHandle() as Promise<string>);
   const reserveHandle = await readPublic("reserve handle", () => pool.getPrizeReserveHandle() as Promise<string>);
   const ethBalance = await readPublic("wallet ETH balance", () => provider.getBalance(actorAddress));
   const blockNumber = await readPublic("block number", () => provider.getBlockNumber());
@@ -411,6 +422,32 @@ async function main(): Promise<void> {
     const event = parseReceiptEvent(receipt, pool, "Deposited");
     if (!event || ethers.getAddress(event.args.user) !== actorAddress) throw new Error("Confirmed receipt is missing the expected Deposited event.");
     printEvidence({ phase: "deposit-confirmed", transactionHash: receipt.hash, blockNumber: receipt.blockNumber, actor: actorAddress });
+
+    const activation = await pool.getPendingParticipantActivation(actorAddress) as {
+      eligibilityHandle: string;
+      active: boolean;
+      requestHash: string;
+    };
+    if (!activation.active) throw new Error("Confirmed deposit did not create a participant activation request.");
+    const decrypted = await instance.publicDecrypt([activation.eligibilityHandle]);
+    const eligible = readClearBoolean(decrypted.clearValues, activation.eligibilityHandle);
+    const activationTransaction = await signedPool.finalizeParticipantActivation(
+      actorAddress,
+      eligible,
+      decrypted.decryptionProof
+    );
+    const activationReceipt = requireConfirmedReceipt(await activationTransaction.wait());
+    const activationEvent = parseReceiptEvent(activationReceipt, pool, "ParticipantActivationFinalized");
+    if (!activationEvent || activationEvent.args.requestHash !== activation.requestHash) {
+      throw new Error("Confirmed receipt is missing the expected participant activation result.");
+    }
+    printEvidence({
+      phase: "participant-activation-finalized",
+      transactionHash: activationReceipt.hash,
+      blockNumber: activationReceipt.blockNumber,
+      eligible,
+      requestHash: activation.requestHash,
+    });
     return;
   }
 

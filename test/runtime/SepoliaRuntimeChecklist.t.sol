@@ -26,7 +26,7 @@ contract SepoliaRuntimeChecklistTest is ConfidentialPoolTestBase {
         assertEq(pool.drawCancellationDelay(), DELAY);
         assertEq(pool.currentDrawId(), 0);
         assertEq(pool.getParticipantCount(), 0);
-        assertEq(pool.lastVerifiedTotalAccountedBalance(), 0);
+        assertEq(pool.lastVerifiedTotalEligibleBalance(), 0);
         assertEq(pool.lastVerifiedPrizeReserve(), 0);
     }
 

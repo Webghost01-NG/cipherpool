@@ -5,6 +5,7 @@ import {
   buildConfirmationPhrase,
   parseLifecycleAction,
   parseLifecycleAmount,
+  readClearBoolean,
   readClearValue,
 } from "../../scripts/live-prize-lifecycle.js";
 
@@ -43,5 +44,8 @@ describe("Live Sepolia lifecycle safeguards", () => {
     const handle = `0x${"ab".repeat(32)}`;
     assert.equal(readClearValue({ [handle.toUpperCase()]: 42n }, handle), 42n);
     assert.throws(() => readClearValue({}, handle), /did not return a value/);
+    assert.equal(readClearBoolean({ [handle.toUpperCase()]: true }, handle), true);
+    assert.equal(readClearBoolean({ [handle]: 0n }, handle), false);
+    assert.throws(() => readClearBoolean({}, handle), /did not return a boolean/);
   });
 });
