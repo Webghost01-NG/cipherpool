@@ -10,7 +10,9 @@ contract SepoliaRuntimeChecklistTest is ConfidentialPoolTestBase {
     address internal constant EXPECTED_SEPOLIA_COPROCESSOR = 0x92C920834Ec8941d2C77D188936E1f7A6f49c127;
     address internal constant EXPECTED_SEPOLIA_KMS_VERIFIER = 0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A;
 
-    function setUp() public { setUpPool(); }
+    function setUp() public {
+        setUpPool();
+    }
 
     function test_ZamaConfigSepoliaRouting() public {
         vm.chainId(11155111);
@@ -26,6 +28,7 @@ contract SepoliaRuntimeChecklistTest is ConfidentialPoolTestBase {
         assertEq(pool.drawCancellationDelay(), DELAY);
         assertEq(pool.currentDrawId(), 0);
         assertEq(pool.getParticipantCount(), 0);
+        assertEq(pool.MAX_PARTICIPANTS(), 12);
         assertEq(pool.lastVerifiedTotalEligibleBalance(), 0);
         assertEq(pool.lastVerifiedPrizeReserve(), 0);
     }

@@ -4,7 +4,9 @@ pragma solidity ^0.8.24;
 import {ebool, euint64} from "@fhevm/solidity/lib/FHE.sol";
 
 interface IPoolTypes {
-    /** @dev Retained for the archived pool exit state machine and its regression tests. */
+    /**
+     * @dev Retained for the archived pool exit state machine and its regression tests.
+     */
     struct WithdrawalRequest {
         euint64 handle;
         uint64 requestedAmount;
@@ -24,6 +26,13 @@ interface IPoolTypes {
 
     struct ParticipantActivationRequest {
         ebool eligibilityHandle;
+        uint64 timestamp;
+        bool active;
+        bytes32 requestHash;
+    }
+
+    struct ParticipantDeactivationRequest {
+        ebool zeroBalanceHandle;
         uint64 timestamp;
         bool active;
         bytes32 requestHash;

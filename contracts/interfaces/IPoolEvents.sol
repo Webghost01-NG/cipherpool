@@ -6,17 +6,18 @@ interface IPoolEvents {
     event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle);
     event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle);
     event ParticipantActivationRequested(
-        address indexed user,
-        uint256 indexed nonce,
-        bytes32 indexed requestHash,
-        bytes32 eligibilityHandle
+        address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, bytes32 eligibilityHandle
     );
     event ParticipantActivationFinalized(
-        address indexed user,
-        bytes32 indexed requestHash,
-        bool eligible,
-        uint256 participantCount
+        address indexed user, bytes32 indexed requestHash, bool eligible, uint256 participantCount
     );
+    event ParticipantDeactivationRequested(
+        address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, bytes32 zeroBalanceHandle
+    );
+    event ParticipantDeactivationFinalized(
+        address indexed user, bytes32 indexed requestHash, bool zeroBalance, uint256 participantCount
+    );
+    event ParticipantDeactivationInvalidated(address indexed user, bytes32 indexed requestHash);
     event DrawRequested(
         uint256 indexed nonce,
         bytes32 indexed requestHash,
@@ -42,13 +43,11 @@ interface IPoolEvents {
         uint256 participantCount
     );
 
-    /** @dev Archived-pool exit events retained for compatibility. */
+    /**
+     * @dev Archived-pool exit events retained for compatibility.
+     */
     event WithdrawalRequested(
-        address indexed user,
-        uint256 indexed nonce,
-        bytes32 indexed requestHash,
-        uint64 requestedAmount,
-        bytes32 handle
+        address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle
     );
     event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount);
     event WithdrawalCancelled(address indexed user, bytes32 indexed requestHash);

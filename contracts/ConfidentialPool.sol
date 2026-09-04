@@ -27,6 +27,7 @@ contract ConfidentialPool is
 {
     bytes32 public constant DEPOSIT_ACTION = keccak256("CIPHERPOOL_DEPOSIT_V1");
     bytes32 public constant PRIZE_RESERVE_ACTION = keccak256("CIPHERPOOL_PRIZE_RESERVE_V1");
+    uint256 public constant override MAX_PARTICIPANTS = 12;
 
     address public immutable override custodyAsset;
     uint64 internal immutable _drawCancellationDelay;
@@ -46,10 +47,13 @@ contract ConfidentialPool is
 
     address[] public participants;
     mapping(address => bool) public isParticipant;
+    mapping(address => uint256) internal _participantIndexPlusOne;
     mapping(address => uint256) public userDepositNonces;
     mapping(address => uint256) public userWithdrawalNonces;
     mapping(address => uint256) public participantActivationNonces;
+    mapping(address => uint256) public participantDeactivationNonces;
     mapping(address => ParticipantActivationRequest) internal _pendingParticipantActivations;
+    mapping(address => ParticipantDeactivationRequest) internal _pendingParticipantDeactivations;
 
     DrawRequest internal _pendingDraw;
     uint256 public drawRequestNonce;
@@ -84,25 +88,33 @@ contract ConfidentialPool is
         _;
     }
 
-    function pause() external onlyOwner { _pause(); }
-    function unpause() external onlyOwner { _unpause(); }
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     /**
      * @notice Accepts an official ERC-7984 transfer callback and credits its actual encrypted result.
      * @dev Call `confidentialTransferAndCall` on the custody token with DEPOSIT_ACTION or
      *      PRIZE_RESERVE_ACTION encoded as a bytes32 value.
      */
-    function onConfidentialTransferReceived(
-        address,
-        address from,
-        euint64 amount,
-        bytes calldata data
-    ) external override nonReentrant returns (ebool) {
+    function onConfidentialTransferReceived(address, address from, euint64 amount, bytes calldata data)
+        external
+        override
+        nonReentrant
+        returns (ebool)
+    {
         if (msg.sender != custodyAsset) revert UnauthorizedTokenCallback(msg.sender);
         if (paused() || _pendingDraw.active || data.length != 32) return _callbackResult(false);
 
         bytes32 action = abi.decode(data, (bytes32));
         if (action == DEPOSIT_ACTION) {
+            if (!isParticipant[from] && participants.length >= MAX_PARTICIPANTS) {
+                return _callbackResult(false);
+            }
             _creditDeposit(from, amount);
             return _callbackResult(true);
         }
@@ -118,32 +130,28 @@ contract ConfidentialPool is
      * @dev Accounting is reduced by the token's returned actual transfer amount, so a silent
      *      zero transfer cannot erase the user's claim.
      */
-    function withdraw(
-        externalEuint64 encryptedAmount,
-        bytes calldata inputProof
-    ) external override nonReentrant whenNotPaused whenBalanceUpdatesUnlocked {
+    function withdraw(externalEuint64 encryptedAmount, bytes calldata inputProof)
+        external
+        override
+        nonReentrant
+        whenNotPaused
+        whenBalanceUpdatesUnlocked
+    {
         if (!_positionInitialized[msg.sender]) revert NoBalancePosition(msg.sender);
 
         euint64 requested = FHE.fromExternal(encryptedAmount, inputProof);
-        euint64 approved = FHE.select(
-            FHE.ge(_balances[msg.sender], requested),
-            requested,
-            FHE.asEuint64(0)
-        );
+        euint64 approved = FHE.select(FHE.ge(_balances[msg.sender], requested), requested, FHE.asEuint64(0));
         FHE.allowTransient(approved, custodyAsset);
         euint64 transferred = IERC7984(custodyAsset).confidentialTransfer(msg.sender, approved);
 
         _balances[msg.sender] = FHE.sub(_balances[msg.sender], transferred);
-        euint64 prizeDebit = FHE.select(
-            FHE.le(_prizes[msg.sender], transferred),
-            _prizes[msg.sender],
-            transferred
-        );
+        euint64 prizeDebit = FHE.select(FHE.le(_prizes[msg.sender], transferred), _prizes[msg.sender], transferred);
         _prizes[msg.sender] = FHE.sub(_prizes[msg.sender], prizeDebit);
         _totalAccountedBalance = FHE.sub(_totalAccountedBalance, transferred);
         if (isParticipant[msg.sender]) {
             _totalEligibleBalance = FHE.sub(_totalEligibleBalance, transferred);
             _totalEligibleBalance = FHE.allowThis(_totalEligibleBalance);
+            _requestParticipantDeactivation(msg.sender);
         } else {
             _requestParticipantActivation(msg.sender);
         }
@@ -154,15 +162,24 @@ contract ConfidentialPool is
     }
 
     /**
+     * @notice Requests a fresh KMS zero-balance check so an unused draw slot can be reclaimed.
+     */
+    function requestParticipantDeactivation() external override nonReentrant whenBalanceUpdatesUnlocked {
+        if (!isParticipant[msg.sender]) revert ParticipantNotActive(msg.sender);
+        _requestParticipantDeactivation(msg.sender);
+    }
+
+    /**
      * @notice Permissionlessly verifies whether a deposited position is positive before admission.
      * @dev The KMS reveals only the encrypted eligibility predicate. Any balance mutation replaces
      *      the pending handle, so a proof for stale position state cannot activate the participant.
      */
-    function finalizeParticipantActivation(
-        address user,
-        bool eligible,
-        bytes calldata decryptionProof
-    ) external override nonReentrant whenBalanceUpdatesUnlocked {
+    function finalizeParticipantActivation(address user, bool eligible, bytes calldata decryptionProof)
+        external
+        override
+        nonReentrant
+        whenBalanceUpdatesUnlocked
+    {
         if (isParticipant[user]) revert ParticipantAlreadyActive(user);
         ParticipantActivationRequest memory request = _pendingParticipantActivations[user];
         if (!request.active) revert NoActiveParticipantActivation(user);
@@ -173,8 +190,12 @@ contract ConfidentialPool is
 
         delete _pendingParticipantActivations[user];
         if (eligible) {
+            if (participants.length >= MAX_PARTICIPANTS) {
+                revert ParticipantCapacityReached(MAX_PARTICIPANTS);
+            }
             isParticipant[user] = true;
             participants.push(user);
+            _participantIndexPlusOne[user] = participants.length;
             if (!_eligibleTotalInitialized) {
                 _eligibleTotalInitialized = true;
                 _totalEligibleBalance = _balances[user];
@@ -184,6 +205,30 @@ contract ConfidentialPool is
             _totalEligibleBalance = FHE.allowThis(_totalEligibleBalance);
         }
         emit ParticipantActivationFinalized(user, request.requestHash, eligible, participants.length);
+    }
+
+    /**
+     * @notice Permissionlessly removes a participant after KMS verifies a zero saved position.
+     * @dev Any later balance mutation invalidates the pending request before changing its handle.
+     *      Swap-and-pop keeps admission O(1) while reclaiming one of the bounded draw slots.
+     */
+    function finalizeParticipantDeactivation(address user, bool zeroBalance, bytes calldata decryptionProof)
+        external
+        override
+        nonReentrant
+        whenBalanceUpdatesUnlocked
+    {
+        if (!isParticipant[user]) revert ParticipantNotActive(user);
+        ParticipantDeactivationRequest memory request = _pendingParticipantDeactivations[user];
+        if (!request.active) revert NoActiveParticipantDeactivation(user);
+
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = FHE.toBytes32(request.zeroBalanceHandle);
+        FHE.checkSignatures(handles, abi.encode(zeroBalance), decryptionProof);
+
+        delete _pendingParticipantDeactivations[user];
+        if (zeroBalance) _removeParticipant(user);
+        emit ParticipantDeactivationFinalized(user, request.requestHash, zeroBalance, participants.length);
     }
 
     /**
@@ -211,15 +256,9 @@ contract ConfidentialPool is
         nextDrawRequestTimestamp = timestamp + drawInterval;
         bytes32 totalHandle = FHE.toBytes32(_totalEligibleBalance);
         bytes32 reserveHandle = FHE.toBytes32(_prizeReserve);
-        bytes32 requestHash = keccak256(abi.encode(
-            block.chainid,
-            address(this),
-            nonce,
-            prizeAmount,
-            timestamp,
-            totalHandle,
-            reserveHandle
-        ));
+        bytes32 requestHash = keccak256(
+            abi.encode(block.chainid, address(this), nonce, prizeAmount, timestamp, totalHandle, reserveHandle)
+        );
 
         _pendingDraw = DrawRequest({
             totalHandle: _totalEligibleBalance,
@@ -237,11 +276,11 @@ contract ConfidentialPool is
      * @dev Permissionless because the KMS proof is bound to the active request's stored handles and
      *      the request already fixes the prize amount. The caller cannot substitute settlement state.
      */
-    function finalizeDraw(
-        uint64 totalEligibleBalance,
-        uint64 prizeReserve,
-        bytes calldata decryptionProof
-    ) external override nonReentrant {
+    function finalizeDraw(uint64 totalEligibleBalance, uint64 prizeReserve, bytes calldata decryptionProof)
+        external
+        override
+        nonReentrant
+    {
         DrawRequest memory request = _pendingDraw;
         if (!request.active) revert NoActiveDrawRequest();
 
@@ -256,11 +295,7 @@ contract ConfidentialPool is
             lastVerifiedPrizeReserve = prizeReserve;
             lastDrawVerificationTimestamp = uint64(block.timestamp);
             emit DrawSkipped(
-                request.requestHash,
-                totalEligibleBalance,
-                prizeReserve,
-                request.prizeAmount,
-                block.timestamp
+                request.requestHash, totalEligibleBalance, prizeReserve, request.prizeAmount, block.timestamp
             );
             return;
         }
@@ -272,12 +307,10 @@ contract ConfidentialPool is
 
         for (uint256 i = 0; i < len; i++) {
             address participant = participants[i];
+            _invalidateParticipantDeactivation(participant);
             euint64 cumulativeStart = cumulativeEnd;
             cumulativeEnd = FHE.add(cumulativeEnd, _balances[participant]);
-            ebool isWinner = FHE.and(
-                FHE.ge(winningTicket, cumulativeStart),
-                FHE.lt(winningTicket, cumulativeEnd)
-            );
+            ebool isWinner = FHE.and(FHE.ge(winningTicket, cumulativeStart), FHE.lt(winningTicket, cumulativeEnd));
             euint64 award = FHE.select(isWinner, prize, FHE.asEuint64(0));
             _balances[participant] = FHE.add(_balances[participant], award);
             _prizes[participant] = FHE.add(_prizes[participant], award);
@@ -306,7 +339,9 @@ contract ConfidentialPool is
         );
     }
 
-    /** @notice Releases a draw lock if threshold decryption does not complete in time. */
+    /**
+     * @notice Releases a draw lock if threshold decryption does not complete in time.
+     */
     function cancelDraw() external override nonReentrant {
         DrawRequest memory request = _pendingDraw;
         if (!request.active) revert NoActiveDrawRequest();
@@ -318,7 +353,9 @@ contract ConfidentialPool is
         emit DrawCancelled(request.requestHash);
     }
 
-    /** @notice Clears the caller's prize counter after merging it into their saved position. */
+    /**
+     * @notice Clears the caller's prize counter after merging it into their saved position.
+     */
     function compoundPrizes() external override nonReentrant whenNotPaused {
         if (!_positionInitialized[msg.sender]) revert NoBalancePosition(msg.sender);
         _prizes[msg.sender] = FHE.asEuint64(0);
@@ -326,18 +363,51 @@ contract ConfidentialPool is
         _prizes[msg.sender] = FHE.allow(_prizes[msg.sender], msg.sender);
     }
 
-    function getPendingDraw() external view override returns (DrawRequest memory) { return _pendingDraw; }
-    function getPendingParticipantActivation(
-        address user
-    ) external view override returns (ParticipantActivationRequest memory) {
+    function getPendingDraw() external view override returns (DrawRequest memory) {
+        return _pendingDraw;
+    }
+
+    function getPendingParticipantActivation(address user)
+        external
+        view
+        override
+        returns (ParticipantActivationRequest memory)
+    {
         return _pendingParticipantActivations[user];
     }
-    function drawCancellationDelay() external view override returns (uint64) { return _drawCancellationDelay; }
-    function getBalanceHandle(address user) external view override returns (bytes32) { return FHE.toBytes32(_balances[user]); }
-    function getPrizeHandle(address user) external view override returns (bytes32) { return FHE.toBytes32(_prizes[user]); }
-    function getTotalEligibleBalanceHandle() external view override returns (bytes32) { return FHE.toBytes32(_totalEligibleBalance); }
-    function getPrizeReserveHandle() external view override returns (bytes32) { return FHE.toBytes32(_prizeReserve); }
-    function getParticipantCount() external view override returns (uint256) { return participants.length; }
+
+    function getPendingParticipantDeactivation(address user)
+        external
+        view
+        override
+        returns (ParticipantDeactivationRequest memory)
+    {
+        return _pendingParticipantDeactivations[user];
+    }
+
+    function drawCancellationDelay() external view override returns (uint64) {
+        return _drawCancellationDelay;
+    }
+
+    function getBalanceHandle(address user) external view override returns (bytes32) {
+        return FHE.toBytes32(_balances[user]);
+    }
+
+    function getPrizeHandle(address user) external view override returns (bytes32) {
+        return FHE.toBytes32(_prizes[user]);
+    }
+
+    function getTotalEligibleBalanceHandle() external view override returns (bytes32) {
+        return FHE.toBytes32(_totalEligibleBalance);
+    }
+
+    function getPrizeReserveHandle() external view override returns (bytes32) {
+        return FHE.toBytes32(_prizeReserve);
+    }
+
+    function getParticipantCount() external view override returns (uint256) {
+        return participants.length;
+    }
 
     function _creditDeposit(address user, euint64 amount) internal {
         if (!_positionInitialized[user]) {
@@ -348,6 +418,7 @@ contract ConfidentialPool is
             _balances[user] = FHE.add(_balances[user], amount);
         }
         if (isParticipant[user]) {
+            _invalidateParticipantDeactivation(user);
             _totalEligibleBalance = FHE.add(_totalEligibleBalance, amount);
             _totalEligibleBalance = FHE.allowThis(_totalEligibleBalance);
         } else {
@@ -370,22 +441,55 @@ contract ConfidentialPool is
         uint256 nonce = participantActivationNonces[user]++;
         uint64 timestamp = uint64(block.timestamp);
         bytes32 eligibilityHandle = FHE.toBytes32(eligibility);
-        bytes32 requestHash = keccak256(abi.encode(
-            block.chainid,
-            address(this),
-            user,
-            nonce,
-            timestamp,
-            FHE.toBytes32(_balances[user]),
-            eligibilityHandle
-        ));
+        bytes32 requestHash = keccak256(
+            abi.encode(
+                block.chainid, address(this), user, nonce, timestamp, FHE.toBytes32(_balances[user]), eligibilityHandle
+            )
+        );
         _pendingParticipantActivations[user] = ParticipantActivationRequest({
-            eligibilityHandle: eligibility,
-            timestamp: timestamp,
-            active: true,
-            requestHash: requestHash
+            eligibilityHandle: eligibility, timestamp: timestamp, active: true, requestHash: requestHash
         });
         emit ParticipantActivationRequested(user, nonce, requestHash, eligibilityHandle);
+    }
+
+    function _requestParticipantDeactivation(address user) internal {
+        _invalidateParticipantDeactivation(user);
+        ebool zeroBalance = FHE.eq(_balances[user], FHE.asEuint64(0));
+        FHE.makePubliclyDecryptable(zeroBalance);
+        uint256 nonce = participantDeactivationNonces[user]++;
+        uint64 timestamp = uint64(block.timestamp);
+        bytes32 zeroBalanceHandle = FHE.toBytes32(zeroBalance);
+        bytes32 requestHash = keccak256(
+            abi.encode(
+                block.chainid, address(this), user, nonce, timestamp, FHE.toBytes32(_balances[user]), zeroBalanceHandle
+            )
+        );
+        _pendingParticipantDeactivations[user] = ParticipantDeactivationRequest({
+            zeroBalanceHandle: zeroBalance, timestamp: timestamp, active: true, requestHash: requestHash
+        });
+        emit ParticipantDeactivationRequested(user, nonce, requestHash, zeroBalanceHandle);
+    }
+
+    function _invalidateParticipantDeactivation(address user) internal {
+        ParticipantDeactivationRequest memory request = _pendingParticipantDeactivations[user];
+        if (!request.active) return;
+        delete _pendingParticipantDeactivations[user];
+        emit ParticipantDeactivationInvalidated(user, request.requestHash);
+    }
+
+    function _removeParticipant(address user) internal {
+        uint256 indexPlusOne = _participantIndexPlusOne[user];
+        if (indexPlusOne == 0) revert ParticipantNotActive(user);
+        uint256 index = indexPlusOne - 1;
+        uint256 lastIndex = participants.length - 1;
+        if (index != lastIndex) {
+            address moved = participants[lastIndex];
+            participants[index] = moved;
+            _participantIndexPlusOne[moved] = index + 1;
+        }
+        participants.pop();
+        delete _participantIndexPlusOne[user];
+        isParticipant[user] = false;
     }
 
     function _creditPrizeReserve(address source, euint64 amount) internal {
