@@ -34,7 +34,7 @@ An authorized KMS user-decryption after settlement returned pool position `0` an
 
 ## Sponsor-Funded Prize Reserve
 
-Sepolia has no verified external yield venue whose underlying asset matches the official cUSDCMock wrapper used by Veylott. The placeholder token-holding vault was therefore removed instead of being presented as a strategy. The active testnet reserve is explicitly sponsor-funded; see [the funding model and production path](reserve-funding.md).
+Sepolia now has a verified exact-asset confidential vault and two-way batchers, but its vault is passive: it reports no strategy adapters, no liquidity adapter, and `maxRate = 0`. It cannot currently generate prizes. The placeholder token-holding vault remains removed and the active testnet reserve remains explicitly sponsor-funded; see [the funding model and reproducible venue check](reserve-funding.md).
 
 | Step | Block | Transaction | Result |
 | --- | ---: | --- | --- |

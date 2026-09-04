@@ -13,6 +13,7 @@
     "test:client": "tsx --test client/test/*.test.ts",
     "build:frontend": "vite build && npm run verify:frontend-bundle",
     "verify:frontend-bundle": "node scripts/verify-frontend-bundle.mjs",
+    "verify:yield-route": "node scripts/verify-sepolia-yield-route.mjs",
     "test:frontend": "tsx --test frontend/test/*.test.ts",
     "fund:sponsor-reserve": "tsx scripts/fund-sponsor-reserve.ts",
     "lifecycle:sepolia": "tsx scripts/live-prize-lifecycle.ts"
