@@ -94,7 +94,6 @@ export const App: React.FC = () => {
     <Layout
       activeTab={activeTab}
       onTabChange={setActiveTab}
-      contractAddress={DEFAULT_POOL_ADDRESS || undefined}
     >
       <TxStatusModal state={txState} onClose={reset} />
 

@@ -149,20 +149,6 @@ a { color: inherit; }
 .nav-pill button:hover { color: var(--text-primary); }
 .nav-pill button[aria-current="page"] { background: var(--accent-blue); color: var(--text-inverse); }
 .header-actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.55rem; }
-.contract-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.55rem;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.55rem 0.68rem;
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-}
-.contract-chip:hover { border-color: var(--border-medium); color: var(--text-primary); }
 
 .console-intro {
   position: relative;
@@ -576,7 +562,7 @@ a { color: inherit; }
   .app-main { padding: 0.65rem 0 3rem; }
   .dashboard-shell { gap: 0.75rem; }
   .header-inner { min-height: 60px; gap: 0.5rem; }
-  .brand__tag, .contract-chip { display: none; }
+  .brand__tag { display: none; }
   .brand__mark { width: 2rem; height: 2rem; }
   .brand__name { font-size: 0.9rem; }
   .header-actions .button { min-height: 2.3rem; padding: 0.52rem 0.65rem; font-size: 0.64rem; }

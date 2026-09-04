@@ -42,11 +42,14 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.equal(typeof StatBox, "function");
   });
 
-  test("Header truncates contract address and handles copy interactions", () => {
-    const element = React.createElement(Header, {
-      contractAddress: "0x1111111111111111111111111111111111111111",
-    });
+  test("Header leaves wallet identity rendering to the wallet control", () => {
+    const headerPath = path.join(process.cwd(), "frontend/src/components/layout/Header.tsx");
+    const content = fs.readFileSync(headerPath, "utf-8");
+    const element = React.createElement(Header);
+
     assert.ok(element);
-    assert.equal(element.props.contractAddress, "0x1111111111111111111111111111111111111111");
+    assert.ok(content.includes("<WalletButton />"), "Wallet control is present");
+    assert.ok(!content.includes("contractAddress"), "Contract address is not rendered as wallet identity");
+    assert.ok(!content.includes("contract-chip"), "Misleading contract chip is absent");
   });
 });
