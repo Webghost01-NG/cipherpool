@@ -61,7 +61,12 @@ export const Button: React.FC<ButtonProps> = ({
     aria-busy={isLoading}
     {...props}
   >
-    {isLoading ? <LoaderCircle aria-hidden="true" className="animate-spin" size={18} /> : children}
+    {isLoading ? (
+      <>
+        <LoaderCircle aria-hidden="true" className="animate-spin" size={18} />
+        <span className="sr-only">{children}</span>
+      </>
+    ) : children}
   </button>
 );
 
