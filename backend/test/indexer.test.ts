@@ -31,6 +31,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: log.topics,
       data: log.data,
       blockNumber: 100,
+      blockTimestamp: 1_700_000_100,
       transactionHash: "0xaaa",
     });
 
@@ -64,6 +65,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: log.topics,
       data: log.data,
       blockNumber: 101,
+      blockTimestamp: 1_700_000_101,
       transactionHash: "0xbbb",
     });
 
@@ -72,6 +74,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
     assert.ok(pending);
     assert.equal(pending.status, "PENDING");
     assert.equal(pending.requestedAmount, 25_000n);
+    assert.equal(pending.timestamp, 1_700_000_101);
   });
 
   test("should handle WithdrawalFinalized and transition state to FINALIZED", () => {
@@ -101,6 +104,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: reqLog.topics,
       data: reqLog.data,
       blockNumber: 102,
+      blockTimestamp: 1_700_000_102,
       transactionHash: "0xccc",
     });
 
@@ -115,6 +119,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: finalLog.topics,
       data: finalLog.data,
       blockNumber: 103,
+      blockTimestamp: 1_700_000_103,
       transactionHash: "0xddd",
     });
 
@@ -128,6 +133,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: finalLog.topics,
       data: finalLog.data,
       blockNumber: 103,
+      blockTimestamp: 1_700_000_103,
       transactionHash: "0xddd",
     });
     assert.equal(store.getUserDeposit(alice), 10_000n);
@@ -152,6 +158,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: reqLog.topics,
       data: reqLog.data,
       blockNumber: 104,
+      blockTimestamp: 1_700_000_104,
       transactionHash: "0xeee",
     });
 
@@ -163,6 +170,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: cancelLog.topics,
       data: cancelLog.data,
       blockNumber: 105,
+      blockTimestamp: 1_700_000_105,
       transactionHash: "0xfff",
     });
 
@@ -185,6 +193,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: log.topics,
       data: log.data,
       blockNumber: 106,
+      blockTimestamp: 1_700_000_106,
       transactionHash: "0x111",
     });
 
@@ -198,6 +207,7 @@ describe("Blockchain Indexer & State Store Tests", () => {
       topics: log.topics,
       data: log.data,
       blockNumber: 106,
+      blockTimestamp: 1_700_000_106,
       transactionHash: "0x111",
     });
     assert.equal(store.getDrawCount(), 1);

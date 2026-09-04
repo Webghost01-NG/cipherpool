@@ -35,6 +35,7 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
       topics: log.topics,
       data: log.data,
       blockNumber: 500,
+      blockTimestamp: 1_700_000_500,
       transactionHash: "0xunique-tx-1",
     };
 
@@ -61,6 +62,7 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
         topics: ["0xinvalidtopic"],
         data: "0xdeadbeef",
         blockNumber: 501,
+        blockTimestamp: 1_700_000_501,
         transactionHash: "0xcorrupt-1",
       });
     });
@@ -71,6 +73,7 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
         topics: [],
         data: "0x",
         blockNumber: 502,
+        blockTimestamp: 1_700_000_502,
         transactionHash: "0xcorrupt-2",
       });
     });
@@ -81,6 +84,7 @@ describe("Backend Failure Paths, Retries & State Recovery Tests", () => {
         topics: [ethers.id("Deposited(address,uint256,uint64,bytes32)")],
         data: "0x12",
         blockNumber: 503,
+        blockTimestamp: 1_700_000_503,
         transactionHash: "0xcorrupt-3",
       });
     });
