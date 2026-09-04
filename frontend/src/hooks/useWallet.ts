@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { getAddress } from "ethers";
 
 export const TARGET_CHAIN_ID = 11155111;
 export const TARGET_CHAIN_NAME = "Ethereum Sepolia";
@@ -44,12 +45,16 @@ function isUnsupportedPermissionsMethod(error: unknown): boolean {
   return code === 4200 || code === -32601;
 }
 
-function parseWalletAccounts(value: unknown): string[] {
+export function parseWalletAccounts(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(
-    (account): account is string =>
-      typeof account === "string" && /^0x[a-fA-F0-9]{40}$/.test(account)
-  );
+  return value.flatMap((account) => {
+    if (typeof account !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(account)) return [];
+    try {
+      return [getAddress(account.toLowerCase())];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export async function requestWalletAccountSelection(
@@ -100,7 +105,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isCorrectNetwork = chainId === TARGET_CHAIN_ID;
 
   const applyWalletState = useCallback((accounts: unknown, nextChainId: number | null) => {
-    const nextAddress = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
+    const nextAddress = parseWalletAccounts(accounts)[0] ?? null;
     addressRef.current = nextAddress;
     chainIdRef.current = nextChainId;
     setAddress(nextAddress);
@@ -160,6 +165,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ethereum.request({ method: "eth_requestAccounts" }),
         ethereum.request({ method: "eth_chainId" }),
       ]);
+      const parsedAccounts = parseWalletAccounts(accounts);
+      if (parsedAccounts.length === 0) {
+        throw new Error("The wallet returned an invalid account address. Reconnect the wallet and try again.");
+      }
       manuallyDisconnectedRef.current = false;
       setIsManuallyDisconnected(false);
       try {
@@ -167,7 +176,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } catch {
         // Session storage is optional; the in-memory preference remains authoritative.
       }
-      applyWalletState(accounts, parseChainId(currentChain));
+      applyWalletState(parsedAccounts, parseChainId(currentChain));
     } catch (error) {
       setStatus("disconnected");
       const message = error instanceof Error ? error.message : "Wallet connection was rejected.";

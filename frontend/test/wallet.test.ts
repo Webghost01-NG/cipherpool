@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import {
   readWalletDisconnectPreference,
+  parseWalletAccounts,
   requestWalletAccountSelection,
   TARGET_CHAIN_ID,
   TARGET_CHAIN_NAME,
@@ -89,6 +90,13 @@ describe("Wallet Connector & Network Guard Tests", () => {
       }),
       /did not return an account/
     );
+  });
+
+  test("canonicalizes provider accounts before ethers receives them", () => {
+    const incorrectlyCased = "0xAbcdefabcdefabcdefabcdefabcdefabcdefabcd";
+    assert.deepEqual(parseWalletAccounts([incorrectlyCased]), [
+      "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD",
+    ]);
   });
 
   test("WalletModal and WalletButton instantiate with valid props", () => {
