@@ -59,7 +59,13 @@ contract FHEVMMockHarness is Test {
     ) internal returns (bytes memory) {
         bytes32[] memory handles = new bytes32[](1);
         handles[0] = handle;
-        bytes memory abiEncodedCleartexts = abi.encode(cleartextAmount);
+        return generateMockKMSProof(handles, abi.encode(cleartextAmount));
+    }
+
+    function generateMockKMSProof(
+        bytes32[] memory handles,
+        bytes memory abiEncodedCleartexts
+    ) internal returns (bytes memory) {
         bytes memory extraData = "";
 
         bytes32 domainHash = keccak256(

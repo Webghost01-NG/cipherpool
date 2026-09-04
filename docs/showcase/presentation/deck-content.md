@@ -1,5 +1,7 @@
 # CipherPool Presentation Content
 
+> **Archived draft:** This content predates the ERC-7984 migration and must be rewritten before submission. See the [current submission overview](../SUBMISSION_OVERVIEW.md).
+
 ## 1. Private prize savings, built for verification
 
 CipherPool is a no-loss prize savings protocol on Zama fhEVM. Principal remains withdrawable while encrypted balances and ticket weights stay confidential. This is a research deployment on Ethereum Sepolia—not production software.

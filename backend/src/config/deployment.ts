@@ -2,7 +2,7 @@ import { AbstractProvider, Contract, keccak256 } from "ethers";
 
 const VERIFICATION_ABI = [
   "function custodyAsset() external view returns (address)",
-  "function totalAccountedBalancePlain() external view returns (uint256)",
+  "function getTotalAccountedBalanceHandle() external view returns (bytes32)",
 ];
 
 export interface PoolDeploymentExpectation {
@@ -16,7 +16,7 @@ export interface PoolDeploymentEvidence {
   chainId: number;
   poolRuntimeCodeHash: string;
   custodyAssetAddress: string;
-  supportsCorrectedAccounting: boolean;
+  supportsConfidentialAccounting: boolean;
 }
 
 export function validatePoolDeployment(
@@ -31,7 +31,7 @@ export function validatePoolDeployment(
   if (observed.custodyAssetAddress.toLowerCase() !== expected.custodyAssetAddress.toLowerCase()) {
     errors.push("pool custody asset does not match configuration");
   }
-  if (!observed.supportsCorrectedAccounting) errors.push("pool does not expose corrected aggregate accounting");
+  if (!observed.supportsConfidentialAccounting) errors.push("pool does not expose confidential aggregate accounting");
   return errors;
 }
 
@@ -47,19 +47,19 @@ export async function verifyPoolDeployment(
 
   const pool = new Contract(expected.poolAddress, VERIFICATION_ABI, provider);
   const custodyAssetAddress = await pool.custodyAsset() as string;
-  let supportsCorrectedAccounting = false;
+  let supportsConfidentialAccounting = false;
   try {
-    const aggregate = await pool.totalAccountedBalancePlain() as bigint;
-    supportsCorrectedAccounting = typeof aggregate === "bigint";
+    const aggregateHandle = await pool.getTotalAccountedBalanceHandle() as string;
+    supportsConfidentialAccounting = /^0x[a-fA-F0-9]{64}$/.test(aggregateHandle);
   } catch {
-    supportsCorrectedAccounting = false;
+    supportsConfidentialAccounting = false;
   }
 
   const evidence: PoolDeploymentEvidence = {
     chainId: Number(network.chainId),
     poolRuntimeCodeHash: keccak256(code),
     custodyAssetAddress,
-    supportsCorrectedAccounting,
+    supportsConfidentialAccounting,
   };
   const errors = validatePoolDeployment(expected, evidence);
   if (errors.length > 0) throw new Error("Deployment verification failed: " + errors.join("; "));

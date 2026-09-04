@@ -5,16 +5,13 @@ import { loadConfig } from "./config/env.js";
 import { BlockchainIndexer } from "./indexer/indexer.js";
 import { PostgresIndexerPersistence } from "./indexer/persistence.js";
 import { IndexerStore } from "./indexer/store.js";
-import { KMSClient } from "./relayer/kms.js";
-import { KMSRelayerService } from "./relayer/relayer.js";
 import { defaultLogger } from "./utils/logger.js";
 
 const POOL_ABI = [
-  "event Deposited(address indexed user, uint256 indexed nonce, uint64 plainAmount, bytes32 indexed inputHandle)",
-  "event WithdrawalRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, uint64 requestedAmount, bytes32 handle)",
-  "event WithdrawalFinalized(address indexed user, bytes32 indexed requestHash, uint64 cleartextAmount)",
-  "event WithdrawalCancelled(address indexed user, bytes32 indexed requestHash)",
-  "event DrawExecuted(uint256 indexed drawId, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
+  "event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
+  "event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
+  "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
+  "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
 ];
 
 async function main() {
@@ -41,11 +38,6 @@ async function main() {
   const checkpoint = await persistence.load();
   const store = checkpoint ? IndexerStore.fromSnapshot(checkpoint.snapshot) : new IndexerStore();
   const indexer = new BlockchainIndexer(store);
-  const kmsClient = new KMSClient(config.RPC_URL, config.RELAYER_URL);
-  const relayer = new KMSRelayerService(store, kmsClient, {
-    maxRetries: config.MAX_RETRIES,
-    baseBackoffMs: 1000,
-  });
   const readContract = new ethers.Contract(config.POOL_CONTRACT_ADDRESS, POOL_ABI, provider);
   let lastPolledBlock = checkpoint
     ? Math.max(config.INDEXER_START_BLOCK, checkpoint.nextBlockNumber)
@@ -107,14 +99,14 @@ async function main() {
   await pollLogs();
   const pollInterval = setInterval(pollLogs, config.POLL_INTERVAL_MS);
 
-  const app = createApp(store, relayer);
+  const app = createApp(store);
   const server = app.listen(config.PORT, () => {
     defaultLogger.info("CipherPool Backend Service started successfully", {
       port: config.PORT,
       nodeEnv: config.NODE_ENV,
       chainId: config.CHAIN_ID,
       poolAddress: config.POOL_CONTRACT_ADDRESS,
-      withdrawalProofService: true,
+      confidentialCustodyIndexer: true,
     });
   });
 

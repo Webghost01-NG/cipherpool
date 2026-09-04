@@ -1,5 +1,7 @@
 # Cryptographic Audit: Request Replay Boundaries & Cross-User Substitution Limits
 
+> **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
+
 **Issue Reference:** [#4 — audit(replay): Analyze request replay boundaries and cross-user substitution limits](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/4)  
 **Milestone:** Phase 3 — Core Protocol & Smart Contract Implementation  
 **Protocol:** CipherPool  

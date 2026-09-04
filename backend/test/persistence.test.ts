@@ -46,99 +46,77 @@ function populatedStore() {
   const store = new IndexerStore();
   const alice = "0x1111111111111111111111111111111111111111";
   const bob = "0x2222222222222222222222222222222222222222";
-  const finalizedHash = ethers.id("finalized");
-  const cancelledHash = ethers.id("cancelled");
 
   store.addDeposit({
     user: alice,
     nonce: 0n,
-    plainAmount: 50_000n,
-    inputHandle: ethers.id("alice-deposit"),
+    encryptedAmountHandle: ethers.id("alice-deposit"),
     blockNumber: 100,
     transactionHash: "0xdeposit-alice",
   });
   store.addDeposit({
     user: bob,
     nonce: 0n,
-    plainAmount: 25_000n,
-    inputHandle: ethers.id("bob-deposit"),
+    encryptedAmountHandle: ethers.id("bob-deposit"),
     blockNumber: 101,
     transactionHash: "0xdeposit-bob",
   });
-  store.addWithdrawalRequest({
+  store.addConfidentialWithdrawal({
     user: alice,
     nonce: 1n,
-    requestHash: finalizedHash,
-    requestedAmount: 10_000n,
-    handle: ethers.id("finalized-handle"),
+    encryptedAmountHandle: ethers.id("alice-withdrawal"),
     blockNumber: 102,
-    transactionHash: "0xrequest-finalized",
-    timestamp: 1_700_000_102,
-    status: "PENDING",
+    transactionHash: "0xwithdraw-alice",
   });
-  store.finalizeWithdrawal({
-    user: alice,
-    requestHash: finalizedHash,
-    cleartextAmount: 10_000n,
+  store.addPrizeReserveFunding({
+    source: bob,
+    encryptedAmountHandle: ethers.id("reserve-funding"),
     blockNumber: 103,
-    transactionHash: "0xfinalized",
-  });
-  store.addWithdrawalRequest({
-    user: bob,
-    nonce: 1n,
-    requestHash: cancelledHash,
-    requestedAmount: 5_000n,
-    handle: ethers.id("cancelled-handle"),
-    blockNumber: 104,
-    transactionHash: "0xrequest-cancelled",
-    timestamp: 1_700_000_104,
-    status: "PENDING",
-  });
-  store.cancelWithdrawal({
-    user: bob,
-    requestHash: cancelledHash,
-    blockNumber: 105,
-    transactionHash: "0xcancelled",
+    transactionHash: "0xreserve",
   });
   store.addDraw({
     drawId: 1n,
+    requestHash: ethers.id("draw-request"),
     prizeAmount: 1_000n,
+    totalWeight: 75_000n,
+    remainingPrizeReserve: 9_000n,
     timestamp: 1_700_000_106,
     participantCount: 2,
     blockNumber: 106,
     transactionHash: "0xdraw",
   });
 
-  return { store, alice, bob, finalizedHash, cancelledHash };
+  return { store, alice, bob };
 }
 
 describe("Indexer checkpoint persistence", () => {
   test("restores all indexed state without losing idempotency", () => {
-    const { store, alice, bob, finalizedHash, cancelledHash } = populatedStore();
+    const { store, alice, bob } = populatedStore();
     const restored = IndexerStore.fromSnapshot(store.toSnapshot());
 
-    assert.equal(restored.getUserDeposit(alice), 40_000n);
-    assert.equal(restored.getUserDeposit(bob), 25_000n);
-    assert.equal(restored.getTotalAccountedBalance(), 66_000n);
-    assert.equal(restored.getPendingWithdrawalByHash(finalizedHash)?.status, "FINALIZED");
-    assert.equal(restored.getPendingWithdrawalByHash(cancelledHash)?.status, "CANCELLED");
-    assert.equal(restored.getAllPendingWithdrawals().length, 0);
+    assert.equal(restored.getUserDepositEventCount(alice), 1n);
+    assert.equal(restored.getUserDepositEventCount(bob), 1n);
+    assert.equal(restored.getTotalDepositEvents(), 2n);
+    assert.equal(restored.getConfidentialWithdrawalCount(), 1n);
+    assert.equal(restored.getPrizeReserveFundingCount(), 1n);
+    assert.equal(restored.getTotalAccountedBalance(), 76_000n);
     assert.equal(restored.getDrawCount(), 1);
     assert.equal(restored.getLatestDraw()?.prizeAmount, 1_000n);
+    assert.equal(restored.getLatestDraw()?.remainingPrizeReserve, 9_000n);
 
-    restored.finalizeWithdrawal({
+    restored.addDeposit({
       user: alice,
-      requestHash: finalizedHash,
-      cleartextAmount: 10_000n,
-      blockNumber: 103,
-      transactionHash: "0xfinalized",
+      nonce: 0n,
+      encryptedAmountHandle: ethers.id("alice-deposit"),
+      blockNumber: 100,
+      transactionHash: "0xdeposit-alice",
     });
-    assert.equal(restored.getUserDeposit(alice), 40_000n);
+    assert.equal(restored.getUserDepositEventCount(alice), 1n);
   });
 
   test("rejects an unsupported or malformed snapshot", () => {
     const valid = new IndexerStore().toSnapshot();
-    assert.throws(() => IndexerStore.fromSnapshot({ ...valid, version: 2 }));
+    assert.throws(() => IndexerStore.fromSnapshot({ ...valid, version: 1 }));
     assert.throws(() => IndexerStore.fromSnapshot({ ...valid, totalAccountedBalance: "-1" }));
   });
 

@@ -15,7 +15,7 @@ describe("Frontend deployment verification", () => {
   test("accepts the reviewed chain, bytecode, custody, and token metadata", () => {
     assert.deepEqual(validateDeploymentEvidence(expected, {
       ...expected,
-      supportsCorrectedAccounting: true,
+      supportsConfidentialAccounting: true,
     }), []);
   });
 
@@ -27,7 +27,7 @@ describe("Frontend deployment verification", () => {
       custodyAssetAddress: "0x4444444444444444444444444444444444444444",
       tokenSymbol: "FAKE",
       tokenDecimals: 18,
-      supportsCorrectedAccounting: false,
+      supportsConfidentialAccounting: false,
     });
     assert.equal(errors.length, 7);
   });

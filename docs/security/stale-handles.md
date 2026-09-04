@@ -1,5 +1,7 @@
 # Cryptographic Audit: Stale Handle Dynamics, Cancellation Windows & Race Conditions
 
+> **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
+
 **Issue Reference:** [#5 — audit(stale): Evaluate stale handle dynamics, cancellation windows, and race conditions](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/5)  
 **Milestone:** Phase 3 — Core Protocol & Smart Contract Implementation  
 **Protocol:** CipherPool  

@@ -1,5 +1,7 @@
 # Forensic Audit: Storage Anchoring Invariants & Handle Tamper-Resistance
 
+> **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
+
 **Issue Reference:** [#3 — audit(storage): Verify storage anchoring invariants and handle tamper-resistance](https://github.com/Webghost01-NG/fhevm-pooltogether-security/issues/3)  
 **Milestone:** Phase 2 — Project Architecture & Threat Modeling  
 **Author:** Security Research Team  

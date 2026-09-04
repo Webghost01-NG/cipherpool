@@ -15,7 +15,7 @@ describe("Backend deployment verification", () => {
       chainId: expected.chainId,
       poolRuntimeCodeHash: expected.poolRuntimeCodeHash,
       custodyAssetAddress: expected.custodyAssetAddress,
-      supportsCorrectedAccounting: true,
+      supportsConfidentialAccounting: true,
     }), []);
   });
 
@@ -24,7 +24,7 @@ describe("Backend deployment verification", () => {
       chainId: 1,
       poolRuntimeCodeHash: "0x" + "cd".repeat(32),
       custodyAssetAddress: "0x3333333333333333333333333333333333333333",
-      supportsCorrectedAccounting: false,
+      supportsConfidentialAccounting: false,
     });
     assert.equal(errors.length, 4);
     assert.ok(errors.some((error) => error.includes("chain ID")));

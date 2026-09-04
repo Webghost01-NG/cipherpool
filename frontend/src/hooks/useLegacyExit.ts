@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { getBrowserFhevmInstance } from "../../../client/src/adapters/InputEncryption.js";
-import { POOL_ABI } from "../contracts/abi.js";
+import { LEGACY_POOL_ABI } from "../contracts/abi.js";
 import { useWallet } from "./useWallet.js";
 import type { PendingWithdrawal, TransactionCallbacks } from "./usePool.js";
 
@@ -43,7 +43,7 @@ export const useLegacyExit = (legacyPoolAddress: string) => {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const code = await provider.getCode(legacyPoolAddress);
       if (code === "0x") throw new Error("The configured archived pool has no Sepolia bytecode.");
-      const pool = new ethers.Contract(legacyPoolAddress, POOL_ABI, provider);
+      const pool = new ethers.Contract(legacyPoolAddress, LEGACY_POOL_ABI, provider);
       const [pending, cancellationDelay] = await Promise.all([
         pool.getPendingWithdrawal(address),
         pool.cancellationDelay() as Promise<bigint>,
@@ -85,7 +85,7 @@ export const useLegacyExit = (legacyPoolAddress: string) => {
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const pool = new ethers.Contract(legacyPoolAddress, POOL_ABI, signer);
+      const pool = new ethers.Contract(legacyPoolAddress, LEGACY_POOL_ABI, signer);
       const transaction = await pool.finalizeWithdrawal(clearValue, result.decryptionProof);
       callbacks.onBroadcast?.(transaction.hash);
       const receipt = ensureReceipt(await transaction.wait());
@@ -106,7 +106,7 @@ export const useLegacyExit = (legacyPoolAddress: string) => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const pool = new ethers.Contract(legacyPoolAddress, POOL_ABI, signer);
+      const pool = new ethers.Contract(legacyPoolAddress, LEGACY_POOL_ABI, signer);
       const transaction = await pool.cancelWithdrawal();
       callbacks.onBroadcast?.(transaction.hash);
       const receipt = ensureReceipt(await transaction.wait());
