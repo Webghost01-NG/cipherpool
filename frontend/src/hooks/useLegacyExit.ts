@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { ethers } from "ethers";
-import { getBrowserFhevmInstance } from "../../../client/src/adapters/InputEncryption.js";
 import { LEGACY_POOL_ABI } from "../contracts/abi.js";
 import { useWallet } from "./useWallet.js";
 import type { PendingWithdrawal, TransactionCallbacks } from "./usePool.js";
@@ -14,7 +12,7 @@ const emptyWithdrawal: PendingWithdrawal = {
   status: "FINALIZED",
 };
 
-function ensureReceipt(receipt: ethers.ContractTransactionReceipt | null): ethers.ContractTransactionReceipt {
+function ensureReceipt<T extends { status: number | null; hash: string }>(receipt: T | null): T {
   if (!receipt || receipt.status !== 1) throw new Error("Transaction was not confirmed on-chain.");
   return receipt;
 }
@@ -40,6 +38,7 @@ export const useLegacyExit = (legacyPoolAddress: string) => {
 
     setIsChecking(true);
     try {
+      const { ethers } = await import("../utils/walletRuntime.js");
       const provider = new ethers.BrowserProvider(window.ethereum);
       const code = await provider.getCode(legacyPoolAddress);
       if (code === "0x") throw new Error("The configured archived pool has no Sepolia bytecode.");
@@ -76,6 +75,10 @@ export const useLegacyExit = (legacyPoolAddress: string) => {
     if (!pendingWithdrawal.hasPending) throw new Error("No archived withdrawal request was found.");
     setIsLoading(true);
     try {
+      const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const instance = await getBrowserFhevmInstance();
       const result = await instance.publicDecrypt([pendingWithdrawal.handle]);
       const clearValue = Object.entries(result.clearValues).find(
@@ -104,6 +107,7 @@ export const useLegacyExit = (legacyPoolAddress: string) => {
     }
     setIsLoading(true);
     try {
+      const { ethers } = await import("../utils/walletRuntime.js");
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const pool = new ethers.Contract(legacyPoolAddress, LEGACY_POOL_ABI, signer);

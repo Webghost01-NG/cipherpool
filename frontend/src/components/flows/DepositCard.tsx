@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { ArrowDown, ExternalLink, Info } from "lucide-react";
-import { parseUnits } from "ethers";
 import { Badge, Card } from "../common/UIPrimitives.js";
 import { WalletGateButton } from "../wallet/WalletGateButton.js";
 import type { WalletStatus } from "../../hooks/useWallet.js";
+import { parseTokenAmount } from "../../utils/tokenAmount.js";
 
 export interface DepositCardProps {
   onDeposit: (amount: bigint) => Promise<void>;
@@ -33,7 +33,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({
 
   const parseAmount = (): bigint | null => {
     try {
-      const value = parseUnits(amount, tokenDecimals);
+      const value = parseTokenAmount(amount, tokenDecimals);
       if (value <= 0n) throw new Error("Enter an amount greater than zero.");
       if (value >= 2n ** 64n) throw new Error("Amount exceeds the protocol limit.");
       setValidationError(null);

@@ -1,5 +1,3 @@
-import { isAddress } from "ethers";
-
 type FrontendEnvironment = Record<string, string | undefined>;
 
 const environment: FrontendEnvironment =
@@ -9,7 +7,7 @@ const environment: FrontendEnvironment =
 
 function readAddress(name: string): string {
   const value = environment[name]?.trim() ?? "";
-  return isAddress(value) ? value : "";
+  return /^0x[a-fA-F0-9]{40}$/.test(value) ? value.toLowerCase() : "";
 }
 
 function readUrl(name: string): string {

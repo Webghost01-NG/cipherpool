@@ -10,14 +10,23 @@ const html = await readFile(path.join(outputDirectory, "index.html"), "utf8");
 const assetNames = await readdir(assetsDirectory);
 const javaScriptChunks = assetNames.filter((name) => name.endsWith(".js")).sort();
 const fheChunks = javaScriptChunks.filter((name) => name.startsWith("fhe-"));
+const web3Chunks = javaScriptChunks.filter((name) => name.startsWith("web3-"));
 const entryMatch = html.match(/src="\/assets\/(index-[^"]+\.js)"/);
 
 assert.equal(fheChunks.length, 1, "The build must emit one isolated FHE JavaScript chunk.");
+assert.equal(web3Chunks.length, 1, "The build must emit one isolated web3 JavaScript chunk.");
 assert.ok(entryMatch, "The frontend entry chunk was not found in index.html.");
-assert.doesNotMatch(html, /fhe-|\.wasm|workerHelpers/, "FHE assets must not be loaded by the initial HTML.");
+assert.doesNotMatch(html, /fhe-|web3-|\.wasm|workerHelpers/, "Web3 and FHE assets must not be loaded by the initial HTML.");
 
 const entryCode = await readFile(path.join(assetsDirectory, entryMatch[1]), "utf8");
-assert.match(entryCode, /assets\/fhe-[^"']+\.js/, "The application must retain a dynamic FHE import boundary.");
+assert.match(entryCode, /import\([^)]*walletRuntime-[^)]*\.js[^)]*\)/, "The application must retain a dynamic web3 import boundary.");
+
+const nonFheCode = (await Promise.all(
+  javaScriptChunks
+    .filter((name) => !name.startsWith("fhe-"))
+    .map((name) => readFile(path.join(assetsDirectory, name), "utf8"))
+)).join("\n");
+assert.match(nonFheCode, /import\([^)]*fhe-[^)]*\.js[^)]*\)/, "The application must retain a dynamic FHE import boundary.");
 
 const sizes = await Promise.all(javaScriptChunks.map(async (name) => ({
   chunk: name.replace(/-[A-Za-z0-9_-]+\.js$/, ".js"),

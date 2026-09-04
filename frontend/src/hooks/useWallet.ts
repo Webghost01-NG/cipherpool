@@ -1,6 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { getAddress } from "ethers";
-
 export const TARGET_CHAIN_ID = 11155111;
 export const TARGET_CHAIN_NAME = "Ethereum Sepolia";
 export const WALLET_DISCONNECT_SESSION_KEY = "cipherpool_wallet_disconnected";
@@ -49,11 +47,7 @@ export function parseWalletAccounts(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((account) => {
     if (typeof account !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(account)) return [];
-    try {
-      return [getAddress(account.toLowerCase())];
-    } catch {
-      return [];
-    }
+    return [account.toLowerCase()];
   });
 }
 
