@@ -13,10 +13,10 @@ describe("Frontend Foundation & Design System Tests", () => {
     const cssPath = path.join(process.cwd(), "frontend/src/styles/theme.css");
     const content = fs.readFileSync(cssPath, "utf-8");
 
-    assert.ok(content.includes("--bg-primary: #07110f"), "Primary background defined");
-    assert.ok(content.includes("--accent-cyan: #66d9ff"), "Primary information accent defined");
-    assert.ok(content.includes("--accent-emerald: #69e6ad"), "Success accent defined");
-    assert.ok(content.includes("--accent-lime: #cafa63"), "Primary interaction accent defined");
+    assert.ok(content.includes("--bg-primary: #ffffff"), "White page background defined");
+    assert.ok(content.includes("--bg-card: #ffffff"), "White card surface defined");
+    assert.ok(content.includes("--accent-blue: #3157f6"), "Primary blue interaction accent defined");
+    assert.ok(content.includes("--accent-emerald: #087f5b"), "Accessible success accent defined");
     assert.ok(content.includes("prefers-reduced-motion: reduce"), "Accessibility reduced-motion query present");
     assert.ok(content.includes(":focus-visible"), "Visible focus ring defined");
   });
