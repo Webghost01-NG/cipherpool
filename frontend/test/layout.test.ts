@@ -91,8 +91,9 @@ describe("Frontend Foundation & Design System Tests", () => {
       })
     );
 
-    assert.match(loadingMarkup, /aria-label="Prize reserve loading"/);
+    assert.doesNotMatch(loadingMarkup, /aria-label=/);
     assert.match(loadingMarkup, /aria-busy="true"/);
+    assert.match(loadingMarkup, /<span class="sr-only">Prize reserve loading<\/span>/);
     assert.doesNotMatch(loadingMarkup, />0 USDC</);
     assert.match(loadedZeroMarkup, />0 USDC<\/strong>/);
     assert.match(staleMarkup, />Stale<\/span>/);

@@ -111,13 +111,13 @@ export const StatBox: React.FC<StatBoxProps> = ({
       <strong
         className="metric__value"
         aria-busy={status === "loading" || undefined}
-        aria-label={status === "loading"
-          ? `${label} loading`
-          : status === "unavailable"
-            ? `${label} unavailable`
-            : undefined}
       >
-        {hasVerifiedValue ? value : <span aria-hidden="true">—</span>}
+        {hasVerifiedValue ? value : (
+          <>
+            <span aria-hidden="true">—</span>
+            <span className="sr-only">{label} {status}</span>
+          </>
+        )}
       </strong>
       {hint && <p className="metric__hint">{hint}</p>}
     </article>
