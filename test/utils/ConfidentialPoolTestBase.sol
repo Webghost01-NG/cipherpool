@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import {FHE, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, ebool, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ConfidentialPool} from "../../contracts/ConfidentialPool.sol";
 import {MockERC7984} from "../mocks/MockERC7984.sol";
 import {FHEVMMockHarness} from "./FHEVMMockHarness.sol";
@@ -30,6 +30,11 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
     }
 
     function _deposit(address user, uint64 amount) internal {
+        _depositWithoutActivation(user, amount);
+        if (amount > 0 && !pool.isParticipant(user)) _finalizeParticipantActivation(user, true);
+    }
+
+    function _depositWithoutActivation(address user, uint64 amount) internal {
         externalEuint64 encryptedAmount = _externalAmount(amount);
         bytes memory action = abi.encode(pool.DEPOSIT_ACTION());
         vm.prank(user);
@@ -39,6 +44,14 @@ abstract contract ConfidentialPoolTestBase is FHEVMMockHarness {
             "",
             action
         );
+    }
+
+    function _finalizeParticipantActivation(address user, bool eligible) internal {
+        ebool eligibilityHandle = pool.getPendingParticipantActivation(user).eligibilityHandle;
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = FHE.toBytes32(eligibilityHandle);
+        bytes memory proof = generateMockKMSProof(handles, abi.encode(eligible));
+        pool.finalizeParticipantActivation(user, eligible, proof);
     }
 
     function _fundReserve(address source, uint64 amount) internal {

@@ -24,7 +24,7 @@ describe("Typed REST API integration", () => {
     assert.equal(res.body.confidentialWithdrawalEvents, "0");
     assert.equal(res.body.prizeReserveFundingEvents, "0");
     assert.equal(res.body.prizeReserveFundingModel, "sponsor-funded-testnet");
-    assert.equal(res.body.lastVerifiedTotalAccountedBalance, "0");
+    assert.equal(res.body.lastVerifiedTotalEligibleBalance, "0");
     assert.equal(res.body.totalDraws, 0);
     assert.equal("totalDeposits" in res.body, false);
   });

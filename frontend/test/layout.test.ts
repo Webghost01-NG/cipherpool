@@ -82,6 +82,14 @@ describe("Frontend Foundation & Design System Tests", () => {
         status: "fresh",
       })
     );
+    const pendingMarkup = renderToStaticMarkup(
+      React.createElement(StatBox, {
+        label: "Eligible weight",
+        value: "0 USDC",
+        subtext: "New pool; appears after the first finalized draw",
+        status: "pending",
+      })
+    );
     const staleMarkup = renderToStaticMarkup(
       React.createElement(StatBox, {
         label: "Prize reserve",
@@ -96,6 +104,8 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.match(loadingMarkup, /<span class="sr-only">Prize reserve loading<\/span>/);
     assert.doesNotMatch(loadingMarkup, />0 USDC</);
     assert.match(loadedZeroMarkup, />0 USDC<\/strong>/);
+    assert.match(pendingMarkup, />Awaiting round<\/span>/);
+    assert.doesNotMatch(pendingMarkup, />0 USDC<\/strong>/);
     assert.match(staleMarkup, />Stale<\/span>/);
     assert.match(staleMarkup, />25 USDC<\/strong>/);
     assert.match(staleMarkup, /Last confirmed value/);

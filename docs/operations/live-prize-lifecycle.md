@@ -21,13 +21,13 @@ Every write also requires:
 - `LIFECYCLE_AMOUNT` — human token units for deposits and withdrawals; draws read the immutable amount from `drawPrizeAmount()`.
 - `LIFECYCLE_CONFIRM` — the exact phrase printed by a failed dry attempt, binding action, amount, draw ID, pool, and wallet.
 
-Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. The runner's draw phase reads the immutable prize/cadence policy and keeps request and KMS finalization together for keeper convenience. Any wallet may request an eligible round, and any keeper may present the valid proof bound to it. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path. A valid proof with an empty pool or insufficient reserve records `DrawSkipped` and releases the lock.
+Run phases independently: `deposit`, `draw`, `reveal-prize`, `claim-prize`, then `withdraw`. On an activation-enabled deployment, `deposit` confirms the confidential transfer first, publicly decrypts only the resulting positive-position predicate, then confirms its proof-bound participant activation separately. The runner records both receipts and stops truthfully if activation is false or interrupted. The draw phase reads the immutable prize/cadence policy and keeps request and KMS finalization together for keeper convenience. Any wallet may request an eligible round, and any keeper may present the valid proof bound to it. The runner prints the confirmed request receipt immediately; if KMS finalization stalls, do not request another draw. Record the request hash and use the deployed contract's 24-hour permissionless cancellation path. A valid proof with an empty pool or insufficient reserve records `DrawSkipped` and releases the lock.
 
 `claim-prize` privately decrypts the caller’s prize, rejects zero, re-encrypts the positive amount, and submits the ordinary `withdraw` operation. Public calldata and events therefore do not label the payment as prize rather than principal.
 
 ## Completed Predecessor-Deployment Lifecycle
 
-On 4 September 2026, the runner completed a real 0.5 cUSDC lifecycle against predecessor pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. No mocked handle, proof, receipt, RPC response, or winner was used. This remains historical protocol evidence; the current permissionless-finalization deployment began at block `11635277` with empty state.
+On 4 September 2026, the runner completed a real 0.5 cUSDC lifecycle against predecessor pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0`. No mocked handle, proof, receipt, RPC response, or winner was used. This remains historical protocol evidence; the current permissionless-request deployment began at block `11635612` with empty state. Participant activation remains source-only until its successor is deployed and verified.
 
 | Phase | Block | Transaction | Verified result |
 | --- | ---: | --- | --- |

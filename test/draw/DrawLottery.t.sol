@@ -68,7 +68,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
 
         IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
         assertTrue(request.active);
-        assertEq(FHE.toBytes32(request.totalHandle), pool.getTotalAccountedBalanceHandle());
+        assertEq(FHE.toBytes32(request.totalHandle), pool.getTotalEligibleBalanceHandle());
         assertEq(FHE.toBytes32(request.reserveHandle), pool.getPrizeReserveHandle());
 
         externalEuint64 encryptedAmount = _externalAmount(100);
@@ -83,7 +83,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _requestAndFinalizeDraw(10_000, 2_000);
 
         assertEq(pool.currentDrawId(), 1);
-        assertEq(pool.lastVerifiedTotalAccountedBalance(), 10_500);
+        assertEq(pool.lastVerifiedTotalEligibleBalance(), 10_500);
         assertEq(pool.lastVerifiedPrizeReserve(), 1_500);
         assertTrue(pool.getPrizeHandle(alice) != bytes32(0));
         assertFalse(pool.getPendingDraw().active);
@@ -140,7 +140,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
 
         assertFalse(pool.getPendingDraw().active);
         assertEq(pool.currentDrawId(), 0);
-        assertEq(pool.lastVerifiedTotalAccountedBalance(), 10_000);
+        assertEq(pool.lastVerifiedTotalEligibleBalance(), 10_000);
         assertEq(pool.lastVerifiedPrizeReserve(), DRAW_PRIZE - 1);
         assertEq(mockExecutor.randomCalls(), 0);
     }

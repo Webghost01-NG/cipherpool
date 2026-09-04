@@ -17,7 +17,7 @@ contract SponsorReserveTest is ConfidentialPoolTestBase, IPoolErrors {
 
         assertEq(pool.getParticipantCount(), 0);
         assertEq(pool.userDepositNonces(sponsor), 0);
-        assertEq(pool.getTotalAccountedBalanceHandle(), bytes32(0));
+        assertEq(pool.getTotalEligibleBalanceHandle(), bytes32(0));
         assertTrue(pool.getPrizeReserveHandle() != bytes32(0));
     }
 

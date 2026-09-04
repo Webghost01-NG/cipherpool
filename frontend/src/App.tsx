@@ -88,6 +88,7 @@ export const App: React.FC = () => {
     deploymentVerification,
     writesEnabled,
     deposit,
+    activateParticipant,
     withdraw,
     fundPrizeReserve,
     revealBalance,
@@ -288,22 +289,27 @@ export const App: React.FC = () => {
 
           <div className="metrics-grid" aria-label="Live pool metrics">
             <StatBox
-              label="Verified pool snapshot"
+              label="Verified eligible weight"
               value={totalDeposits + " " + asset.symbol}
-              subtext={metricFreshness.totalDeposits === "unavailable"
-                ? "Awaiting the first KMS-finalized draw"
+              subtext={metricFreshness.totalDeposits === "pending"
+                ? "New pool; appears after the first finalized draw"
                 : "Aggregate only; individual positions stay encrypted"}
               status={metricFreshness.totalDeposits}
             />
             <StatBox
               label="Verified prize reserve"
               value={prizeReserve + " " + asset.symbol}
-              subtext={metricFreshness.prizeReserve === "unavailable"
-                ? "Awaiting the first KMS-finalized draw"
+              subtext={metricFreshness.prizeReserve === "pending"
+                ? "New pool; appears after the first finalized draw"
                 : "Sponsor-funded on Sepolia; last KMS-verified snapshot"}
               status={metricFreshness.prizeReserve}
             />
-            <StatBox label="Private savers" value={poolStats.participantCount} subtext="On-chain participants" status={metricFreshness.participantCount} />
+            <StatBox
+              label="Private savers"
+              value={poolStats.participantCount}
+              subtext={poolStats.participantCount === 0 ? "No KMS-activated savers yet" : "KMS-activated on-chain participants"}
+              status={metricFreshness.participantCount}
+            />
             <StatBox
               label="Confirmed rounds"
               value={poolStats.totalDraws}
@@ -312,6 +318,12 @@ export const App: React.FC = () => {
               status={metricFreshness.totalDraws}
             />
           </div>
+          {deploymentVerification.status === "verified" && poolStats.totalDraws === 0 && (
+            <div className="callout protocol-empty-state" role="status">
+              <ShieldCheck size={17} aria-hidden="true" />
+              <span>This deployment is live and intentionally empty. Metrics populate only from real deposits, KMS-verified activation, reserve funding, and finalized Sepolia rounds—nothing is preloaded.</span>
+            </div>
+          )}
         </section>
 
         {activeTab === "pool" && (
@@ -346,6 +358,15 @@ export const App: React.FC = () => {
                     { label: "Official cUSDC", address: asset.address }
                   )
                 }
+                onActivate={() =>
+                  runAction(
+                    "Private draw activation",
+                    () => activateParticipant(transactionCallbacks),
+                    "KMS-verified draw eligibility finalized on Ethereum Sepolia.",
+                    { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
+                  )
+                }
+                activationPending={poolStats.pendingActivation.active}
                 isLoading={isLoading}
                 walletConnected={walletReady && !poolStats.isPaused}
                 walletStatus={status}

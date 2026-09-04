@@ -5,9 +5,12 @@
 1. Connect a wallet to Ethereum Sepolia.
 2. Obtain USDCMock and wrap it with the official Zama cUSDCMock wrapper.
 3. Enter a deposit amount. The browser encrypts it for cUSDC with the Zama Relayer SDK.
-4. Confirm one `confidentialTransferAndCall` transaction.
+4. Confirm `confidentialTransferAndCall`; the callback creates an encrypted `position > 0` eligibility predicate.
 5. cUSDC invokes the pool with the actual encrypted transfer result; only that ciphertext is credited.
-6. Reveal the position only when needed by signing an EIP-712 user-decryption request.
+6. Ask Zama KMS to publicly decrypt only the eligibility predicate, never the amount.
+7. Confirm `finalizeParticipantActivation`; the contract verifies the proof and admits only a positive position to prize draws.
+8. If finalization is interrupted, use the visible recovery action. The deposit remains in custody and excluded from draws until activation succeeds.
+9. Reveal the position only when needed by signing an EIP-712 user-decryption request.
 
 The interface must never display a public cUSDC balance as if it were plaintext. Transaction errors must distinguish proof generation, wallet rejection, broadcast, and receipt failure.
 
@@ -36,7 +39,7 @@ This is one transaction. The active pool has no plaintext withdrawal request, ba
 1. A sponsor encrypts a cUSDC amount for the custody token and submits `confidentialTransferAndCall` with `CIPHERPOOL_PRIZE_RESERVE_V1`.
 2. The pool credits only the token-returned ciphertext to the prize reserve. Sepolia copy must describe this as sponsor funding, not generated yield.
 3. Once the immutable cadence opens, any wallet submits the exact on-chain `drawPrizeAmount()` with `requestDraw`.
-4. The pool marks aggregate position and reserve handles publicly decryptable and locks deposits and withdrawals.
+4. The pool marks eligible draw weight and reserve handles publicly decryptable and locks deposits and withdrawals.
 5. The client asks the Zama KMS to decrypt those two aggregates.
 6. Any keeper submits `finalizeDraw(total, reserve, proof)`. The KMS proof is bound to the active request's stored handles, and the immutable policy fixes the prize amount, so the relayer cannot substitute settlement state. A verified insufficient reserve emits `DrawSkipped` and releases the lock without awarding a prize.
 7. The pool verifies both stored handles, creates a bounded encrypted random ticket, and evaluates encrypted cumulative balance intervals.

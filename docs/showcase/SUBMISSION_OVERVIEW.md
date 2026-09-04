@@ -5,7 +5,7 @@
 CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC deposit, position, withdrawal, prize counter, and winning outcome encrypted while selecting a winner over encrypted balance weights.
 
 - Application: [cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
-- Pool: [`0x63bA2DF59b43801492060f2cc5D071155C45dD47`](https://sepolia.etherscan.io/address/0x63bA2DF59b43801492060f2cc5D071155C45dD47)
+- Pool: [`0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8`](https://sepolia.etherscan.io/address/0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8)
 - Official cUSDCMock: [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639)
 - Network: Ethereum Sepolia
 
@@ -13,7 +13,7 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 
 1. A wallet encrypts a `uint64` deposit for the official cUSDC contract.
 2. `confidentialTransferAndCall` moves cUSDC and passes the actual encrypted result to CipherPool.
-3. CipherPool updates the user position and aggregate liability homomorphically.
+3. CipherPool updates the user position and aggregate liability homomorphically. The current source admits a new draw participant only after a KMS proof verifies the encrypted positive-position predicate; deployment is required before presenting this activation flow as live.
 4. A sponsor contributes encrypted cUSDC to the Sepolia prize reserve; this is explicitly not presented as generated yield.
 5. Any wallet requests the next cadence-eligible, policy-sized draw, anchoring publicly decryptable aggregate weight and reserve handles while balance mutations are locked.
 6. A KMS proof verifies both aggregate handles. `FHE.randEuint64` and encrypted cumulative intervals award the prize without revealing the winning address.
@@ -22,7 +22,7 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 
 ## Evidence
 
-- The active runtime is 19,501 bytes and matches hash `0x4200e0006ccec7cfee9840944ac3b17996d078932dc4610155affab5e1fcd222`.
+- The active permissionless-draw runtime is 20,143 bytes and matches hash `0xe393050b9bdccc1802dcdef00bf8f7329b629c0e223d56fcd2a380e2a38c7abe`.
 - Predecessor pool `0x9c939b82…191e0` completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal before the permissionless-finalization migration.
 - Draw 1 finalized with verified weight and prize of 500,000 base units; authorized post-settlement KMS decryption returned a zero private position and zero prize counter.
 - Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).

@@ -90,6 +90,8 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
   test("Accessibility: Form controls associate labels with inputs using matching IDs", () => {
     const depositCard = React.createElement(DepositCard, {
       onDeposit: async () => {},
+      onActivate: async () => {},
+      activationPending: false,
       isLoading: false,
       walletConnected: true,
       walletStatus: "connected",

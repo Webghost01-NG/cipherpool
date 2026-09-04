@@ -12,6 +12,8 @@ interface IPoolErrors {
     error EmptyPool();
     error EmptyPrizeReserve();
     error NoBalancePosition(address user);
+    error NoActiveParticipantActivation(address user);
+    error ParticipantAlreadyActive(address user);
     error UnauthorizedTokenCallback(address caller);
     error BalanceUpdatesLocked(bytes32 requestHash);
     error ActiveDrawRequestExists(bytes32 requestHash);

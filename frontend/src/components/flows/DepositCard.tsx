@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { ArrowDown, ExternalLink, Info } from "lucide-react";
-import { Badge, Card } from "../common/UIPrimitives.js";
+import { ArrowDown, ExternalLink, Info, ShieldCheck } from "lucide-react";
+import { Badge, Button, Card } from "../common/UIPrimitives.js";
 import { WalletGateButton } from "../wallet/WalletGateButton.js";
 import type { WalletStatus } from "../../hooks/useWallet.js";
 import { parseTokenAmount } from "../../utils/tokenAmount.js";
 
 export interface DepositCardProps {
   onDeposit: (amount: bigint) => Promise<void>;
+  onActivate: () => Promise<void>;
+  activationPending: boolean;
   isLoading: boolean;
   walletConnected: boolean;
   walletStatus: WalletStatus;
@@ -19,6 +21,8 @@ export interface DepositCardProps {
 
 export const DepositCard: React.FC<DepositCardProps> = ({
   onDeposit,
+  onActivate,
+  activationPending,
   isLoading,
   walletConnected,
   walletStatus,
@@ -83,8 +87,23 @@ export const DepositCard: React.FC<DepositCardProps> = ({
         {validationError && <p id="deposit-error" role="alert" className="badge badge--error">{validationError}</p>}
         <div className="callout" id="deposit-help">
           <Info size={17} aria-hidden="true" />
-          <span>The amount is encrypted for the official cUSDC contract before your wallet submits one transfer-and-deposit transaction.</span>
+          <span>After the encrypted transfer, Zama KMS proves only whether the position is positive. A second wallet confirmation activates draw eligibility without revealing the amount.</span>
         </div>
+        {activationPending && (
+          <div className="pending-box" role="status">
+            <div className="pending-box__title"><ShieldCheck size={16} /> Draw activation pending</div>
+            <p>The transfer callback is confirmed, but this position is excluded from prize draws until its positive-position proof is finalized.</p>
+            <Button
+              className="button--wide"
+              type="button"
+              variant="secondary"
+              disabled={isLoading || !walletConnected || !writesEnabled}
+              onClick={() => void onActivate()}
+            >
+              Finalize private draw entry
+            </Button>
+          </div>
+        )}
         <WalletGateButton
           className="button--wide"
           type="submit"

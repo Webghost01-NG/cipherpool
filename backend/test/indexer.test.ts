@@ -8,6 +8,8 @@ const POOL_EVENTS_ABI = [
   "event Deposited(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
   "event Withdrawn(address indexed user, uint256 indexed nonce, bytes32 indexed encryptedAmountHandle)",
   "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
+  "event ParticipantActivationRequested(address indexed user, uint256 indexed nonce, bytes32 indexed requestHash, bytes32 eligibilityHandle)",
+  "event ParticipantActivationFinalized(address indexed user, bytes32 indexed requestHash, bool eligible, uint256 participantCount)",
   "event DrawSkipped(bytes32 indexed requestHash, uint64 totalWeight, uint64 prizeReserve, uint64 requiredPrizeAmount, uint256 timestamp)",
   "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint64 totalWeight, uint64 remainingPrizeReserve, uint256 timestamp, uint256 participantCount)",
 ];
@@ -60,6 +62,19 @@ describe("Confidential pool indexer", () => {
     process(indexer, "PrizeReserveFunded", args, "0xreserve");
 
     assert.equal(store.getPrizeReserveFundingCount(), 1n);
+  });
+
+  test("parses activation events without inventing a participant balance", () => {
+    const store = new IndexerStore();
+    const indexer = new BlockchainIndexer(store);
+    const requestHash = ethers.id("participant-activation");
+
+    process(indexer, "ParticipantActivationRequested", [alice, 0n, requestHash, ethers.id("eligibility")], "0xrequest");
+    process(indexer, "ParticipantActivationFinalized", [alice, requestHash, true, 1], "0xfinalize");
+
+    assert.equal(store.getTotalDepositEvents(), 0n);
+    assert.equal(store.getTotalAccountedBalance(), 0n);
+    assert.equal(store.getDrawCount(), 0);
   });
 
   test("indexes the verified aggregate snapshot emitted by a draw", () => {

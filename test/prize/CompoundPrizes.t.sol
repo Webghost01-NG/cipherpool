@@ -13,13 +13,13 @@ contract CompoundPrizesTest is ConfidentialPoolTestBase {
         _fundReserve(address(0xBEEF), 2_000);
         _requestAndFinalizeDraw(10_000, 2_000);
         bytes32 positionBefore = pool.getBalanceHandle(alice);
-        bytes32 aggregateBefore = pool.getTotalAccountedBalanceHandle();
+        bytes32 aggregateBefore = pool.getTotalEligibleBalanceHandle();
 
         vm.prank(alice);
         pool.compoundPrizes();
 
         assertEq(pool.getBalanceHandle(alice), positionBefore);
-        assertEq(pool.getTotalAccountedBalanceHandle(), aggregateBefore);
+        assertEq(pool.getTotalEligibleBalanceHandle(), aggregateBefore);
         assertEq(pool.getPrizeHandle(alice), bytes32(0));
     }
 }

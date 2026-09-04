@@ -75,11 +75,12 @@ export interface StatBoxProps {
   value: string | number;
   subtext?: string;
   badge?: React.ReactNode;
-  status?: "loading" | "fresh" | "stale" | "unavailable";
+  status?: "loading" | "pending" | "fresh" | "stale" | "unavailable";
 }
 
 const metricStatusLabel = {
   loading: "Loading",
+  pending: "Awaiting round",
   stale: "Stale",
   unavailable: "Unavailable",
 } as const;
@@ -94,11 +95,13 @@ export const StatBox: React.FC<StatBoxProps> = ({
   const hasVerifiedValue = status === "fresh" || status === "stale";
   const hint = status === "loading"
     ? "Loading verified source…"
-    : status === "unavailable"
-      ? (subtext ?? "Verified source unavailable")
-      : status === "stale"
-        ? `Last confirmed value${subtext ? ` · ${subtext}` : ""}`
-        : subtext;
+    : status === "pending"
+      ? (subtext ?? "Awaiting the first verified protocol event")
+      : status === "unavailable"
+        ? (subtext ?? "Verified source unavailable")
+        : status === "stale"
+          ? `Last confirmed value${subtext ? ` · ${subtext}` : ""}`
+          : subtext;
 
   return (
     <article className={`metric metric--${status}`}>

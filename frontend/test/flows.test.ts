@@ -15,16 +15,17 @@ import { WalletGateButton } from "../src/components/wallet/WalletGateButton.js";
 import { StatBox } from "../src/components/common/UIPrimitives.js";
 
 describe("Core Product Flows & Interactive Cards Tests", () => {
-  test("unavailable verified metrics explain the first-draw lifecycle", () => {
+  test("new-pool metrics distinguish pending history from unavailable data", () => {
     const markup = renderToStaticMarkup(React.createElement(StatBox, {
-      label: "Verified pool snapshot",
+      label: "Verified eligible weight",
       value: "0 cUSDCMock",
-      status: "unavailable",
-      subtext: "Awaiting the first KMS-finalized draw",
+      status: "pending",
+      subtext: "New pool; appears after the first finalized draw",
     }));
 
-    assert.match(markup, /Unavailable/);
-    assert.match(markup, /Awaiting the first KMS-finalized draw/);
+    assert.match(markup, /Awaiting round/);
+    assert.match(markup, /New pool; appears after the first finalized draw/);
+    assert.doesNotMatch(markup, /Unavailable/);
     assert.doesNotMatch(markup, /0 cUSDCMock/);
   });
 
@@ -123,6 +124,8 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
   test("DepositCard instantiates with deposit handler and validation flags", () => {
     const card = React.createElement(DepositCard, {
       onDeposit: async () => {},
+      onActivate: async () => {},
+      activationPending: false,
       isLoading: false,
       walletConnected: true,
       walletStatus: "connected",
@@ -134,6 +137,27 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     });
     assert.ok(card);
     assert.equal(card.props.walletConnected, true);
+  });
+
+  test("DepositCard exposes recovery when KMS activation remains pending", () => {
+    const markup = renderToStaticMarkup(React.createElement(DepositCard, {
+      onDeposit: async () => {},
+      onActivate: async () => {},
+      activationPending: true,
+      isLoading: false,
+      walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
+      tokenSymbol: "cUSDCMock",
+      tokenDecimals: 6,
+      writesEnabled: true,
+    }));
+
+    assert.match(markup, /Draw activation pending/);
+    assert.match(markup, /Finalize private draw entry/);
+    assert.match(markup, /transfer callback is confirmed/);
+    assert.match(markup, /excluded from prize draws/);
   });
 
   test("WithdrawalCard exposes a direct encrypted withdrawal action", () => {

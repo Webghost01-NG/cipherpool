@@ -2,7 +2,7 @@ import { AbstractProvider, Contract, keccak256 } from "ethers";
 
 const VERIFICATION_ABI = [
   "function custodyAsset() external view returns (address)",
-  "function getTotalAccountedBalanceHandle() external view returns (bytes32)",
+  "function getTotalEligibleBalanceHandle() external view returns (bytes32)",
 ];
 
 export interface PoolDeploymentExpectation {
@@ -49,7 +49,7 @@ export async function verifyPoolDeployment(
   const custodyAssetAddress = await pool.custodyAsset() as string;
   let supportsConfidentialAccounting = false;
   try {
-    const aggregateHandle = await pool.getTotalAccountedBalanceHandle() as string;
+    const aggregateHandle = await pool.getTotalEligibleBalanceHandle() as string;
     supportsConfidentialAccounting = /^0x[a-fA-F0-9]{64}$/.test(aggregateHandle);
   } catch {
     supportsConfidentialAccounting = false;

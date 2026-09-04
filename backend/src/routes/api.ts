@@ -21,7 +21,7 @@ export function createApiRouter(store: IndexerStore): Router {
       confidentialWithdrawalEvents: store.getConfidentialWithdrawalCount().toString(),
       prizeReserveFundingEvents: store.getPrizeReserveFundingCount().toString(),
       prizeReserveFundingModel: "sponsor-funded-testnet",
-      lastVerifiedTotalAccountedBalance: store.getTotalAccountedBalance().toString(),
+      lastVerifiedTotalEligibleBalance: store.getTotalAccountedBalance().toString(),
       totalDraws: store.getDrawCount(),
       latestDraw: latest
         ? {

@@ -6,15 +6,16 @@ The active pool uses the official Zama `cUSDCMock` ERC-7984 wrapper on Ethereum 
 
 | Component | Address | Block | Transaction | Runtime code hash |
 | --- | --- | ---: | --- | --- |
-| ConfidentialPool | `0x63bA2DF59b43801492060f2cc5D071155C45dD47` | `11635277` | [`0x889310...`](https://sepolia.etherscan.io/tx/0x88931045f63a8e66af7d8c165f8bc7d09be56784926db2852651a564b4553c94) | `0x4200e0006ccec7cfee9840944ac3b17996d078932dc4610155affab5e1fcd222` |
+| ConfidentialPool | `0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8` | `11635612` | [`0x381895...`](https://sepolia.etherscan.io/tx/0x3818956361bc145697a7a956947a494298d5a70ff491a3211e5674a5377b8bc6) | `0xe393050b9bdccc1802dcdef00bf8f7329b629c0e223d56fcd2a380e2a38c7abe` |
 | Official cUSDCMock | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` | Zama-managed | [Contract](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) | Upgradeable proxy |
 
 Verified initial state:
 
 - Owner: `0xF19125e08AFC9502DCde60703c1E24C334902356`
 - Custody asset: official cUSDCMock address above
-- Runtime size: `19,501` bytes
+- Runtime size: `20,143` bytes
 - Cancellation delay: `86,400` seconds
+- Draw interval: `604,800` seconds; fixed prize: `500,000` base units
 - Paused: `false`; draw count and participant count: `0`
 
 ## Predecessor ERC-7984 Round Trip
@@ -50,7 +51,7 @@ Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow b
 
 ## Runtime Activation
 
-The backend must use `INDEXER_START_BLOCK=11635277` and namespace its checkpoint by chain ID plus lowercased pool address. Configure the frontend and backend with the address, custody asset, and runtime hash above. Enable frontend writes only after both services pass their deployment checks. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state.
+The backend uses `INDEXER_START_BLOCK=11635612` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. The positive-position activation changes in the current source require another atomic contract and service migration before they are live.
 
 ## Rollback
 
