@@ -1,12 +1,17 @@
 import React, { useState } from "react";
 import { ArrowUpRight, Info } from "lucide-react";
 import { parseUnits } from "ethers";
-import { Badge, Button, Card } from "../common/UIPrimitives.js";
+import { Badge, Card } from "../common/UIPrimitives.js";
+import { WalletGateButton } from "../wallet/WalletGateButton.js";
+import type { WalletStatus } from "../../hooks/useWallet.js";
 
 export interface WithdrawalCardProps {
   onWithdraw: (amount: bigint) => Promise<void>;
   isLoading: boolean;
   walletConnected: boolean;
+  walletStatus: WalletStatus;
+  onWalletAction: () => void;
+  walletActionEnabled: boolean;
   tokenSymbol: string;
   tokenDecimals: number;
   writesEnabled: boolean;
@@ -16,6 +21,9 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
   onWithdraw,
   isLoading,
   walletConnected,
+  walletStatus,
+  onWalletAction,
+  walletActionEnabled,
   tokenSymbol,
   tokenDecimals,
   writesEnabled,
@@ -64,9 +72,20 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
           <Info size={17} aria-hidden="true" />
           <span>ERC-7984 transfers zero if your private balance is insufficient. Reveal your position afterward to verify the result.</span>
         </div>
-        <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !amount} isLoading={isLoading}>
-          <ArrowUpRight size={17} /> {!writesEnabled ? "Withdrawals safety-locked" : walletConnected ? "Withdraw privately" : "Connect wallet to withdraw"}
-        </Button>
+        <WalletGateButton
+          className="button--wide"
+          type="submit"
+          disabled={!walletConnected || !writesEnabled || !amount}
+          isLoading={isLoading}
+          walletStatus={walletStatus}
+          onWalletAction={onWalletAction}
+          walletActionEnabled={walletActionEnabled}
+          connectLabel="Connect wallet to withdraw"
+          switchNetworkLabel="Switch to Sepolia to withdraw"
+          lockedLabel="Withdrawals safety-locked"
+        >
+          <ArrowUpRight size={17} /> {!writesEnabled ? "Withdrawals safety-locked" : "Withdraw privately"}
+        </WalletGateButton>
       </form>
     </Card>
   );

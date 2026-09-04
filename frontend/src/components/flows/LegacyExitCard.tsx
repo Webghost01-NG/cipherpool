@@ -1,6 +1,8 @@
 import React from "react";
 import { ArchiveRestore, Clock3, ExternalLink, RotateCcw, ShieldCheck } from "lucide-react";
 import { Badge, Button, Card } from "../common/UIPrimitives.js";
+import { WalletGateButton } from "../wallet/WalletGateButton.js";
+import type { WalletStatus } from "../../hooks/useWallet.js";
 import type { PendingWithdrawal } from "../../hooks/usePool.js";
 import { formatTokenAmount, shortenHex } from "../../utils/format.js";
 
@@ -10,6 +12,8 @@ export interface LegacyExitCardProps {
   pendingWithdrawal: PendingWithdrawal;
   cancellationDelaySeconds: number;
   walletConnected: boolean;
+  walletStatus: WalletStatus;
+  onWalletAction: () => void;
   isLoading: boolean;
   isChecking: boolean;
   error: string | null;
@@ -25,6 +29,8 @@ export const LegacyExitCard: React.FC<LegacyExitCardProps> = ({
   pendingWithdrawal,
   cancellationDelaySeconds,
   walletConnected,
+  walletStatus,
+  onWalletAction,
   isLoading,
   isChecking,
   error,
@@ -54,7 +60,19 @@ export const LegacyExitCard: React.FC<LegacyExitCardProps> = ({
 
       {error && <div className="callout" role="alert"><ArchiveRestore size={17} /><span>{error}</span></div>}
       {!error && !walletConnected && (
-        <div className="callout"><ShieldCheck size={17} /><span>Connect the wallet that created the legacy request to check its exit status.</span></div>
+        <div className="stack">
+          <div className="callout"><ShieldCheck size={17} /><span>Connect the wallet that created the legacy request to check its exit status.</span></div>
+          <WalletGateButton
+            className="button--wide"
+            variant="secondary"
+            walletStatus={walletStatus}
+            onWalletAction={onWalletAction}
+            connectLabel="Connect wallet to check exits"
+            switchNetworkLabel="Switch to Sepolia to check exits"
+          >
+            Check archived exits
+          </WalletGateButton>
+        </div>
       )}
       {!error && walletConnected && !pendingWithdrawal.hasPending && (
         <div className="callout"><ShieldCheck size={17} /><span>{isChecking ? "Checking the archived pool…" : "No pending legacy withdrawal was found for this wallet."}</span></div>

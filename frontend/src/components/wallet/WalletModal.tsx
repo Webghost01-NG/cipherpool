@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { AlertTriangle, ArrowRight, ShieldCheck, Wallet, X } from "lucide-react";
-import { useWallet } from "../../hooks/useWallet.js";
+import { useWallet, type WalletStatus } from "../../hooks/useWallet.js";
 import { useModalFocus } from "../../hooks/useModalFocus.js";
 import { Badge, Button } from "../common/UIPrimitives.js";
 
@@ -9,9 +9,16 @@ export interface WalletModalProps {
   onClose: () => void;
 }
 
+export function shouldCloseWalletModal(status: WalletStatus): boolean {
+  return status === "connected";
+}
+
 export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   const { status, connect, switchNetwork, errorMessage } = useWallet();
   const dialogRef = useModalFocus({ isOpen, onDismiss: onClose });
+  useEffect(() => {
+    if (isOpen && shouldCloseWalletModal(status)) onClose();
+  }, [isOpen, onClose, status]);
   if (!isOpen) return null;
 
   const hasInjectedWallet =
@@ -47,7 +54,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
               <AlertTriangle size={18} aria-hidden="true" />
               <span>This deployment uses Ethereum Sepolia. Your wallet is connected to another network.</span>
             </div>
-            <Button className="button--wide" onClick={() => void switchNetwork().then(onClose).catch(() => undefined)}>
+            <Button className="button--wide" onClick={() => void switchNetwork().catch(() => undefined)}>
               Switch to Sepolia <ArrowRight size={16} />
             </Button>
           </>
@@ -57,7 +64,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
               className="connector"
               type="button"
               disabled={status === "connecting"}
-              onClick={() => void connect().then(onClose).catch(() => undefined)}
+              onClick={() => void connect().catch(() => undefined)}
             >
               <span className="connector__body">
                 <Wallet size={20} aria-hidden="true" />

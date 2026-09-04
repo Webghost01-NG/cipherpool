@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { Badge, Button, Card } from "../common/UIPrimitives.js";
+import { WalletGateButton } from "../wallet/WalletGateButton.js";
+import type { WalletStatus } from "../../hooks/useWallet.js";
 import { formatTokenAmount } from "../../utils/format.js";
 
 export interface BalanceRevealCardProps {
@@ -10,6 +12,9 @@ export interface BalanceRevealCardProps {
   onHide: () => void;
   isLoading: boolean;
   walletConnected: boolean;
+  walletStatus: WalletStatus;
+  onWalletAction: () => void;
+  walletActionEnabled: boolean;
   tokenSymbol: string;
   tokenDecimals: number;
 }
@@ -21,6 +26,9 @@ export const BalanceRevealCard: React.FC<BalanceRevealCardProps> = ({
   onHide,
   isLoading,
   walletConnected,
+  walletStatus,
+  onWalletAction,
+  walletActionEnabled,
   tokenSymbol,
   tokenDecimals,
 }) => {
@@ -56,14 +64,20 @@ export const BalanceRevealCard: React.FC<BalanceRevealCardProps> = ({
         {isRevealed ? (
           <Button variant="secondary" onClick={onHide}><EyeOff size={16} /> Hide balance</Button>
         ) : (
-          <Button
+          <WalletGateButton
             variant="secondary"
             onClick={onReveal}
             disabled={!walletConnected}
             isLoading={isLoading}
+            walletStatus={walletStatus}
+            onWalletAction={onWalletAction}
+            walletActionEnabled={walletActionEnabled}
+            connectLabel="Connect wallet to reveal"
+            switchNetworkLabel="Switch to Sepolia to reveal"
+            lockedLabel="Balance unavailable"
           >
-            <Eye size={16} /> {walletConnected ? "Reveal privately" : "Connect wallet to reveal"}
-          </Button>
+            <Eye size={16} /> Reveal privately
+          </WalletGateButton>
         )}
       </div>
     </Card>

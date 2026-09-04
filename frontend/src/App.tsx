@@ -15,6 +15,7 @@ import { WithdrawalCard } from "./components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "./components/flows/LotteryDrawCard.js";
 import { LegacyExitCard } from "./components/flows/LegacyExitCard.js";
 import { TxStatusModal } from "./components/common/TxStatusModal.js";
+import { WalletModal } from "./components/wallet/WalletModal.js";
 import { useWallet } from "./hooks/useWallet.js";
 import { usePool, TransactionCallbacks } from "./hooks/usePool.js";
 import { useLegacyExit } from "./hooks/useLegacyExit.js";
@@ -53,6 +54,7 @@ export async function revealBalanceWithFeedback(
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("pool");
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const { address, status } = useWallet();
   const {
     poolStats,
@@ -87,6 +89,8 @@ export const App: React.FC = () => {
   } = useTxLifecycle();
 
   const walletReady = status === "connected" && Boolean(address) && asset.isLoaded && configurationErrors.length === 0;
+  const walletConfigurationReady = configurationErrors.length === 0;
+  const walletWriteActionEnabled = walletConfigurationReady && runtimeConfig.protocolWritesEnabled && !poolStats.isPaused;
   const transactionCallbacks: TransactionCallbacks = {
     onBroadcast: (hash) => {
       setBroadcasting(hash);
@@ -131,6 +135,7 @@ export const App: React.FC = () => {
       onTabChange={setActiveTab}
     >
       <TxStatusModal state={txState} onClose={reset} />
+      <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} />
 
       <div className="container dashboard-shell">
         <section className="console-intro" aria-labelledby="console-title">
@@ -267,6 +272,9 @@ export const App: React.FC = () => {
                 onHide={hideBalance}
                 isLoading={isLoading}
                 walletConnected={walletReady}
+                walletStatus={status}
+                onWalletAction={() => setIsWalletModalOpen(true)}
+                walletActionEnabled={walletConfigurationReady}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
               />
@@ -281,6 +289,9 @@ export const App: React.FC = () => {
                 }
                 isLoading={isLoading}
                 walletConnected={walletReady && !poolStats.isPaused}
+                walletStatus={status}
+                onWalletAction={() => setIsWalletModalOpen(true)}
+                walletActionEnabled={walletWriteActionEnabled}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
                 writesEnabled={writesEnabled}
@@ -296,6 +307,9 @@ export const App: React.FC = () => {
                 }
                 isLoading={isLoading}
                 walletConnected={walletReady && !poolStats.isPaused}
+                walletStatus={status}
+                onWalletAction={() => setIsWalletModalOpen(true)}
+                walletActionEnabled={walletWriteActionEnabled}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
                 writesEnabled={writesEnabled}
@@ -319,6 +333,8 @@ export const App: React.FC = () => {
               pendingWithdrawal={legacyExit.pendingWithdrawal}
               cancellationDelaySeconds={legacyExit.cancellationDelaySeconds}
               walletConnected={status === "connected"}
+              walletStatus={status}
+              onWalletAction={() => setIsWalletModalOpen(true)}
               isLoading={legacyExit.isLoading}
               isChecking={legacyExit.isChecking}
               error={legacyExit.error}
@@ -375,6 +391,9 @@ export const App: React.FC = () => {
                 isLoading={isLoading}
                 isOwner={isOwner && !poolStats.isPaused}
                 walletConnected={walletReady && !poolStats.isPaused}
+                walletStatus={status}
+                onWalletAction={() => setIsWalletModalOpen(true)}
+                walletActionEnabled={walletWriteActionEnabled}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
                 writesEnabled={writesEnabled}

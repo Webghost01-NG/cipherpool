@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Dices, Gift, Info, Sparkles } from "lucide-react";
 import { parseUnits } from "ethers";
-import { Badge, Button, Card } from "../common/UIPrimitives.js";
+import { Badge, Card } from "../common/UIPrimitives.js";
+import { WalletGateButton } from "../wallet/WalletGateButton.js";
+import type { WalletStatus } from "../../hooks/useWallet.js";
 import { formatTokenAmount } from "../../utils/format.js";
 
 export interface LotteryDrawCardProps {
@@ -14,6 +16,9 @@ export interface LotteryDrawCardProps {
   isLoading: boolean;
   isOwner: boolean;
   walletConnected: boolean;
+  walletStatus: WalletStatus;
+  onWalletAction: () => void;
+  walletActionEnabled: boolean;
   tokenSymbol: string;
   tokenDecimals: number;
   writesEnabled: boolean;
@@ -29,6 +34,9 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   isLoading,
   isOwner,
   walletConnected,
+  walletStatus,
+  onWalletAction,
+  walletActionEnabled,
   tokenSymbol,
   tokenDecimals,
   writesEnabled,
@@ -106,9 +114,20 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
           </span>
         </label>
         {sponsorError && <p role="alert" className="badge badge--error">{sponsorError}</p>}
-        <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !sponsorAmount} isLoading={isLoading}>
+        <WalletGateButton
+          className="button--wide"
+          type="submit"
+          disabled={!walletConnected || !writesEnabled || !sponsorAmount}
+          isLoading={isLoading}
+          walletStatus={walletStatus}
+          onWalletAction={onWalletAction}
+          walletActionEnabled={walletActionEnabled}
+          connectLabel="Connect wallet to fund reserve"
+          switchNetworkLabel="Switch to Sepolia to fund reserve"
+          lockedLabel="Reserve funding safety-locked"
+        >
           <Gift size={17} /> Fund encrypted reserve
-        </Button>
+        </WalletGateButton>
       </form>
       <form className="form-stack" onSubmit={handleDraw} style={{ marginTop: "1rem" }}>
         <label className="field" htmlFor="draw-prize-input">
@@ -133,9 +152,20 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
         {(!isOwner || !writesEnabled) && (
           <div className="callout"><Info size={17} /><span>{!writesEnabled ? "Draw execution is locked until deployment verification and the operational safety switch both pass." : "Only the verified pool owner can execute a draw. Connected savers can monitor confirmed rounds here."}</span></div>
         )}
-        <Button className="button--wide" type="submit" disabled={!isOwner || !writesEnabled || !drawPrize} isLoading={isLoading}>
+        <WalletGateButton
+          className="button--wide"
+          type="submit"
+          disabled={!isOwner || !writesEnabled || !drawPrize}
+          isLoading={isLoading}
+          walletStatus={walletStatus}
+          onWalletAction={onWalletAction}
+          walletActionEnabled={walletActionEnabled}
+          connectLabel="Connect wallet to check draw access"
+          switchNetworkLabel="Switch to Sepolia to check draw access"
+          lockedLabel="Draws safety-locked"
+        >
           <Sparkles size={17} /> {writesEnabled ? "Execute encrypted draw" : "Draws safety-locked"}
-        </Button>
+        </WalletGateButton>
       </form>
     </Card>
   );
