@@ -163,6 +163,8 @@ $$\text{availableYieldPlain} = \max(0, \text{custody} - \text{base liability} - 
 
 Draw finalization credits the encrypted award to `_balances` and mirrors it in `_prizes` as private metadata; `compoundPrizes()` only clears that metadata and does not change aggregate liability. Because a distinctive caller-initiated compounding transaction can leak claim intent through timing, the production UI does not use it. Prize claims instead use the same encrypted `withdraw` selector as principal exits. Successful withdrawals consume the caller's encrypted prize counter first, without publishing the amount or the prize/principal split.
 
+The updated contract source makes finalization permissionless after a draw request is committed. A keeper can only relay the aggregate values and KMS proof: `FHE.checkSignatures` binds those values to the request's stored total and reserve handles, while the request already fixes the prize amount. Deleting the request before winner evaluation and reverting when no request exists preserve single-use settlement and replay protection. Draw requests remain owner-controlled and are tracked separately. The active Sepolia deployment predates this source change, so permissionless finalization is not claimed for that address until a verified redeployment occurs.
+
 ---
 
 ## 6. Acceptance Criteria Checklist & Phase 3 Handoff
