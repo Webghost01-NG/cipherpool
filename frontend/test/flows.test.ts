@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
+import { revealBalanceWithFeedback } from "../src/App.js";
 import { BalanceRevealCard } from "../src/components/flows/BalanceRevealCard.js";
 import { DepositCard } from "../src/components/flows/DepositCard.js";
 import { WithdrawalCard } from "../src/components/flows/WithdrawalCard.js";
@@ -8,6 +9,43 @@ import { LotteryDrawCard } from "../src/components/flows/LotteryDrawCard.js";
 import { LegacyExitCard } from "../src/components/flows/LegacyExitCard.js";
 
 describe("Core Product Flows & Interactive Cards Tests", () => {
+  test("private balance reveal reports truthful success feedback", async () => {
+    const events: string[] = [];
+
+    await revealBalanceWithFeedback(
+      async () => { events.push("revealed"); },
+      {
+        start: (_title, details) => events.push(details ?? ""),
+        confirm: (details) => events.push(details ?? ""),
+        fail: () => events.push("failed"),
+      }
+    );
+
+    assert.deepEqual(events, [
+      "Approve the private decryption request in your wallet. This signature does not broadcast a transaction.",
+      "revealed",
+      "Balance decrypted locally. No blockchain transaction was submitted.",
+    ]);
+  });
+
+  test("private balance reveal catches and surfaces failures", async () => {
+    const failure = new Error("Wallet rejected the decryption signature.");
+    let surfacedError: Error | string | null = null;
+    let confirmed = false;
+
+    await revealBalanceWithFeedback(
+      async () => { throw failure; },
+      {
+        start: () => undefined,
+        confirm: () => { confirmed = true; },
+        fail: (error) => { surfacedError = error; },
+      }
+    );
+
+    assert.equal(surfacedError, failure);
+    assert.equal(confirmed, false);
+  });
+
   test("BalanceRevealCard instantiates in concealed state by default", () => {
     const card = React.createElement(BalanceRevealCard, {
       isRevealed: false,

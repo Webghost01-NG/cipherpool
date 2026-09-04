@@ -26,13 +26,13 @@ export const useTxLifecycle = () => {
     details: null,
   });
 
-  const startTx = useCallback((actionTitle: string) => {
+  const startTx = useCallback((actionTitle: string, details?: string) => {
     setTxState({
       phase: "PROMPTED",
       actionTitle,
       txHash: null,
       errorMessage: null,
-      details: "Please approve the transaction request in your connected wallet.",
+      details: details ?? "Please approve the transaction request in your connected wallet.",
     });
   }, []);
 
