@@ -1,12 +1,17 @@
-import { formatUnits } from "ethers";
-
 export function formatTokenAmount(
   value: string | bigint,
   decimals: number,
   maximumFractionDigits = 2
 ): string {
-  const [whole, fraction = ""] = formatUnits(value, decimals).split(".");
-  const groupedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const amount = BigInt(value);
+  const sign = amount < 0n ? "-" : "";
+  const absoluteAmount = amount < 0n ? -amount : amount;
+  const base = 10n ** BigInt(decimals);
+  const whole = (absoluteAmount / base).toString();
+  const fraction = decimals > 0
+    ? (absoluteAmount % base).toString().padStart(decimals, "0")
+    : "";
+  const groupedWhole = sign + whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const trimmedFraction = fraction.slice(0, maximumFractionDigits).replace(/0+$/, "");
   return trimmedFraction ? `${groupedWhole}.${trimmedFraction}` : groupedWhole;
 }

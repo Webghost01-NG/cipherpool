@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { getAddress, hexlify, isAddress } from "ethers";
 import type { FhevmInstance } from "@zama-fhe/relayer-sdk/web";
 
 export interface EncryptedInputPayload {
@@ -42,14 +42,14 @@ export class InputEncryptionAdapter {
     userAddress: string,
     instanceFactory: FhevmInstanceFactory = getBrowserFhevmInstance
   ) {
-    if (!ethers.isAddress(contractAddress)) {
+    if (!isAddress(contractAddress)) {
       throw new Error("Pool contract address is not configured correctly.");
     }
-    if (!ethers.isAddress(userAddress)) {
+    if (!isAddress(userAddress)) {
       throw new Error("Connected wallet address is invalid.");
     }
-    this.contractAddress = ethers.getAddress(contractAddress);
-    this.userAddress = ethers.getAddress(userAddress);
+    this.contractAddress = getAddress(contractAddress);
+    this.userAddress = getAddress(userAddress);
     this.instanceFactory = instanceFactory;
   }
 
@@ -68,8 +68,8 @@ export class InputEncryptionAdapter {
     }
 
     return {
-      handle: ethers.hexlify(encrypted.handles[0]),
-      inputProof: ethers.hexlify(encrypted.inputProof),
+      handle: hexlify(encrypted.handles[0]),
+      inputProof: hexlify(encrypted.inputProof),
     };
   }
 }

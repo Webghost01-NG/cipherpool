@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ethers } from "ethers";
 import { useWallet } from "./useWallet.js";
-import { getBrowserFhevmInstance, InputEncryptionAdapter } from "../../../client/src/adapters/InputEncryption.js";
 import { ERC7984_ABI, POOL_ABI } from "../contracts/abi.js";
 import {
   DEFAULT_BACKEND_URL,
@@ -71,10 +69,9 @@ const initialMetricFreshness: PoolMetricFreshness = {
   participantCount: "loading",
 };
 
-const DEPOSIT_ACTION = ethers.id("CIPHERPOOL_DEPOSIT_V1");
-const PRIZE_RESERVE_ACTION = ethers.id("CIPHERPOOL_PRIZE_RESERVE_V1");
+const ZERO_HASH = `0x${"0".repeat(64)}`;
 
-function ensureReceipt(receipt: ethers.ContractTransactionReceipt | null): ethers.ContractTransactionReceipt {
+function ensureReceipt<T extends { status: number | null; hash: string }>(receipt: T | null): T {
   if (!receipt || receipt.status !== 1) throw new Error("Transaction was not confirmed on-chain.");
   return receipt;
 }
@@ -99,7 +96,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       active: false,
       prizeAmount: "0",
       timestamp: 0,
-      requestHash: ethers.ZeroHash,
+      requestHash: ZERO_HASH,
     },
   });
   const [asset, setAsset] = useState<AssetMetadata>({
@@ -181,6 +178,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     }
 
     try {
+      const { ethers } = await import("../utils/walletRuntime.js");
       const provider = new ethers.BrowserProvider(window.ethereum);
       const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
       const network = await provider.getNetwork();
@@ -291,10 +289,14 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     requireVerifiedWrites();
     setIsLoading(true);
     try {
+      const [{ ethers }, { InputEncryptionAdapter }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const encrypted = await new InputEncryptionAdapter(asset.address, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const token = new ethers.Contract(asset.address, ERC7984_ABI, await provider.getSigner());
-      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [DEPOSIT_ACTION]);
+      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [ethers.id("CIPHERPOOL_DEPOSIT_V1")]);
       const transaction = await token.confidentialTransferAndCall(contractAddress, encrypted.handle, encrypted.inputProof, actionData);
       callbacks.onBroadcast?.(transaction.hash);
       const receipt = ensureReceipt(await transaction.wait());
@@ -310,6 +312,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     requireVerifiedWrites();
     setIsLoading(true);
     try {
+      const [{ ethers }, { InputEncryptionAdapter }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const encrypted = await new InputEncryptionAdapter(contractAddress, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
@@ -328,10 +334,14 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     requireVerifiedWrites();
     setIsLoading(true);
     try {
+      const [{ ethers }, { InputEncryptionAdapter }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const encrypted = await new InputEncryptionAdapter(asset.address, address).encryptUint64(amount);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const token = new ethers.Contract(asset.address, ERC7984_ABI, await provider.getSigner());
-      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [PRIZE_RESERVE_ACTION]);
+      const actionData = ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [ethers.id("CIPHERPOOL_PRIZE_RESERVE_V1")]);
       const transaction = await token.confidentialTransferAndCall(
         contractAddress,
         encrypted.handle,
@@ -351,6 +361,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
     setIsLoading(true);
     try {
+      const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const handle = await new ethers.Contract(contractAddress, POOL_ABI, provider).getBalanceHandle(address) as string;
@@ -388,6 +402,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
     setIsLoading(true);
     try {
+      const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const handle = await new ethers.Contract(contractAddress, POOL_ABI, provider).getPrizeHandle(address) as string;
@@ -437,6 +455,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     if (address.toLowerCase() !== poolStats.owner.toLowerCase()) throw new Error("Only the pool owner can execute a draw.");
     setIsLoading(true);
     try {
+      const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
       const requestTx = await pool.requestDraw(prizeAmount);

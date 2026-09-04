@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Dices, Gift, Info, Sparkles } from "lucide-react";
-import { parseUnits } from "ethers";
 import { Badge, Card } from "../common/UIPrimitives.js";
 import { WalletGateButton } from "../wallet/WalletGateButton.js";
 import type { WalletStatus } from "../../hooks/useWallet.js";
 import { formatTokenAmount } from "../../utils/format.js";
+import { parseTokenAmount } from "../../utils/tokenAmount.js";
 
 export interface LotteryDrawCardProps {
   prizeReserve: string;
@@ -59,7 +59,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   const handleSponsor = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      const value = parseUnits(sponsorAmount, tokenDecimals);
+      const value = parseTokenAmount(sponsorAmount, tokenDecimals);
       if (value <= 0n) throw new Error("Enter a contribution greater than zero.");
       setSponsorError(null);
       await onFundReserve(value);
@@ -72,7 +72,7 @@ export const LotteryDrawCard: React.FC<LotteryDrawCardProps> = ({
   const handleDraw = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      const value = parseUnits(drawPrize, tokenDecimals);
+      const value = parseTokenAmount(drawPrize, tokenDecimals);
       if (value <= 0n) throw new Error("Enter a prize greater than zero.");
       setValidationError(null);
       await onExecuteDraw(value);

@@ -94,10 +94,10 @@ describe("Wallet Connector & Network Guard Tests", () => {
     );
   });
 
-  test("canonicalizes provider accounts before ethers receives them", () => {
+  test("normalizes provider accounts before a deferred web3 call receives them", () => {
     const incorrectlyCased = "0xAbcdefabcdefabcdefabcdefabcdefabcdefabcd";
     assert.deepEqual(parseWalletAccounts([incorrectlyCased]), [
-      "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD",
+      "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
     ]);
   });
 
