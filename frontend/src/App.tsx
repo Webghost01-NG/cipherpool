@@ -5,7 +5,6 @@ import {
   Fingerprint,
   KeyRound,
   Layers3,
-  LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
 import { Layout } from "./components/layout/Layout.js";
@@ -27,6 +26,7 @@ import {
   runtimeConfig,
 } from "./contracts/config.js";
 import { formatTokenAmount } from "./utils/format.js";
+import { getNetworkStatus } from "./utils/networkStatus.js";
 import { getPoolStatus } from "./utils/poolStatus.js";
 
 interface PrivateRevealFeedback {
@@ -116,6 +116,7 @@ export const App: React.FC = () => {
 
   const totalDeposits = formatTokenAmount(poolStats.totalDeposits, asset.decimals);
   const prizeReserve = formatTokenAmount(poolStats.prizeReserve, asset.decimals);
+  const networkStatus = getNetworkStatus(status);
   const poolStatus = getPoolStatus(deploymentVerification.status, poolStats.isPaused);
   const hasDrawCount = metricFreshness.totalDraws === "fresh" || metricFreshness.totalDraws === "stale";
   const runBalanceReveal = () => revealBalanceWithFeedback(revealBalance, {
@@ -159,7 +160,10 @@ export const App: React.FC = () => {
             <dl className="assurance-list">
               <div>
                 <dt>Network</dt>
-                <dd><LockKeyhole size={13} /> Ethereum Sepolia</dd>
+                <dd>
+                  <span className={"status-dot " + (networkStatus.isHealthy ? "status-dot--ok" : "status-dot--warn")} />
+                  {networkStatus.label}
+                </dd>
               </div>
               <div>
                 <dt>Indexer</dt>
@@ -218,7 +222,10 @@ export const App: React.FC = () => {
                 <span className={"status-dot " + (poolStatus.isHealthy ? "status-dot--ok" : "status-dot--warn")} />
                 {poolStatus.label}
               </span>
-              <span className="status-item"><LockKeyhole size={13} /> Ethereum Sepolia</span>
+              <span className="status-item">
+                <span className={"status-dot " + (networkStatus.isHealthy ? "status-dot--ok" : "status-dot--warn")} />
+                {networkStatus.label}
+              </span>
               <span className="status-item">
                 <span className={"status-dot " + (deploymentVerification.status === "verified" ? "status-dot--ok" : "status-dot--warn")} />
                 Deployment {deploymentVerification.status}

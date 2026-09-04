@@ -10,6 +10,7 @@ import {
   runtimeConfig,
 } from "../contracts/config.js";
 import { validateDeploymentEvidence } from "../contracts/deployment.js";
+import { canReadSepoliaContracts } from "../utils/networkStatus.js";
 
 export interface PoolStats {
   totalDeposits: string;
@@ -150,11 +151,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setBackendStatus("offline");
     }
 
-    if (!window.ethereum || status === "wrong_network") {
+    if (!canReadSepoliaContracts(status, Boolean(window.ethereum))) {
       setDeploymentVerification({
         status: "pending",
         message: status === "wrong_network" ? "Switch the connected wallet to Ethereum Sepolia." : "Connect a Sepolia wallet to verify the active deployment.",
       });
+      setDataError(null);
       setLastUpdatedAt(Date.now());
       return;
     }
@@ -162,9 +164,20 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const pool = new ethers.Contract(contractAddress, POOL_ABI, provider);
-      const [network, poolCode, total, reserve, verifiedAt, totalDraws, participantCount, paused, owner, custodyAddress] = await Promise.all([
-        provider.getNetwork(),
-        provider.getCode(contractAddress),
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== runtimeConfig.chainId) {
+        throw new Error("Wallet is not connected to Ethereum Sepolia.");
+      }
+      const poolCode = await provider.getCode(contractAddress);
+      if (poolCode === "0x") {
+        throw new Error("The configured CipherPool contract was not found on Ethereum Sepolia.");
+      }
+      const observedPoolCodeHash = ethers.keccak256(poolCode);
+      if (observedPoolCodeHash.toLowerCase() !== runtimeConfig.poolRuntimeCodeHash.toLowerCase()) {
+        throw new Error("The configured CipherPool bytecode does not match the reviewed Sepolia deployment.");
+      }
+
+      const [total, reserve, verifiedAt, totalDraws, participantCount, paused, owner, custodyAddress] = await Promise.all([
         pool.lastVerifiedTotalAccountedBalance() as Promise<bigint>,
         pool.lastVerifiedPrizeReserve() as Promise<bigint>,
         pool.lastDrawVerificationTimestamp() as Promise<bigint>,
@@ -192,7 +205,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         {
           chainId: Number(network.chainId),
           poolAddress: contractAddress,
-          poolRuntimeCodeHash: poolCode === "0x" ? "" : ethers.keccak256(poolCode),
+          poolRuntimeCodeHash: observedPoolCodeHash,
           custodyAssetAddress: custodyAddress,
           tokenSymbol: symbol,
           tokenDecimals: Number(decimals),
