@@ -45,7 +45,7 @@ export function createApiRouter(store: IndexerStore): Router {
 
     res.status(410).json({
       error: "PrivateMetric",
-      message: "CipherPool does not index plaintext user deposits. Reveal the encrypted position with the connected wallet.",
+      message: "Veylott does not index plaintext user deposits. Reveal the encrypted position with the connected wallet.",
     });
   });
 

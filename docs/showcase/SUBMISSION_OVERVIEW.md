@@ -1,28 +1,28 @@
-# CipherPool Submission Overview
+# Veylott Submission Overview
 
 ## Product
 
-CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC deposit, position, withdrawal, prize counter, and winning outcome encrypted while selecting a winner over encrypted balance weights.
+Veylott is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC deposit, position, withdrawal, prize counter, and winning outcome encrypted while selecting a winner over encrypted balance weights.
 
-- Application: [cipherpool-beta.vercel.app](https://cipherpool-beta.vercel.app)
-- Pool: [`0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8`](https://sepolia.etherscan.io/address/0xC37992f74De5bE0459FAceEB1Bc2e9199B0221A8)
+- Application: [veylott.vercel.app](https://veylott.vercel.app)
+- Pool: [`0x54FdC46D0EA722EfA4853192678b35fCABFad99C`](https://sepolia.etherscan.io/address/0x54FdC46D0EA722EfA4853192678b35fCABFad99C)
 - Official cUSDCMock: [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639)
 - Network: Ethereum Sepolia
 
 ## Core Flow
 
 1. A wallet encrypts a `uint64` deposit for the official cUSDC contract.
-2. `confidentialTransferAndCall` moves cUSDC and passes the actual encrypted result to CipherPool.
-3. CipherPool updates the user position and aggregate liability homomorphically. The current source admits a new draw participant only after a KMS proof verifies the encrypted positive-position predicate; deployment is required before presenting this activation flow as live.
+2. `confidentialTransferAndCall` moves cUSDC and passes the actual encrypted result to Veylott.
+3. Veylott updates the user position and aggregate liability homomorphically. The active deployment admits a new draw participant only after a KMS proof verifies the encrypted positive-position predicate.
 4. A sponsor contributes encrypted cUSDC to the Sepolia prize reserve; this is explicitly not presented as generated yield.
 5. Any wallet requests the next cadence-eligible, policy-sized draw, anchoring publicly decryptable aggregate weight and reserve handles while balance mutations are locked.
 6. A KMS proof verifies both aggregate handles. `FHE.randEuint64` and encrypted cumulative intervals award the prize without revealing the winning address.
 7. Each saver can privately reveal only their own prize counter; a winner claims through the same encrypted withdrawal path as principal, so the public call does not identify whether withdrawn value was winnings or savings.
-8. A saver withdraws directly with an encrypted amount; CipherPool and cUSDC update both sides using the actual encrypted transfer result.
+8. A saver withdraws directly with an encrypted amount; Veylott and cUSDC update both sides using the actual encrypted transfer result.
 
 ## Evidence
 
-- The active permissionless-draw runtime is 20,143 bytes and matches hash `0xe393050b9bdccc1802dcdef00bf8f7329b629c0e223d56fcd2a380e2a38c7abe`.
+- The active activation-enabled runtime is 12,756 bytes and matches hash `0x9568c86d6d8a2ed93bcb6b229b3c3c0bc3ad8468cde60abc2ce671bc73a397a5`.
 - Predecessor pool `0x9c939b82…191e0` completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal before the permissionless-finalization migration.
 - Draw 1 finalized with verified weight and prize of 500,000 base units; authorized post-settlement KMS decryption returned a zero private position and zero prize counter.
 - Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).

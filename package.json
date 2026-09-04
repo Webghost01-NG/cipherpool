@@ -1,5 +1,5 @@
 {
-  "name": "zama",
+  "name": "veylott",
   "version": "1.0.0",
   "description": "A rigorous security research, formal analysis, and adversarial verification project focused on confidential prize savings protocols built on Zama's Fully Homomorphic Encryption Virtual Machine (fhEVM).",
   "main": "index.js",
@@ -19,15 +19,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Webghost01-NG/cipherpool.git"
+    "url": "git+https://github.com/Webghost01-NG/veylott.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Webghost01-NG/cipherpool/issues"
+    "url": "https://github.com/Webghost01-NG/veylott/issues"
   },
-  "homepage": "https://github.com/Webghost01-NG/cipherpool#readme",
+  "homepage": "https://github.com/Webghost01-NG/veylott#readme",
   "dependencies": {
     "@fhevm/solidity": "0.13.3",
     "@openzeppelin/contracts": "^5.6.1",

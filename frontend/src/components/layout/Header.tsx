@@ -1,5 +1,4 @@
 import React from "react";
-import { Fingerprint } from "lucide-react";
 import { WalletButton } from "../wallet/WalletButton.js";
 
 export interface HeaderProps {
@@ -19,10 +18,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => (
     <header className="site-header">
       <div className="container header-inner">
-        <button className="brand" type="button" onClick={() => onTabChange?.("pool")} aria-label="CipherPool home">
-          <span className="brand__mark"><Fingerprint size={21} aria-hidden="true" /></span>
+        <button className="brand" type="button" onClick={() => onTabChange?.("pool")} aria-label="Veylott home">
+          <span className="brand__mark"><img src="/veylott-mark.svg" alt="" aria-hidden="true" /></span>
           <span>
-            <span className="brand__name">CipherPool</span>
+            <span className="brand__name">Veylott</span>
             <span className="brand__tag">Private prize savings</span>
           </span>
         </button>

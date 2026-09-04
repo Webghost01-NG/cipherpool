@@ -2,9 +2,9 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
-**Issue Reference:** [#5 — audit(stale): Evaluate stale handle dynamics, cancellation windows, and race conditions](https://github.com/Webghost01-NG/cipherpool/issues/5)
+**Issue Reference:** [#5 — audit(stale): Evaluate stale handle dynamics, cancellation windows, and race conditions](https://github.com/Webghost01-NG/veylott/issues/5)
 **Milestone:** Phase 3 — Core Protocol & Smart Contract Implementation  
-**Protocol:** CipherPool  
+**Protocol:** Veylott
 **Author:** Security Research Team  
 **Status:** Audit Complete & Verified  
 
@@ -12,13 +12,13 @@
 
 ## 1. Executive Summary
 
-Because CipherPool’s 2-step withdrawal protocol bridges synchronous EVM smart contract logic with an asynchronous off-chain threshold Key Management System (KMS), the system introduces a **temporal latency gap**:
+Because Veylott’s 2-step withdrawal protocol bridges synchronous EVM smart contract logic with an asynchronous off-chain threshold Key Management System (KMS), the system introduces a **temporal latency gap**:
 
 $$\Delta t_{\text{settlement}} = t_{\text{finalize}} - t_{\text{request}}$$
 
 During this window, an unfinalized ciphertext handle remains stored in contract state. If the off-chain KMS nodes experience temporary downtime, network partition, or severe relayer congestion, withdrawal requests could theoretically become trapped unless a trust-minimized escape mechanism is provided.
 
-CipherPool implements an emergency escape mechanism via `cancelWithdrawal()`, gated by an immutable parameter:
+Veylott implements an emergency escape mechanism via `cancelWithdrawal()`, gated by an immutable parameter:
 
 $$\text{cancellationDelay} = 1\text{ days} = 86,400\text{ seconds}$$
 

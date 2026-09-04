@@ -11,19 +11,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SHOWCASE = ROOT / "docs" / "showcase" / "presentation"
 ASSETS = SHOWCASE / "assets"
-OUTPUT = SHOWCASE / "CipherPool-Demo.mp4"
+OUTPUT = SHOWCASE / "Veylott-Demo.mp4"
 
 NARRATION = [
-    "CipherPool is private prize savings built on Zama F H E V M. It protects balances and ticket weights while keeping custody and settlement independently verifiable. The current deployment is research software on Ethereum Sepolia.",
-    "Public ledgers make financial state easy to inspect. A savings balance, ticket weight, and transaction timing can expose intent or make high value users easy to track. CipherPool preserves auditability without publishing every private position.",
+    "Veylott is private prize savings built on Zama F H E V M. It protects balances and ticket weights while keeping custody and settlement independently verifiable. The current deployment is research software on Ethereum Sepolia.",
+    "Public ledgers make financial state easy to inspect. A savings balance, ticket weight, and transaction timing can expose intent or make high value users easy to track. Veylott preserves auditability without publishing every private position.",
     "A deposit transfers confidential c U S D C, and the pool credits only the token returned encrypted result. Balances and draw weights remain encrypted. A saver can reveal a balance locally only after signing a wallet authorization.",
     "The React application reads Ethereum Sepolia and sends explicit wallet signed transactions. The pool owns encrypted accounting and prize liabilities, while sponsors fund the encrypted testnet prize reserve. Zama's relayer and K M S prepare decryption evidence. The public indexer stores durable checkpoints in Postgre S Q L.",
     "This is the production interface captured from Vercel. A disconnected session shows only Connect wallet. An address appears only after the provider returns one. Public protocol status remains visible, and deployment bindings are verified before writes can proceed.",
     "The journey has four explicit steps. Wrap test U S D C into official confidential c U S D C. Deposit an encrypted amount. Fund or monitor a K M S verified prize round. Then withdraw c U S D C directly. Every transaction still requires wallet confirmation.",
     "The contracts bind encrypted credit to the token returned transfer, consume sponsor funded reserves when awarding prizes, and keep winner credits in the aggregate liability. Draw proofs are bound to stored handles. Anyone can release a stale draw lock after twenty four hours. Sepolia does not claim generated yield.",
-    "This is not a simulated transaction. On the corrected active pool, a real encrypted half c U S D C deposit entered draw one. Zama K M S finalized the winner selection. The winner privately detected and claimed the prize through an ordinary withdrawal, then recovered the remaining principal. Every receipt and the authorized post settlement check are linked in the repository.",
+    "This is not a simulated transaction. On a documented predecessor deployment, a real encrypted half c U S D C deposit entered draw one. Zama K M S finalized the winner selection. The winner privately detected and claimed the prize through an ordinary withdrawal, then recovered the remaining principal. Every historical receipt and the authorized post settlement check are linked in the repository.",
     "Reproducible validation covers Solidity invariants, backend A P I and indexer behavior, the client encryption adapter, and frontend user experience. The frontend runs on Vercel, the read only indexer A P I on Render, and Postgre S Q L storage lets the indexer resume from its saved checkpoint after restart.",
-    "CipherPool demonstrates that private savings can remain usable and verifiable. Open the live research app, inspect the active Sepolia contracts, and review every security decision and test in the public repository.",
+    "Veylott demonstrates that private savings can remain usable and verifiable. Open the live research app, inspect the active Sepolia contracts, and review every security decision and test in the public repository.",
 ]
 
 
@@ -61,7 +61,7 @@ def main():
     if len(slides) != len(NARRATION):
         raise SystemExit(f"Expected {len(NARRATION)} rendered slides, found {len(slides)} in {ASSETS}")
 
-    with tempfile.TemporaryDirectory(prefix="cipherpool-video-") as temp_name:
+    with tempfile.TemporaryDirectory(prefix="veylott-video-") as temp_name:
         temp = Path(temp_name)
         segments = []
         caption_blocks = []

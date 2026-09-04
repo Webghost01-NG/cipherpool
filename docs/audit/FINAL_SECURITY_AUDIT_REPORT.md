@@ -1,8 +1,8 @@
-# CipherPool Protocol — Final Security Audit & Verification Report
+# Veylott Protocol — Final Security Audit & Verification Report
 
 > **Archived design:** This report predates the ERC-7984 custody migration and is not a current security attestation. Use the active tests and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md) as current evidence.
 
-**Protocol Name:** CipherPool (Confidential Prize Savings Protocol)  
+**Protocol Name:** Veylott (Confidential Prize Savings Protocol)
 **Target Platform:** Zama fhEVM v0.13.3 (Ethereum Sepolia Testnet)  
 **Date:** September 2026  
 **Auditor / Verification Lead:** Protocol Security & Formal Verification Group  
@@ -13,7 +13,7 @@
 
 ## 1. Executive Summary
 
-CipherPool is an encrypted, no-loss prize savings protocol built on Zama's Fully Homomorphic Encryption Virtual Machine (fhEVM). User deposit balances, ticket shares, lottery ticket draws, and balance reveal flows are maintained as encrypted ciphertexts (`euint64`) on-chain.
+Veylott is an encrypted, no-loss prize savings protocol built on Zama's Fully Homomorphic Encryption Virtual Machine (fhEVM). User deposit balances, ticket shares, lottery ticket draws, and balance reveal flows are maintained as encrypted ciphertexts (`euint64`) on-chain.
 
 This report consolidates formal proofs, forensic codebase examinations, adversarial exploit simulations, and end-to-end multi-user integration tests executed across Phases 1 through 6.
 

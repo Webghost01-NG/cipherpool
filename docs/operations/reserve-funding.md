@@ -2,15 +2,15 @@
 
 ## Honest Testnet Model
 
-CipherPool’s Sepolia reserve is funded by voluntary sponsor contributions of official `cUSDCMock`. It is not described as generated yield. Contributions use the same ERC-7984 transfer-and-callback path as deposits but carry `CIPHERPOOL_PRIZE_RESERVE_V1`, so the pool credits only the encrypted amount actually transferred. `PrizeReserveFunded` records the sponsor and ciphertext handle without exposing the amount.
+Veylott’s Sepolia reserve is funded by voluntary sponsor contributions of official `cUSDCMock`. It is not described as generated yield. Contributions use the same ERC-7984 transfer-and-callback path as deposits but carry `CIPHERPOOL_PRIZE_RESERVE_V1`, so the pool credits only the encrypted amount actually transferred. `PrizeReserveFunded` records the sponsor and ciphertext handle without exposing the amount.
 
 The former `ConfidentialVault` was removed because it only held plaintext tokens and treated unsolicited balance increases as yield. It had no lending or ERC-4626 integration and could not prove where an increase originated.
 
 ## Why Aave Is Not Wired In
 
-The [official Zama Sepolia cUSDC wrapper](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md) reports underlying token `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`. [Aave’s official Sepolia address book](https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Sepolia.sol) lists USDC `0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8`. These are different assets. Sending CipherPool’s underlying to the Aave market would fail, while substituting or minting an equivalent amount would create an unverifiable bridge.
+The [official Zama Sepolia cUSDC wrapper](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md) reports underlying token `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`. [Aave’s official Sepolia address book](https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Sepolia.sol) lists USDC `0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8`. These are different assets. Sending Veylott’s underlying to the Aave market would fail, while substituting or minting an equivalent amount would create an unverifiable bridge.
 
-[Zama’s production confidential vault design](https://www.zama.org/post/private-deposits-into-public-defi-zamas-first-confidential-vault-design) solves the general ERC-7984/ERC-4626 boundary with OpenZeppelin’s [`BatcherConfidential`](https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/blob/master/contracts/finance/BatcherConfidential.sol): individual encrypted contributions are aggregated, only the batch total is decrypted, and failure paths rewrap funds. That is the appropriate production architecture, but no compatible deployed Sepolia route for CipherPool’s official cUSDC asset was verified.
+[Zama’s production confidential vault design](https://www.zama.org/post/private-deposits-into-public-defi-zamas-first-confidential-vault-design) solves the general ERC-7984/ERC-4626 boundary with OpenZeppelin’s [`BatcherConfidential`](https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/blob/master/contracts/finance/BatcherConfidential.sol): individual encrypted contributions are aggregated, only the batch total is decrypted, and failure paths rewrap funds. That is the appropriate production architecture, but no compatible deployed Sepolia route for Veylott’s official cUSDC asset was verified.
 
 ## Reproducible Contribution
 

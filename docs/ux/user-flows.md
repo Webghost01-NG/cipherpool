@@ -1,4 +1,4 @@
-# CipherPool User Flows
+# Veylott User Flows
 
 ## Confidential Deposit
 

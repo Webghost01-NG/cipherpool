@@ -2,9 +2,9 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
-**Issue Reference:** [#6 — spec(adversarial): Design adversarial test plan and exploit simulation specifications](https://github.com/Webghost01-NG/cipherpool/issues/6)
+**Issue Reference:** [#6 — spec(adversarial): Design adversarial test plan and exploit simulation specifications](https://github.com/Webghost01-NG/veylott/issues/6)
 **Milestone:** Phase 3 — Core Protocol & Smart Contract Implementation  
-**Protocol:** CipherPool  
+**Protocol:** Veylott
 **Author:** Security Research Team  
 **Status:** Complete & Ready for Review  
 
@@ -12,7 +12,7 @@
 
 ## 1. Executive Summary & Objective
 
-This specification formalizes the adversarial testing regime for **CipherPool**. It defines structured test vectors, exploit simulations, and invariant fuzzing campaigns designed to stress-test the protocol against sophisticated economic, cryptographic, and state-machine attack vectors on Zama fhEVM.
+This specification formalizes the adversarial testing regime for **Veylott**. It defines structured test vectors, exploit simulations, and invariant fuzzing campaigns designed to stress-test the protocol against sophisticated economic, cryptographic, and state-machine attack vectors on Zama fhEVM.
 
 The plan validates that the protocol adheres to its fundamental security promises:
 1. **Confidentiality:** Zero leakage of user balances, lottery ticket allocations, or winner identities.

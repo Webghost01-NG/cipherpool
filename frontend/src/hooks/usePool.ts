@@ -213,11 +213,11 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       }
       const poolCode = await provider.getCode(contractAddress);
       if (poolCode === "0x") {
-        throw new Error("The configured CipherPool contract was not found on Ethereum Sepolia.");
+        throw new Error("The configured Veylott contract was not found on Ethereum Sepolia.");
       }
       const observedPoolCodeHash = ethers.keccak256(poolCode);
       if (observedPoolCodeHash.toLowerCase() !== runtimeConfig.poolRuntimeCodeHash.toLowerCase()) {
-        throw new Error("The configured CipherPool bytecode does not match the reviewed Sepolia deployment.");
+        throw new Error("The configured Veylott bytecode does not match the reviewed Sepolia deployment.");
       }
 
       const [

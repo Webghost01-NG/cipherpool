@@ -2,9 +2,9 @@
 
 > **Archived design:** This document describes the superseded plaintext-custody pool and is retained only as historical analysis. It is not evidence for the active ERC-7984 deployment; see [`docs/ux/user-flows.md`](../ux/user-flows.md) and [`docs/operations/sepolia-deployment.md`](../operations/sepolia-deployment.md).
 
-**Issue Reference:** [#4 — audit(replay): Analyze request replay boundaries and cross-user substitution limits](https://github.com/Webghost01-NG/cipherpool/issues/4)
+**Issue Reference:** [#4 — audit(replay): Analyze request replay boundaries and cross-user substitution limits](https://github.com/Webghost01-NG/veylott/issues/4)
 **Milestone:** Phase 3 — Core Protocol & Smart Contract Implementation  
-**Protocol:** CipherPool  
+**Protocol:** Veylott
 **Author:** Security Research Team  
 **Status:** Audit Complete & Verified  
 
@@ -12,7 +12,7 @@
 
 ## 1. Executive Summary
 
-In CipherPool, withdrawal finalization verifies threshold signatures produced by the off-chain Zama Key Management System (KMS) using:
+In Veylott, withdrawal finalization verifies threshold signatures produced by the off-chain Zama Key Management System (KMS) using:
 
 ```solidity
 FHE.checkSignatures(handles, abiEncodedCleartexts, decryptionProof)
@@ -20,7 +20,7 @@ FHE.checkSignatures(handles, abiEncodedCleartexts, decryptionProof)
 
 Because KMS signers verify public decryption authorizations rather than managing application-level user accounts, **the raw KMS signatures do not directly bind the caller's address (`msg.sender`) or the smart contract's storage state**.
 
-This audit analyzes the replay boundaries and cross-user substitution limits enforced by CipherPool's smart contract architecture ([`RequestBindingState.sol`](file:///home/web-ghost/Hackathons-project/zama/contracts/base/RequestBindingState.sol) and [`ConfidentialPool.sol`](file:///home/web-ghost/Hackathons-project/zama/contracts/ConfidentialPool.sol)), mathematically proving why neither cross-user proof interception nor replay attacks can succeed under any circumstance.
+This audit analyzes the replay boundaries and cross-user substitution limits enforced by Veylott's smart contract architecture ([`RequestBindingState.sol`](file:///home/web-ghost/Hackathons-project/zama/contracts/base/RequestBindingState.sol) and [`ConfidentialPool.sol`](file:///home/web-ghost/Hackathons-project/zama/contracts/ConfidentialPool.sol)), mathematically proving why neither cross-user proof interception nor replay attacks can succeed under any circumstance.
 
 ---
 
@@ -154,7 +154,7 @@ handles[0] = FHE.toBytes32(req.handle);
 
 ### **REPLAY & SUBSTITUTION BOUNDARIES: MATHEMATICALLY PROVEN SECURE**
 
-CipherPool's architecture guarantees that:
+Veylott's architecture guarantees that:
 1. Proofs are single-use and consumed atomically before asset interaction.
 2. Signatures are immutably tied to internal storage slots, preventing cross-user substitution.
 3. Calldata tampering is preempted by both contract-level assertions and cryptographic EIP-712 digests.

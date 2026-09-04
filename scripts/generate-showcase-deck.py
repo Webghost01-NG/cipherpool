@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the editable CipherPool showcase deck from verified project facts."""
+"""Generate the editable Veylott showcase deck from verified project facts."""
 
 from pathlib import Path
 
@@ -13,7 +13,7 @@ from pptx.util import Inches, Pt
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "docs" / "showcase" / "presentation"
 SCREENSHOT = OUTPUT_DIR / "assets" / "live-dashboard.png"
-OUTPUT = OUTPUT_DIR / "CipherPool-Presentation.pptx"
+OUTPUT = OUTPUT_DIR / "Veylott-Presentation.pptx"
 
 WHITE = RGBColor(255, 255, 255)
 INK = RGBColor(20, 31, 55)
@@ -105,9 +105,9 @@ def add_pill(slide, text, x, y, w, *, fill=BLUE_PALE, color=BLUE):
 
 def add_brand(slide, number):
     mark = add_box(slide, 0.58, 0.28, 0.34, 0.34, fill=BLUE, line=BLUE)
-    add_text(slide, "C", 0.58, 0.285, 0.34, 0.28, size=13, color=WHITE,
+    add_text(slide, "V", 0.58, 0.285, 0.34, 0.28, size=13, color=WHITE,
              bold=True, align=PP_ALIGN.CENTER, valign=MSO_ANCHOR.MIDDLE)
-    add_text(slide, "CipherPool", 1.02, 0.3, 1.5, 0.28, size=12, bold=True)
+    add_text(slide, "Veylott", 1.02, 0.3, 1.5, 0.28, size=12, bold=True)
     add_text(slide, "RESEARCH DEPLOYMENT · ETHEREUM SEPOLIA", 8.55, 0.34, 3.65, 0.2,
              size=7, color=MUTED, font=MONO, align=PP_ALIGN.RIGHT)
     add_text(slide, f"{number:02d} / 10", 12.22, 0.34, 0.54, 0.2,
@@ -145,7 +145,7 @@ def slide_1(prs):
                   0.72, 1.72, 7.3, 1.75, size=36)
     add_text(slide, "Principal stays withdrawable while encrypted balances and ticket weights stay confidential.",
              0.75, 3.68, 6.55, 0.68, size=17, color=MUTED, line_spacing=1.15)
-    add_link(slide, "cipherpool-beta.vercel.app", "https://cipherpool-beta.vercel.app",
+    add_link(slide, "veylott.vercel.app", "https://veylott.vercel.app",
              0.75, 4.62, 4.2, 0.35, size=12)
     add_box(slide, 8.35, 1.3, 4.2, 4.9, fill=BLUE_DARK, line=BLUE_DARK)
     for x, y, size, alpha_color in [(8.85, 1.78, 2.65, RGBColor(63, 95, 224)), (9.25, 2.18, 1.85, RGBColor(84, 114, 236)), (9.65, 2.58, 1.05, BLUE)]:
@@ -173,7 +173,7 @@ def slide_2(prs):
 def slide_3(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6]); slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
     add_brand(slide, 3)
-    add_title(slide, "The solution", "Public custody. Confidential accounting.", "CipherPool separates what must be auditable from what should remain private.")
+    add_title(slide, "The solution", "Public custody. Confidential accounting.", "Veylott separates what must be auditable from what should remain private.")
     add_box(slide, 0.68, 2.55, 5.75, 3.65, fill=WHITE, line=LINE)
     add_pill(slide, "Public · independently verifiable", 0.98, 2.87, 2.45, fill=GREEN_PALE, color=GREEN)
     add_text(slide, "Custody layer", 0.98, 3.42, 4.7, 0.42, size=22, bold=True)
@@ -240,7 +240,7 @@ def slide_5(prs):
     add_text(slide, "A disconnected user sees only Connect wallet. An address appears only after the provider returns the selected account.", 10.02, 3.58, 2.2, 1.35, size=12, color=MUTED, line_spacing=1.15)
     add_text(slide, "Runtime assurance", 10.02, 5.2, 2.25, 0.32, size=13, bold=True)
     add_text(slide, "Chain, bytecode, and custody bindings are checked before protocol writes.", 10.02, 5.65, 2.2, 0.9, size=11, color=MUTED)
-    add_footer(slide, "Captured from https://cipherpool-beta.vercel.app · 4 Sep 2026")
+    add_footer(slide, "Captured from https://veylott.vercel.app · 4 Sep 2026")
 
 
 def slide_6(prs):
@@ -292,7 +292,7 @@ def slide_7(prs):
 def slide_8(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6]); slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
     add_brand(slide, 8)
-    add_title(slide, "Verified evidence", "A complete live prize round—not a simulated receipt", "Each transaction below links directly to its confirmed block-explorer record.")
+    add_title(slide, "Verified evidence", "A completed historical prize round—not a simulated receipt", "Each transaction below links directly to its confirmed predecessor-deployment receipt.")
     txs = [
         ("01", "cUSDC deposit", "0xe36db7…b39f", "Encrypted position", "https://sepolia.etherscan.io/tx/0xe36db7ad47a927811971b56166ced5dd5ffa388d368f54623d09d7124ca8b39f"),
         ("02", "KMS draw", "0x504862…ce6c", "Draw 1 finalized", "https://sepolia.etherscan.io/tx/0x504862de2aa5ad002f2314ea834b5336d394e9bf111c5652bb16c8700a1ece6c"),
@@ -343,13 +343,13 @@ def slide_10(prs):
                   0.72, 1.8, 7.8, 1.5, size=38)
     add_text(slide, "Try the live app. Inspect the active Sepolia deployment. Review every invariant and test.",
              0.75, 3.65, 7.1, 0.65, size=17, color=MUTED)
-    add_link(slide, "cipherpool-beta.vercel.app", "https://cipherpool-beta.vercel.app", 0.75, 4.65, 4.5, 0.36, size=14)
-    add_link(slide, "github.com/Webghost01-NG/cipherpool", "https://github.com/Webghost01-NG/cipherpool", 0.75, 5.18, 6.6, 0.36, size=11)
+    add_link(slide, "veylott.vercel.app", "https://veylott.vercel.app", 0.75, 4.65, 4.5, 0.36, size=14)
+    add_link(slide, "github.com/Webghost01-NG/veylott", "https://github.com/Webghost01-NG/veylott", 0.75, 5.18, 6.6, 0.36, size=11)
     add_box(slide, 8.6, 1.55, 3.75, 4.65, fill=BLUE_PALE, line=LINE)
     add_text(slide, "ACTIVE POOL", 8.95, 1.95, 2.8, 0.25, size=8, color=BLUE, bold=True, font=MONO)
-    add_text(slide, "0xC37992f7\n4De5bE04\n59FAceEB\n1Bc2e919\n9B0221A8", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
+    add_text(slide, "0x54FdC46D\n0EA722Ef\nA4853192\n678b35fC\nABFad99C", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
     add_pill(slide, "Ethereum Sepolia", 8.95, 5.25, 1.6, fill=GREEN_PALE, color=GREEN)
-    add_footer(slide, "CipherPool · Zama fhEVM · Research deployment")
+    add_footer(slide, "Veylott · Zama fhEVM · Research deployment")
 
 
 def main():
@@ -359,9 +359,9 @@ def main():
     prs.slide_height = Inches(7.5)
     for builder in (slide_1, slide_2, slide_3, slide_4, slide_5, slide_6, slide_7, slide_8, slide_9, slide_10):
         builder(prs)
-    prs.core_properties.title = "CipherPool — Private Prize Savings"
+    prs.core_properties.title = "Veylott — Private Prize Savings"
     prs.core_properties.subject = "Verified Zama fhEVM research deployment showcase"
-    prs.core_properties.author = "CipherPool contributors"
+    prs.core_properties.author = "Veylott contributors"
     prs.core_properties.comments = "Generated from repository-verified facts; no fabricated transactions or production claims."
     prs.save(OUTPUT)
     print(f"Generated {OUTPUT}")

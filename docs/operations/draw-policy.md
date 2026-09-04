@@ -1,6 +1,6 @@
 # Permissionless Draw Policy
 
-CipherPool removes operator discretion from draw requests with immutable deployment parameters. The reviewed Sepolia policy is a `500,000` base-unit prize (0.5 cUSDC), a seven-day minimum interval, and a one-day settlement timeout.
+Veylott removes operator discretion from draw requests with immutable deployment parameters. The reviewed Sepolia policy is a `500,000` base-unit prize (0.5 cUSDC), a seven-day minimum interval, and a one-day settlement timeout.
 
 Any address may call `requestDraw`, but the supplied prize must exactly equal `drawPrizeAmount()` and the block timestamp must be at least `nextDrawRequestTimestamp()`. The first valid request snapshots encrypted KMS-activated draw weight and reserve, advances the next eligible timestamp by `drawInterval()`, and locks balance mutations until settlement or cancellation. Unverified positions are excluded from both the participant array and this aggregate. Because callers cannot request early, change the prize, or create a second active request, owner timing and prize-size discretion are removed. The draw’s random ticket is generated only during proof-bound finalization, not from the request caller or timestamp.
 
