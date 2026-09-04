@@ -47,6 +47,15 @@ export interface DeploymentVerification {
   message: string;
 }
 
+export type MetricFreshness = "loading" | "fresh" | "stale" | "unavailable";
+
+export interface PoolMetricFreshness {
+  totalDeposits: MetricFreshness;
+  availableYield: MetricFreshness;
+  totalDraws: MetricFreshness;
+  participantCount: MetricFreshness;
+}
+
 const emptyWithdrawal: PendingWithdrawal = {
   hasPending: false,
   requestHash: "",
@@ -55,6 +64,17 @@ const emptyWithdrawal: PendingWithdrawal = {
   timestamp: 0,
   status: "FINALIZED",
 };
+
+const initialMetricFreshness: PoolMetricFreshness = {
+  totalDeposits: "loading",
+  availableYield: "loading",
+  totalDraws: "loading",
+  participantCount: "loading",
+};
+
+const markMetricUnavailable = (current: MetricFreshness): MetricFreshness => (
+  current === "fresh" || current === "stale" ? "stale" : "unavailable"
+);
 
 function ensureReceipt(receipt: ethers.ContractTransactionReceipt | null): ethers.ContractTransactionReceipt {
   if (!receipt || receipt.status !== 1) throw new Error("Transaction was not confirmed on-chain.");
@@ -87,6 +107,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
   const [dataError, setDataError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [metricFreshness, setMetricFreshness] = useState<PoolMetricFreshness>(initialMetricFreshness);
   const [deploymentVerification, setDeploymentVerification] = useState<DeploymentVerification>({
     status: "pending",
     message: "Connect a Sepolia wallet to verify the active deployment.",
@@ -134,6 +155,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setDataError("Protocol environment variables are incomplete.");
       setBackendStatus("offline");
       setDeploymentVerification({ status: "failed", message: "Deployment configuration is incomplete." });
+      setMetricFreshness((current) => ({
+        totalDeposits: markMetricUnavailable(current.totalDeposits),
+        availableYield: markMetricUnavailable(current.availableYield),
+        totalDraws: markMetricUnavailable(current.totalDraws),
+        participantCount: markMetricUnavailable(current.participantCount),
+      }));
       return;
     }
 
@@ -146,11 +173,19 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         totalAccountedBalance?: string;
         totalDraws?: number;
       };
+      const totalAccountedBalance = data.totalAccountedBalance ?? data.totalDeposits;
+      const totalDraws = data.totalDraws;
+      if (!totalAccountedBalance || !/^\d+$/.test(totalAccountedBalance)) {
+        throw new Error("Backend returned an invalid accounted balance.");
+      }
+      if (typeof totalDraws !== "number" || !Number.isSafeInteger(totalDraws) || totalDraws < 0) {
+        throw new Error("Backend returned an invalid draw count.");
+      }
       setBackendStatus("online");
       setPoolStats((current) => ({
         ...current,
-        totalDeposits: data.totalAccountedBalance ?? data.totalDeposits ?? current.totalDeposits,
-        totalDraws: data.totalDraws ?? current.totalDraws,
+        totalDeposits: totalAccountedBalance,
+        totalDraws,
       }));
     } catch {
       backendRequestFailed = true;
@@ -158,6 +193,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     }
 
     if (!window.ethereum || status === "wrong_network") {
+      setMetricFreshness((current) => ({
+        totalDeposits: backendRequestFailed ? markMetricUnavailable(current.totalDeposits) : "fresh",
+        availableYield: markMetricUnavailable(current.availableYield),
+        totalDraws: backendRequestFailed ? markMetricUnavailable(current.totalDraws) : "fresh",
+        participantCount: markMetricUnavailable(current.participantCount),
+      }));
       setDataError(backendRequestFailed ? "Live protocol data is temporarily unavailable." : null);
       setDeploymentVerification({
         status: "pending",
@@ -238,6 +279,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         isPaused: paused,
         owner,
       });
+      setMetricFreshness({
+        totalDeposits: "fresh",
+        availableYield: "fresh",
+        totalDraws: "fresh",
+        participantCount: "fresh",
+      });
       setAsset({
         address: custodyAddress,
         symbol,
@@ -270,6 +317,12 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       setDeploymentVerification({ status: "failed", message });
       setDataError(message);
       setLastUpdatedAt(Date.now());
+      setMetricFreshness((current) => ({
+        totalDeposits: backendRequestFailed ? markMetricUnavailable(current.totalDeposits) : "fresh",
+        availableYield: markMetricUnavailable(current.availableYield),
+        totalDraws: backendRequestFailed ? markMetricUnavailable(current.totalDraws) : "fresh",
+        participantCount: markMetricUnavailable(current.participantCount),
+      }));
     }
   }, [address, contractAddress, persistWithdrawal, status]);
 
@@ -474,6 +527,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     backendStatus,
     dataError,
     lastUpdatedAt,
+    metricFreshness,
     deploymentVerification,
     writesEnabled,
     isOwner,

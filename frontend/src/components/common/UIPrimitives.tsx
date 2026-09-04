@@ -75,15 +75,51 @@ export interface StatBoxProps {
   value: string | number;
   subtext?: string;
   badge?: React.ReactNode;
+  status?: "loading" | "fresh" | "stale" | "unavailable";
 }
 
-export const StatBox: React.FC<StatBoxProps> = ({ label, value, subtext, badge }) => (
-  <article className="metric">
-    <div className="metric__topline">
-      <span>{label}</span>
-      {badge}
-    </div>
-    <strong className="metric__value">{value}</strong>
-    {subtext && <p className="metric__hint">{subtext}</p>}
-  </article>
-);
+const metricStatusLabel = {
+  loading: "Loading",
+  stale: "Stale",
+  unavailable: "Unavailable",
+} as const;
+
+export const StatBox: React.FC<StatBoxProps> = ({
+  label,
+  value,
+  subtext,
+  badge,
+  status = "fresh",
+}) => {
+  const hasVerifiedValue = status === "fresh" || status === "stale";
+  const hint = status === "loading"
+    ? "Loading verified source…"
+    : status === "unavailable"
+      ? "Verified source unavailable"
+      : status === "stale"
+        ? `Last confirmed value${subtext ? ` · ${subtext}` : ""}`
+        : subtext;
+
+  return (
+    <article className={`metric metric--${status}`}>
+      <div className="metric__topline">
+        <span>{label}</span>
+        {status === "fresh" ? badge : (
+          <span className={`metric__state metric__state--${status}`}>{metricStatusLabel[status]}</span>
+        )}
+      </div>
+      <strong
+        className="metric__value"
+        aria-busy={status === "loading" || undefined}
+        aria-label={status === "loading"
+          ? `${label} loading`
+          : status === "unavailable"
+            ? `${label} unavailable`
+            : undefined}
+      >
+        {hasVerifiedValue ? value : <span aria-hidden="true">—</span>}
+      </strong>
+      {hint && <p className="metric__hint">{hint}</p>}
+    </article>
+  );
+};

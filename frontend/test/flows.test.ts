@@ -103,6 +103,8 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     const card = React.createElement(LotteryDrawCard, {
       availableYield: "25000",
       totalDraws: 5,
+      availableYieldStatus: "fresh",
+      totalDrawsStatus: "fresh",
       onExecuteDraw: async () => {},
       isLoading: false,
       isOwner: true,
