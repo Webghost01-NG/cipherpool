@@ -13,6 +13,7 @@ import { BalanceRevealCard } from "./components/flows/BalanceRevealCard.js";
 import { DepositCard } from "./components/flows/DepositCard.js";
 import { WithdrawalCard } from "./components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "./components/flows/LotteryDrawCard.js";
+import { PrizeClaimCard } from "./components/flows/PrizeClaimCard.js";
 import { LegacyExitCard } from "./components/flows/LegacyExitCard.js";
 import { TxStatusModal } from "./components/common/TxStatusModal.js";
 import { WalletModal } from "./components/wallet/WalletModal.js";
@@ -52,6 +53,22 @@ export async function revealBalanceWithFeedback(
   }
 }
 
+export async function revealPrizeWithFeedback(
+  revealPrize: () => Promise<void>,
+  feedback: PrivateRevealFeedback
+): Promise<void> {
+  feedback.start(
+    "Private prize reveal",
+    "Approve the private decryption request in your wallet. This signature does not broadcast a transaction."
+  );
+  try {
+    await revealPrize();
+    feedback.confirm("Prize checked locally. No blockchain transaction was submitted.");
+  } catch (error) {
+    feedback.fail(error instanceof Error ? error : String(error));
+  }
+}
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("pool");
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -61,6 +78,8 @@ export const App: React.FC = () => {
     asset,
     isBalanceRevealed,
     revealedBalance,
+    isPrizeRevealed,
+    revealedPrize,
     isLoading,
     backendStatus,
     dataError,
@@ -74,6 +93,9 @@ export const App: React.FC = () => {
     fundPrizeReserve,
     revealBalance,
     hideBalance,
+    revealPrize,
+    hidePrize,
+    claimPrize,
     drawLottery,
   } = usePool(DEFAULT_POOL_ADDRESS);
   const legacyExit = useLegacyExit(DEFAULT_LEGACY_POOL_ADDRESS);
@@ -124,6 +146,11 @@ export const App: React.FC = () => {
   const poolStatus = getPoolStatus(deploymentVerification.status, poolStats.isPaused);
   const hasDrawCount = metricFreshness.totalDraws === "fresh" || metricFreshness.totalDraws === "stale";
   const runBalanceReveal = () => revealBalanceWithFeedback(revealBalance, {
+    start: startTx,
+    confirm: setConfirmed,
+    fail: setFailed,
+  });
+  const runPrizeReveal = () => revealPrizeWithFeedback(revealPrize, {
     start: startTx,
     confirm: setConfirmed,
     fail: setFailed,
@@ -398,27 +425,40 @@ export const App: React.FC = () => {
                 tokenDecimals={asset.decimals}
                 writesEnabled={writesEnabled}
               />
-              <Card className="panel--ink" eyebrow="Draw invariant" title="The winner is never exposed">
-                <div className="balance-display">
-                  <strong
-                    className="balance-display__value"
-                    aria-label={hasDrawCount
-                      ? undefined
-                      : metricFreshness.totalDraws === "loading"
-                        ? "Confirmed rounds loading"
-                        : "Confirmed rounds unavailable"}
-                  >
-                    {hasDrawCount ? poolStats.totalDraws : "—"}
-                  </strong>
-                  <p className="balance-display__hint">
-                    {metricFreshness.totalDraws === "stale" && "Last confirmed value. "}
-                    {hasDrawCount
-                      ? "Encrypted rounds completed. Winner selection uses bounded fhEVM randomness against encrypted cumulative balances."
-                      : "Confirmed round data will appear after a verified source responds."}
-                  </p>
-                </div>
-              </Card>
+              <PrizeClaimCard
+                isRevealed={isPrizeRevealed}
+                revealedPrize={revealedPrize}
+                onReveal={runPrizeReveal}
+                onHide={hidePrize}
+                onClaim={() =>
+                  runAction(
+                    "Claim private prize",
+                    () => claimPrize(transactionCallbacks),
+                    "Prize claimed into your encrypted savings position on Ethereum Sepolia.",
+                    { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
+                  )
+                }
+                isLoading={isLoading}
+                walletConnected={walletReady}
+                walletStatus={status}
+                onWalletAction={() => setIsWalletModalOpen(true)}
+                walletActionEnabled={walletConfigurationReady}
+                tokenSymbol={asset.symbol}
+                tokenDecimals={asset.decimals}
+                writesEnabled={writesEnabled && !poolStats.isPaused}
+              />
             </section>
+            <aside className="privacy-note">
+              <span className="privacy-note__icon"><Layers3 size={18} /></span>
+              <div>
+                <strong>The winner is never exposed</strong>
+                <p>
+                  {hasDrawCount
+                    ? `${poolStats.totalDraws} encrypted round${poolStats.totalDraws === 1 ? "" : "s"} completed. Each wallet privately checks its own result.`
+                    : "Confirmed round data will appear after a verified source responds."}
+                </p>
+              </div>
+            </aside>
           </div>
         )}
 

@@ -2,11 +2,12 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { revealBalanceWithFeedback } from "../src/App.js";
+import { revealBalanceWithFeedback, revealPrizeWithFeedback } from "../src/App.js";
 import { BalanceRevealCard } from "../src/components/flows/BalanceRevealCard.js";
 import { DepositCard } from "../src/components/flows/DepositCard.js";
 import { WithdrawalCard } from "../src/components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "../src/components/flows/LotteryDrawCard.js";
+import { PrizeClaimCard } from "../src/components/flows/PrizeClaimCard.js";
 import { LegacyExitCard } from "../src/components/flows/LegacyExitCard.js";
 import { WalletGateButton } from "../src/components/wallet/WalletGateButton.js";
 
@@ -36,6 +37,43 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     let confirmed = false;
 
     await revealBalanceWithFeedback(
+      async () => { throw failure; },
+      {
+        start: () => undefined,
+        confirm: () => { confirmed = true; },
+        fail: (error) => { surfacedError = error; },
+      }
+    );
+
+    assert.equal(surfacedError, failure);
+    assert.equal(confirmed, false);
+  });
+
+  test("private prize reveal reports truthful local-only feedback", async () => {
+    const events: string[] = [];
+
+    await revealPrizeWithFeedback(
+      async () => { events.push("revealed"); },
+      {
+        start: (_title, details) => events.push(details ?? ""),
+        confirm: (details) => events.push(details ?? ""),
+        fail: () => events.push("failed"),
+      }
+    );
+
+    assert.deepEqual(events, [
+      "Approve the private decryption request in your wallet. This signature does not broadcast a transaction.",
+      "revealed",
+      "Prize checked locally. No blockchain transaction was submitted.",
+    ]);
+  });
+
+  test("private prize reveal catches and surfaces failures", async () => {
+    const failure = new Error("KMS rejected the prize decryption request.");
+    let surfacedError: Error | string | null = null;
+    let confirmed = false;
+
+    await revealPrizeWithFeedback(
       async () => { throw failure; },
       {
         start: () => undefined,
@@ -123,6 +161,62 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     assert.match(markup, /Sepolia prizes are sponsor-funded, not protocol yield/);
     assert.match(markup, /Sponsor prize reserve/);
     assert.match(markup, /Fund encrypted reserve/);
+  });
+
+  test("PrizeClaimCard keeps the prize private and gates claims on a positive reveal", () => {
+    const concealed = renderToStaticMarkup(React.createElement(PrizeClaimCard, {
+      isRevealed: false,
+      revealedPrize: null,
+      onReveal: async () => {},
+      onHide: () => {},
+      onClaim: async () => {},
+      isLoading: false,
+      walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
+      tokenSymbol: "cUSDC",
+      tokenDecimals: 6,
+      writesEnabled: true,
+    }));
+    const noPrize = renderToStaticMarkup(React.createElement(PrizeClaimCard, {
+      isRevealed: true,
+      revealedPrize: "0",
+      onReveal: async () => {},
+      onHide: () => {},
+      onClaim: async () => {},
+      isLoading: false,
+      walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
+      tokenSymbol: "cUSDC",
+      tokenDecimals: 6,
+      writesEnabled: true,
+    }));
+    const winner = renderToStaticMarkup(React.createElement(PrizeClaimCard, {
+      isRevealed: true,
+      revealedPrize: "500000",
+      onReveal: async () => {},
+      onHide: () => {},
+      onClaim: async () => {},
+      isLoading: false,
+      walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
+      tokenSymbol: "cUSDC",
+      tokenDecimals: 6,
+      writesEnabled: true,
+    }));
+
+    assert.match(concealed, /Check prize privately/);
+    assert.doesNotMatch(concealed, /500000/);
+    assert.match(noPrize, /No prize available to claim/);
+    assert.match(noPrize, /disabled/);
+    assert.match(winner, /0\.5 cUSDC/);
+    assert.match(winner, /Claim into savings/);
+    assert.doesNotMatch(winner, /disabled/);
   });
 
   test("LegacyExitCard exposes settlement without enabling new legacy requests", () => {

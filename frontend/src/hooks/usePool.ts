@@ -99,6 +99,8 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   });
   const [isBalanceRevealed, setIsBalanceRevealed] = useState(false);
   const [revealedBalance, setRevealedBalance] = useState<string | null>(null);
+  const [isPrizeRevealed, setIsPrizeRevealed] = useState(false);
+  const [revealedPrize, setRevealedPrize] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
   const [dataError, setDataError] = useState<string | null>(null);
@@ -110,11 +112,16 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   });
 
   useEffect(() => {
-    if (!address) {
-      setRevealedBalance(null);
-      setIsBalanceRevealed(false);
-    }
+    setRevealedBalance(null);
+    setIsBalanceRevealed(false);
+    setRevealedPrize(null);
+    setIsPrizeRevealed(false);
   }, [address]);
+
+  useEffect(() => {
+    setRevealedPrize(null);
+    setIsPrizeRevealed(false);
+  }, [poolStats.totalDraws]);
 
   const refreshPoolData = useCallback(async () => {
     if (!contractAddress || !DEFAULT_BACKEND_URL) {
@@ -346,6 +353,70 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     }
   }, [address, contractAddress, status]);
 
+  const hideBalance = useCallback(() => {
+    setIsBalanceRevealed(false);
+    setRevealedBalance(null);
+  }, []);
+
+  const revealPrize = useCallback(async () => {
+    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
+    setIsLoading(true);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const handle = await new ethers.Contract(contractAddress, POOL_ABI, provider).getPrizeHandle(address) as string;
+      if (handle === ethers.ZeroHash) {
+        setRevealedPrize("0");
+        setIsPrizeRevealed(true);
+        return;
+      }
+      const instance = await getBrowserFhevmInstance();
+      const keypair = instance.generateKeypair();
+      const startTimestamp = Math.floor(Date.now() / 1000);
+      const durationDays = 1;
+      const contractAddresses = [contractAddress];
+      const typedData = instance.createEIP712(keypair.publicKey, contractAddresses, startTimestamp, durationDays);
+      const signature = await signer.signTypedData(typedData.domain, { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification }, typedData.message);
+      const result = await instance.userDecrypt(
+        [{ handle, contractAddress }], keypair.privateKey, keypair.publicKey, signature,
+        contractAddresses, address, startTimestamp, durationDays
+      );
+      const clearValue = result[handle];
+      if (typeof clearValue !== "bigint") throw new Error("KMS returned an invalid prize value.");
+      setRevealedPrize(clearValue.toString());
+      setIsPrizeRevealed(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address, contractAddress, status]);
+
+  const hidePrize = useCallback(() => {
+    setIsPrizeRevealed(false);
+    setRevealedPrize(null);
+  }, []);
+
+  const claimPrize = useCallback(async (callbacks: TransactionCallbacks = {}) => {
+    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
+    requireVerifiedWrites();
+    if (revealedPrize === null || BigInt(revealedPrize) <= 0n) {
+      throw new Error("Reveal a positive unclaimed prize before claiming it.");
+    }
+    setIsLoading(true);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const pool = new ethers.Contract(contractAddress, POOL_ABI, await provider.getSigner());
+      const transaction = await pool.compoundPrizes();
+      callbacks.onBroadcast?.(transaction.hash);
+      const receipt = ensureReceipt(await transaction.wait());
+      setRevealedPrize("0");
+      setIsPrizeRevealed(true);
+      await refreshPoolData();
+      return { txHash: receipt.hash };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, revealedPrize, status]);
+
   const drawLottery = useCallback(async (prizeAmount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect the owner wallet first.");
     requireVerifiedWrites();
@@ -383,6 +454,8 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     asset,
     isBalanceRevealed,
     revealedBalance,
+    isPrizeRevealed,
+    revealedPrize,
     isLoading,
     backendStatus,
     dataError,
@@ -395,7 +468,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     withdraw,
     fundPrizeReserve,
     revealBalance,
-    hideBalance: () => { setIsBalanceRevealed(false); setRevealedBalance(null); },
+    hideBalance,
+    revealPrize,
+    hidePrize,
+    claimPrize,
     drawLottery,
     refreshPoolData,
   };
