@@ -1,7 +1,5 @@
 # CipherPool Presentation Content
 
-> **Archived draft:** This content predates the ERC-7984 migration and must be rewritten before submission. See the [current submission overview](../SUBMISSION_OVERVIEW.md).
-
 ## 1. Private prize savings, built for verification
 
 CipherPool is a no-loss prize savings protocol on Zama fhEVM. Principal remains withdrawable while encrypted balances and ticket weights stay confidential. This is a research deployment on Ethereum Sepolia—not production software.
@@ -26,18 +24,18 @@ The white-and-blue console shows public pool health without exposing private pos
 
 ## 6. One coherent user journey
 
-1. Deposit confidential testnet cUSDC; the pool credits only the token-returned encrypted amount.
-2. Enter encrypted prize rounds; weighted selection runs homomorphically.
-3. Contribute encrypted sponsor funds to the prize reserve or monitor a round.
-4. Withdraw cUSDC directly; sufficiency is evaluated without revealing the balance.
+1. Wrap test USDC into confidential cUSDC with Zama's official Sepolia wrapper.
+2. Deposit an encrypted cUSDC amount; the pool credits only the token-returned result.
+3. Fund or monitor the sponsor reserve, then run a KMS-verified encrypted weighted draw.
+4. Withdraw with an encrypted amount; the pool debits only the token-returned transfer result.
 
 ## 7. Security controls that protect solvency
 
-- Deposit credit is derived from the transferred custody amount.
+- Deposit credit is derived from the token-returned encrypted custody amount.
 - Draws consume the verified sponsor reserve so assets cannot fund repeated prizes.
-- Compounded prizes remain included in the encrypted aggregate liability.
+- Winner credits enter both the encrypted position and aggregate liability during draw finalization; compounding only clears the separate prize counter.
 - Withdrawals debit accounting by the token-returned encrypted transfer result.
-- KMS signatures are verified on-chain; stale requests have a 24-hour cancellation escape valve.
+- KMS proofs are bound to the stored aggregate and reserve handles; anyone can cancel a stale draw lock after 24 hours.
 
 ## 8. Verified cUSDC Sepolia evidence
 
@@ -45,11 +43,11 @@ The white-and-blue console shows public pool health without exposing private pos
 - Direct withdrawal: `0x8ee0e4…8429`
 - Sponsor reserve: `0x07b797…7eaa`
 
-All three receipts succeeded. Authorized KMS verification confirmed the deposit/withdrawal round trip and the sponsor wallet’s 1 cUSDC reserve contribution.
+All three receipts succeeded. Authorized KMS verification confirmed that the round trip restored the test wallet to 10 cUSDC; the later sponsor contribution moved 1 cUSDC into the encrypted reserve.
 
 ## 9. Engineering evidence
 
-The repository has 100 passing automated tests: 42 Foundry contract tests, 23 backend tests, 1 client adapter test, and 34 frontend tests. Vercel serves the client, Render serves the indexer, and PostgreSQL preserves indexer checkpoints across restarts.
+The reproducible validation covers Foundry contract invariants, backend API and indexer behavior, the client encryption adapter, and frontend UX. Vercel serves the client, Render serves the read-only indexer/API, and PostgreSQL preserves indexer checkpoints across restarts. The deck intentionally avoids a fixed test count that would become stale as coverage grows.
 
 ## 10. Confidential savings, without blind trust
 

@@ -1,8 +1,6 @@
 # CipherPool Demo Script
 
-> **Archived draft:** This script predates the ERC-7984 migration and must not be used for the final human-presented bounty video. See the [current submission overview](../SUBMISSION_OVERVIEW.md).
-
-Target runtime: approximately 2 minutes 40 seconds. The generated video uses the live public interface and already-verified Sepolia evidence. It does not simulate a wallet, signature, KMS response, or newly confirmed transaction.
+Target runtime: approximately 3 minutes 20 seconds. The generated video uses the live public interface and already-verified Sepolia evidence. It does not simulate a wallet, signature, KMS response, or newly confirmed transaction.
 
 ## Slide 1 — Introduction
 
@@ -26,19 +24,19 @@ This is the production interface captured from Vercel. A disconnected session sh
 
 ## Slide 6 — User journey
 
-The journey has four explicit steps: deposit testnet cUSDC, contribute or monitor the sponsor-funded reserve, participate in an encrypted weighted draw, and withdraw cUSDC directly. Every transaction still requires wallet confirmation.
+The journey has four explicit steps: wrap test USDC into official cUSDC, deposit an encrypted amount, fund or monitor a KMS-verified prize round, and withdraw cUSDC directly. Every transaction still requires wallet confirmation.
 
 ## Slide 7 — Security controls
 
-The current contracts bind encrypted credit to transferred assets, consume sponsor-funded prize reserves when awarding prizes, and include compounded prizes in aggregate liabilities. Withdrawal requests anchor their encrypted handle in storage. On-chain signature verification and a cancellation timeout protect settlement. Sepolia does not claim generated yield.
+The contracts bind encrypted credit to the token-returned transfer, consume sponsor-funded reserves when awarding prizes, and add winner credits to both the position and aggregate liability. Draw proofs are bound to stored aggregate and reserve handles. Anyone can release a stale draw lock after 24 hours. Sepolia does not claim generated yield.
 
 ## Slide 8 — Verified transaction evidence
 
-This is not a simulated transaction. A real one-cUSDC deposit and direct withdrawal completed on Sepolia, followed by a real encrypted one-cUSDC sponsor contribution. The transaction hashes and authorized KMS verification are linked in the repository.
+This is not a simulated transaction. A real one-cUSDC deposit and direct withdrawal completed on Sepolia, restoring the test wallet to 10 cUSDC. A later encrypted one-cUSDC sponsor contribution funded the reserve. The receipts and authorized KMS evidence are linked in the repository.
 
 ## Slide 9 — Engineering proof
 
-The project currently passes 100 automated checks across Solidity contracts, backend services, client adapters, and frontend behavior. The frontend runs on Vercel, the backend on Render, and PostgreSQL storage allows the indexer to resume from its saved checkpoint after a restart.
+Reproducible validation covers Solidity invariants, backend API and indexer behavior, the client encryption adapter, and frontend UX. The frontend runs on Vercel, the read-only indexer API on Render, and PostgreSQL storage allows the indexer to resume from its saved checkpoint after a restart.
 
 ## Slide 10 — Close
 

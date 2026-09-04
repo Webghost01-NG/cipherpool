@@ -26,6 +26,10 @@ CipherPool is a confidential prize-savings prototype on Zama fhEVM. It keeps eac
 - Authorized KMS decryption after settlement verified a zero pool position and restored 10 cUSDC wallet balance.
 - Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).
 
+## Data Integrity
+
+The chain ID, reviewed contract addresses, deployment block, runtime hash, token metadata, and explorer URL are intentionally pinned deployment identifiers—not simulated application data. Live pool state comes from the verified contract or read-only indexer, and unavailable sources remain visibly unavailable rather than falling back to sample balances. Synthetic addresses appear only in automated tests. RPC, database, signing, and deployment credentials stay in ignored environment files or external secret stores.
+
 ## Submission Readiness
 
-Contract custody is ERC-7984-native. The placeholder vault that mislabeled donated tokens as yield has been removed. Sepolia prizes use the truthful sponsor-reserve fallback documented in [the funding model](../operations/reserve-funding.md); production yield requires a compatible audited confidential batcher route. The remaining milestone is the final UI audit, screenshots, and a new human-presented demo. Existing presentation binaries predate this migration and must not be submitted as current evidence.
+Contract custody is ERC-7984-native. The placeholder vault that mislabeled donated tokens as yield has been removed. Sepolia prizes use the truthful sponsor-reserve fallback documented in [the funding model](../operations/reserve-funding.md); production yield requires a compatible audited confidential batcher route. The current screenshot, presentation, and captioned walkthrough were refreshed against the active deployment on 4 September 2026. A final human-presented walkthrough is still recommended for bounty submission so judges can see wallet prompts and receipts without any simulated interaction.
