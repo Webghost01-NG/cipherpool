@@ -11,7 +11,7 @@ import {
   useWallet,
 } from "../src/hooks/useWallet.js";
 import { WalletButton } from "../src/components/wallet/WalletButton.js";
-import { WalletModal } from "../src/components/wallet/WalletModal.js";
+import { shouldCloseWalletModal, WalletModal } from "../src/components/wallet/WalletModal.js";
 
 describe("Wallet Connector & Network Guard Tests", () => {
   test("strictly enforces Sepolia testnet parameters", () => {
@@ -100,5 +100,12 @@ describe("Wallet Connector & Network Guard Tests", () => {
 
     const button = React.createElement(WalletButton);
     assert.ok(button);
+  });
+
+  test("wallet dialog remains open for network correction after connecting", () => {
+    assert.equal(shouldCloseWalletModal("connected"), true);
+    assert.equal(shouldCloseWalletModal("wrong_network"), false);
+    assert.equal(shouldCloseWalletModal("connecting"), false);
+    assert.equal(shouldCloseWalletModal("disconnected"), false);
   });
 });

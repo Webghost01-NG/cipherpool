@@ -8,6 +8,7 @@ import { DepositCard } from "../src/components/flows/DepositCard.js";
 import { WithdrawalCard } from "../src/components/flows/WithdrawalCard.js";
 import { LotteryDrawCard } from "../src/components/flows/LotteryDrawCard.js";
 import { LegacyExitCard } from "../src/components/flows/LegacyExitCard.js";
+import { WalletGateButton } from "../src/components/wallet/WalletGateButton.js";
 
 describe("Core Product Flows & Interactive Cards Tests", () => {
   test("private balance reveal reports truthful success feedback", async () => {
@@ -55,6 +56,9 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       onHide: () => {},
       isLoading: false,
       walletConnected: false,
+      walletStatus: "disconnected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
     });
@@ -67,6 +71,9 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       onDeposit: async () => {},
       isLoading: false,
       walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
       writesEnabled: true,
@@ -80,6 +87,9 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       onWithdraw: async () => {},
       isLoading: false,
       walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
       writesEnabled: true,
@@ -99,6 +109,9 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       isLoading: false,
       isOwner: true,
       walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
       tokenSymbol: "USDC",
       tokenDecimals: 6,
       writesEnabled: true,
@@ -126,6 +139,8 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
       },
       cancellationDelaySeconds: 86400,
       walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
       isLoading: false,
       isChecking: false,
       error: null,
@@ -137,5 +152,44 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     assert.ok(card);
     assert.equal(card.props.legacyPoolAddress, "0x1111111111111111111111111111111111111111");
     assert.equal("onRequestWithdrawal" in card.props, false);
+  });
+
+  test("wallet-gated operation controls remain actionable when disconnected", () => {
+    const disconnectedMarkup = renderToStaticMarkup(React.createElement(WalletGateButton, {
+      walletStatus: "disconnected",
+      onWalletAction: () => {},
+      connectLabel: "Connect wallet to deposit",
+      switchNetworkLabel: "Switch to Sepolia to deposit",
+      children: "Deposit",
+    }));
+    const wrongNetworkMarkup = renderToStaticMarkup(React.createElement(WalletGateButton, {
+      walletStatus: "wrong_network",
+      onWalletAction: () => {},
+      connectLabel: "Connect wallet to deposit",
+      switchNetworkLabel: "Switch to Sepolia to deposit",
+      children: "Deposit",
+    }));
+
+    assert.match(disconnectedMarkup, /type="button"/);
+    assert.match(disconnectedMarkup, /aria-haspopup="dialog"/);
+    assert.match(disconnectedMarkup, /Connect wallet to deposit/);
+    assert.doesNotMatch(disconnectedMarkup, /disabled/);
+    assert.match(wrongNetworkMarkup, /Switch to Sepolia to deposit/);
+  });
+
+  test("wallet gate preserves genuine protocol safety locks", () => {
+    const markup = renderToStaticMarkup(React.createElement(WalletGateButton, {
+      walletStatus: "disconnected",
+      onWalletAction: () => {},
+      walletActionEnabled: false,
+      connectLabel: "Connect wallet to deposit",
+      switchNetworkLabel: "Switch to Sepolia to deposit",
+      lockedLabel: "Deposits safety-locked",
+      children: "Deposit",
+    }));
+
+    assert.match(markup, /disabled/);
+    assert.match(markup, /Deposits safety-locked/);
+    assert.doesNotMatch(markup, /aria-haspopup="dialog"/);
   });
 });

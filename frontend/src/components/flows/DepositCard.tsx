@@ -1,12 +1,17 @@
 import React, { useState } from "react";
 import { ArrowDown, ExternalLink, Info } from "lucide-react";
 import { parseUnits } from "ethers";
-import { Badge, Button, Card } from "../common/UIPrimitives.js";
+import { Badge, Card } from "../common/UIPrimitives.js";
+import { WalletGateButton } from "../wallet/WalletGateButton.js";
+import type { WalletStatus } from "../../hooks/useWallet.js";
 
 export interface DepositCardProps {
   onDeposit: (amount: bigint) => Promise<void>;
   isLoading: boolean;
   walletConnected: boolean;
+  walletStatus: WalletStatus;
+  onWalletAction: () => void;
+  walletActionEnabled: boolean;
   tokenSymbol: string;
   tokenDecimals: number;
   writesEnabled: boolean;
@@ -16,6 +21,9 @@ export const DepositCard: React.FC<DepositCardProps> = ({
   onDeposit,
   isLoading,
   walletConnected,
+  walletStatus,
+  onWalletAction,
+  walletActionEnabled,
   tokenSymbol,
   tokenDecimals,
   writesEnabled,
@@ -77,9 +85,20 @@ export const DepositCard: React.FC<DepositCardProps> = ({
           <Info size={17} aria-hidden="true" />
           <span>The amount is encrypted for the official cUSDC contract before your wallet submits one transfer-and-deposit transaction.</span>
         </div>
-        <Button className="button--wide" type="submit" disabled={!walletConnected || !writesEnabled || !amount} isLoading={isLoading}>
-          <ArrowDown size={17} /> {!writesEnabled ? "Deposits safety-locked" : walletConnected ? "Deposit" : "Connect wallet to deposit"}
-        </Button>
+        <WalletGateButton
+          className="button--wide"
+          type="submit"
+          disabled={!walletConnected || !writesEnabled || !amount}
+          isLoading={isLoading}
+          walletStatus={walletStatus}
+          onWalletAction={onWalletAction}
+          walletActionEnabled={walletActionEnabled}
+          connectLabel="Connect wallet to deposit"
+          switchNetworkLabel="Switch to Sepolia to deposit"
+          lockedLabel="Deposits safety-locked"
+        >
+          <ArrowDown size={17} /> {!writesEnabled ? "Deposits safety-locked" : "Deposit"}
+        </WalletGateButton>
         <a className="helper-link" href="https://app.zama.org/" target="_blank" rel="noreferrer">
           Shield test tokens to cUSDC <ExternalLink size={12} />
         </a>
