@@ -1,5 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import {
   readWalletDisconnectPreference,
@@ -11,7 +13,7 @@ import {
   WalletProvider,
   useWallet,
 } from "../src/hooks/useWallet.js";
-import { WalletButton } from "../src/components/wallet/WalletButton.js";
+import { getWalletMenuFocusIndex, WalletButton } from "../src/components/wallet/WalletButton.js";
 import { shouldCloseWalletModal, WalletModal } from "../src/components/wallet/WalletModal.js";
 
 describe("Wallet Connector & Network Guard Tests", () => {
@@ -108,6 +110,29 @@ describe("Wallet Connector & Network Guard Tests", () => {
 
     const button = React.createElement(WalletButton);
     assert.ok(button);
+  });
+
+  test("wallet menu keyboard navigation wraps and supports boundary keys", () => {
+    assert.equal(getWalletMenuFocusIndex("ArrowDown", -1, 3), 0);
+    assert.equal(getWalletMenuFocusIndex("ArrowDown", 2, 3), 0);
+    assert.equal(getWalletMenuFocusIndex("ArrowUp", -1, 3), 2);
+    assert.equal(getWalletMenuFocusIndex("ArrowUp", 0, 3), 2);
+    assert.equal(getWalletMenuFocusIndex("Home", 2, 3), 0);
+    assert.equal(getWalletMenuFocusIndex("End", 0, 3), 2);
+    assert.equal(getWalletMenuFocusIndex("Tab", 0, 3), null);
+    assert.equal(getWalletMenuFocusIndex("ArrowDown", 0, 0), null);
+  });
+
+  test("wallet menu wires focus entry, Escape, outside dismissal, and trigger restoration", () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), "frontend/src/components/wallet/WalletButton.tsx"),
+      "utf-8"
+    );
+
+    assert.match(source, /menuItems\(\)\[0\]\?\.focus\(\)/);
+    assert.match(source, /event\.key === "Escape"/);
+    assert.match(source, /document\.addEventListener\("pointerdown", handlePointerDown\)/);
+    assert.match(source, /triggerRef\.current\?\.focus\(\)/);
   });
 
   test("wallet dialog remains open for network correction after connecting", () => {
