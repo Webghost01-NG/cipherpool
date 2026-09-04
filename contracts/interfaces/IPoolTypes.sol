@@ -18,6 +18,7 @@ interface IPoolTypes {
     struct DrawRequest {
         euint64 totalHandle;
         euint64 reserveHandle;
+        ebool readinessHandle;
         uint64 prizeAmount;
         uint64 timestamp;
         bool active;

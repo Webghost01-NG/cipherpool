@@ -9,7 +9,9 @@ contract EndToEndPoolTest is ConfidentialPoolTestBase {
 
     function setUp() public {
         setUpPool();
-        for (uint256 i = 0; i < USER_COUNT; i++) users[i] = address(uint160(0x1000 + i));
+        for (uint256 i = 0; i < USER_COUNT; i++) {
+            users[i] = address(uint160(0x1000 + i));
+        }
     }
 
     function test_EndToEnd_EncryptedDepositsDrawAndWithdrawals() public {
@@ -24,8 +26,7 @@ contract EndToEndPoolTest is ConfidentialPoolTestBase {
         _requestAndFinalizeDraw(100_500, 3_500);
         _requestAndFinalizeDraw(101_000, 3_000);
         assertEq(pool.currentDrawId(), 3);
-        assertEq(pool.lastVerifiedTotalEligibleBalance(), 101_500);
-        assertEq(pool.lastVerifiedPrizeReserve(), 2_500);
+        assertTrue(pool.lastDrawReady());
 
         _withdraw(users[0], 4_000);
         _withdraw(users[1], 10_000);

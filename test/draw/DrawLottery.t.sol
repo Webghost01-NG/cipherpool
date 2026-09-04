@@ -73,16 +73,20 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         pool.withdraw(encryptedAmount, "");
     }
 
-    function test_FinalizeDrawConsumesReserveAndRecordsVerifiedSnapshot() public {
+    function test_FinalizeDrawConsumesReserveWithoutPublishingAggregateSnapshot() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
         _requestAndFinalizeDraw(10_000, 2_000);
 
         assertEq(pool.currentDrawId(), 1);
-        assertEq(pool.lastVerifiedTotalEligibleBalance(), 10_500);
-        assertEq(pool.lastVerifiedPrizeReserve(), 1_500);
+        assertTrue(pool.lastDrawReady());
         assertTrue(pool.getPrizeHandle(alice) != bytes32(0));
         assertFalse(pool.getPendingDraw().active);
+
+        (bool exposesTotal,) = address(pool).staticcall(abi.encodeWithSignature("lastVerifiedTotalEligibleBalance()"));
+        (bool exposesReserve,) = address(pool).staticcall(abi.encodeWithSignature("lastVerifiedPrizeReserve()"));
+        assertFalse(exposesTotal);
+        assertFalse(exposesReserve);
     }
 
     function test_NonOwnerCanFinalizeProofBoundDraw() public {
@@ -90,17 +94,13 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _fundReserve(sponsor, 2_000);
         pool.requestDraw(DRAW_PRIZE);
 
-        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(request.totalHandle);
-        handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(2_000)));
+        bytes memory proof = _drawReadinessProof(true);
 
         vm.prank(keeper);
-        pool.finalizeDraw(10_000, 2_000, proof);
+        pool.finalizeDraw(true, proof);
 
         assertEq(pool.currentDrawId(), 1);
-        assertEq(pool.lastVerifiedPrizeReserve(), 1_500);
+        assertTrue(pool.lastDrawReady());
         assertFalse(pool.getPendingDraw().active);
     }
 
@@ -119,19 +119,15 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, DRAW_PRIZE - 1);
         pool.requestDraw(DRAW_PRIZE);
-        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(request.totalHandle);
-        handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(DRAW_PRIZE - 1)));
+        bytes memory proof = _drawReadinessProof(false);
 
         vm.prank(keeper);
-        pool.finalizeDraw(10_000, DRAW_PRIZE - 1, proof);
+        pool.finalizeDraw(false, proof);
 
         assertFalse(pool.getPendingDraw().active);
         assertEq(pool.currentDrawId(), 0);
-        assertEq(pool.lastVerifiedTotalEligibleBalance(), 10_000);
-        assertEq(pool.lastVerifiedPrizeReserve(), DRAW_PRIZE - 1);
+        assertFalse(pool.lastDrawReady());
+        assertTrue(pool.lastDrawVerificationTimestamp() > 0);
         assertEq(mockExecutor.randomCalls(), 0);
     }
 
@@ -140,15 +136,13 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _fundReserve(sponsor, 2_000);
         pool.requestDraw(DRAW_PRIZE);
 
-        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
-        bytes32[] memory substitutedHandles = new bytes32[](2);
-        substitutedHandles[0] = FHE.toBytes32(request.totalHandle);
-        substitutedHandles[1] = bytes32(uint256(1));
-        bytes memory proof = generateMockKMSProof(substitutedHandles, abi.encode(uint64(10_000), uint64(2_000)));
+        bytes32[] memory substitutedHandles = new bytes32[](1);
+        substitutedHandles[0] = bytes32(uint256(1));
+        bytes memory proof = generateMockKMSProof(substitutedHandles, abi.encode(true));
 
         vm.startPrank(keeper);
         vm.expectRevert();
-        pool.finalizeDraw(10_000, 2_000, proof);
+        pool.finalizeDraw(true, proof);
         vm.stopPrank();
         assertTrue(pool.getPendingDraw().active);
     }
@@ -158,15 +152,11 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _fundReserve(sponsor, 2_000);
         pool.requestDraw(DRAW_PRIZE);
 
-        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(request.totalHandle);
-        handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(2_000)));
+        bytes memory proof = _drawReadinessProof(true);
 
         vm.startPrank(keeper);
         vm.expectRevert();
-        pool.finalizeDraw(10_001, 2_000, proof);
+        pool.finalizeDraw(false, proof);
         vm.stopPrank();
         assertTrue(pool.getPendingDraw().active);
     }
@@ -176,17 +166,13 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         _fundReserve(sponsor, 2_000);
         pool.requestDraw(DRAW_PRIZE);
 
-        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(request.totalHandle);
-        handles[1] = FHE.toBytes32(request.reserveHandle);
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(uint64(10_000), uint64(2_000)));
+        bytes memory proof = _drawReadinessProof(true);
         vm.prank(keeper);
-        pool.finalizeDraw(10_000, 2_000, proof);
+        pool.finalizeDraw(true, proof);
 
         vm.prank(alice);
         vm.expectRevert(NoActiveDrawRequest.selector);
-        pool.finalizeDraw(10_000, 2_000, proof);
+        pool.finalizeDraw(true, proof);
     }
 
     function test_FinalizesAtDocumentedParticipantBound() public {
@@ -198,21 +184,24 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         }
         _fundReserve(sponsor, DRAW_PRIZE);
         pool.requestDraw(DRAW_PRIZE);
-        IPoolTypes.DrawRequest memory request = pool.getPendingDraw();
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(request.totalHandle);
-        handles[1] = FHE.toBytes32(request.reserveHandle);
-        uint64 total = 12 * balance;
-        bytes memory proof = generateMockKMSProof(handles, abi.encode(total, DRAW_PRIZE));
+        bytes memory proof = _drawReadinessProof(true);
 
         uint256 gasBefore = gasleft();
-        pool.finalizeDraw(total, DRAW_PRIZE, proof);
+        pool.finalizeDraw(true, proof);
         uint256 gasUsed = gasBefore - gasleft();
 
         emit log_named_uint("bounded finalization gas", gasUsed);
         assertLt(gasUsed, 30_000_000);
         assertEq(pool.currentDrawId(), 1);
         assertEq(pool.getParticipantCount(), maximum);
+    }
+
+    function test_LegacyAggregateFinalizationSelectorIsAbsent() public {
+        (bool exposed,) = address(pool)
+            .call(
+                abi.encodeWithSignature("finalizeDraw(uint64,uint64,bytes)", uint64(10_000), uint64(2_000), bytes(""))
+            );
+        assertFalse(exposed);
     }
 
     function test_AnyoneCanCancelStaleDrawLock() public {

@@ -29,13 +29,12 @@ contract SepoliaRuntimeChecklistTest is ConfidentialPoolTestBase {
         assertEq(pool.currentDrawId(), 0);
         assertEq(pool.getParticipantCount(), 0);
         assertEq(pool.MAX_PARTICIPANTS(), 12);
-        assertEq(pool.lastVerifiedTotalEligibleBalance(), 0);
-        assertEq(pool.lastVerifiedPrizeReserve(), 0);
+        assertFalse(pool.lastDrawReady());
     }
 
     function test_ConfidentialActionsAreStableDomainSeparators() public {
-        assertEq(pool.DEPOSIT_ACTION(), keccak256("CIPHERPOOL_DEPOSIT_V1"));
-        assertEq(pool.PRIZE_RESERVE_ACTION(), keccak256("CIPHERPOOL_PRIZE_RESERVE_V1"));
+        assertEq(pool.DEPOSIT_ACTION(), keccak256("VEYLOTT_DEPOSIT_V1"));
+        assertEq(pool.PRIZE_RESERVE_ACTION(), keccak256("VEYLOTT_PRIZE_RESERVE_V1"));
         assertTrue(pool.DEPOSIT_ACTION() != pool.PRIZE_RESERVE_ACTION());
     }
 

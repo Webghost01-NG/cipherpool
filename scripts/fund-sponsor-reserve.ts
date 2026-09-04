@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import { createInstance, SepoliaConfig } from "@zama-fhe/relayer-sdk/node";
 
 const POOL_ABI = [
+  "function PRIZE_RESERVE_ACTION() external view returns (bytes32)",
   "function custodyAsset() external view returns (address)",
   "function paused() external view returns (bool)",
   "event PrizeReserveFunded(address indexed source, bytes32 indexed encryptedAmountHandle)",
@@ -48,9 +49,10 @@ async function main() {
   }
 
   const pool = new ethers.Contract(poolAddress, POOL_ABI, wallet);
-  const [configuredCustody, paused] = await Promise.all([
+  const [configuredCustody, paused, reserveAction] = await Promise.all([
     pool.custodyAsset() as Promise<string>,
     pool.paused() as Promise<boolean>,
+    pool.PRIZE_RESERVE_ACTION() as Promise<string>,
   ]);
   if (ethers.getAddress(configuredCustody) !== custodyAssetAddress) {
     throw new Error("The pool custody asset does not match CUSTODY_ASSET_ADDRESS.");
@@ -74,7 +76,7 @@ async function main() {
 
   const action = ethers.AbiCoder.defaultAbiCoder().encode(
     ["bytes32"],
-    [ethers.id("CIPHERPOOL_PRIZE_RESERVE_V1")]
+    [reserveAction]
   );
   const transaction = await token.confidentialTransferAndCall(
     poolAddress,

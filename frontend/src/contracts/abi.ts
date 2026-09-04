@@ -1,4 +1,6 @@
 export const POOL_ABI = [
+  "function DEPOSIT_ACTION() external view returns (bytes32)",
+  "function PRIZE_RESERVE_ACTION() external view returns (bytes32)",
   "function withdraw(bytes32 encryptedAmount, bytes calldata inputProof) external",
   "function finalizeParticipantActivation(address user, bool eligible, bytes calldata decryptionProof) external",
   "function requestDraw(uint64 prizeAmount) external",

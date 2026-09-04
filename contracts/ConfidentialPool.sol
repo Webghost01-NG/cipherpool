@@ -14,8 +14,8 @@ import {IERC7984Receiver} from "./interfaces/IERC7984Receiver.sol";
 /**
  * @title ConfidentialPool
  * @notice ERC-7984 prize savings pool with encrypted deposits, balances, withdrawals, and prizes.
- * @dev Individual values never enter plaintext calldata. Only aggregate draw snapshots are publicly
- *      decrypted so bounded randomness can select a winner over encrypted cumulative balances.
+ * @dev Individual and aggregate amounts never enter plaintext draw calldata. A single readiness
+ *      predicate authorizes encrypted-bound winner selection over encrypted cumulative balances.
  */
 contract ConfidentialPool is
     IConfidentialPool,
@@ -25,8 +25,8 @@ contract ConfidentialPool is
     Pausable,
     ZamaEthereumConfig
 {
-    bytes32 public constant DEPOSIT_ACTION = keccak256("CIPHERPOOL_DEPOSIT_V1");
-    bytes32 public constant PRIZE_RESERVE_ACTION = keccak256("CIPHERPOOL_PRIZE_RESERVE_V1");
+    bytes32 public constant DEPOSIT_ACTION = keccak256("VEYLOTT_DEPOSIT_V1");
+    bytes32 public constant PRIZE_RESERVE_ACTION = keccak256("VEYLOTT_PRIZE_RESERVE_V1");
     uint256 public constant override MAX_PARTICIPANTS = 12;
 
     address public immutable override custodyAsset;
@@ -59,8 +59,7 @@ contract ConfidentialPool is
     uint256 public drawRequestNonce;
     uint64 public override nextDrawRequestTimestamp;
     uint256 public override currentDrawId;
-    uint64 public override lastVerifiedTotalEligibleBalance;
-    uint64 public override lastVerifiedPrizeReserve;
+    bool public override lastDrawReady;
     uint64 public override lastDrawVerificationTimestamp;
 
     constructor(
@@ -248,59 +247,57 @@ contract ConfidentialPool is
         if (!_eligibleTotalInitialized || participants.length == 0) revert EmptyPool();
         if (!_reserveInitialized) revert EmptyPrizeReserve();
 
-        FHE.makePubliclyDecryptable(_totalEligibleBalance);
-        FHE.makePubliclyDecryptable(_prizeReserve);
+        ebool hasEligibleWeight = FHE.gt(_totalEligibleBalance, uint64(0));
+        ebool reserveSufficient = FHE.ge(_prizeReserve, prizeAmount);
+        ebool ready = FHE.and(hasEligibleWeight, reserveSufficient);
+        FHE.makePubliclyDecryptable(ready);
 
         uint256 nonce = drawRequestNonce++;
         uint64 timestamp = uint64(block.timestamp);
         nextDrawRequestTimestamp = timestamp + drawInterval;
         bytes32 totalHandle = FHE.toBytes32(_totalEligibleBalance);
         bytes32 reserveHandle = FHE.toBytes32(_prizeReserve);
+        bytes32 readinessHandle = FHE.toBytes32(ready);
         bytes32 requestHash = keccak256(
-            abi.encode(block.chainid, address(this), nonce, prizeAmount, timestamp, totalHandle, reserveHandle)
+            abi.encode(
+                block.chainid, address(this), nonce, prizeAmount, timestamp, totalHandle, reserveHandle, readinessHandle
+            )
         );
 
         _pendingDraw = DrawRequest({
             totalHandle: _totalEligibleBalance,
             reserveHandle: _prizeReserve,
+            readinessHandle: ready,
             prizeAmount: prizeAmount,
             timestamp: timestamp,
             active: true,
             requestHash: requestHash
         });
-        emit DrawRequested(nonce, requestHash, prizeAmount, totalHandle, reserveHandle);
+        emit DrawRequested(nonce, requestHash, prizeAmount, totalHandle, reserveHandle, readinessHandle);
     }
 
     /**
-     * @notice Verifies the aggregate snapshot and executes weighted selection over encrypted balances.
+     * @notice Verifies one draw-readiness bit and executes weighted selection over encrypted balances.
      * @dev Permissionless because the KMS proof is bound to the active request's stored handles and
      *      the request already fixes the prize amount. The caller cannot substitute settlement state.
      */
-    function finalizeDraw(uint64 totalEligibleBalance, uint64 prizeReserve, bytes calldata decryptionProof)
-        external
-        override
-        nonReentrant
-    {
+    function finalizeDraw(bool ready, bytes calldata decryptionProof) external override nonReentrant {
         DrawRequest memory request = _pendingDraw;
         if (!request.active) revert NoActiveDrawRequest();
 
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(request.totalHandle);
-        handles[1] = FHE.toBytes32(request.reserveHandle);
-        FHE.checkSignatures(handles, abi.encode(totalEligibleBalance, prizeReserve), decryptionProof);
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = FHE.toBytes32(request.readinessHandle);
+        FHE.checkSignatures(handles, abi.encode(ready), decryptionProof);
 
         delete _pendingDraw;
-        if (totalEligibleBalance == 0 || request.prizeAmount > prizeReserve) {
-            lastVerifiedTotalEligibleBalance = totalEligibleBalance;
-            lastVerifiedPrizeReserve = prizeReserve;
-            lastDrawVerificationTimestamp = uint64(block.timestamp);
-            emit DrawSkipped(
-                request.requestHash, totalEligibleBalance, prizeReserve, request.prizeAmount, block.timestamp
-            );
+        lastDrawReady = ready;
+        lastDrawVerificationTimestamp = uint64(block.timestamp);
+        if (!ready) {
+            emit DrawSkipped(request.requestHash, request.prizeAmount, block.timestamp);
             return;
         }
 
-        euint64 winningTicket = _sampleWeightedTicket(totalEligibleBalance);
+        euint64 winningTicket = _sampleWeightedTicket(request.totalHandle);
         euint64 cumulativeEnd = FHE.asEuint64(0);
         euint64 prize = FHE.asEuint64(request.prizeAmount);
         uint256 len = participants.length;
@@ -325,18 +322,7 @@ contract ConfidentialPool is
         _totalEligibleBalance = FHE.allowThis(_totalEligibleBalance);
 
         currentDrawId++;
-        lastVerifiedTotalEligibleBalance = totalEligibleBalance + request.prizeAmount;
-        lastVerifiedPrizeReserve = prizeReserve - request.prizeAmount;
-        lastDrawVerificationTimestamp = uint64(block.timestamp);
-        emit DrawExecuted(
-            currentDrawId,
-            request.requestHash,
-            request.prizeAmount,
-            totalEligibleBalance,
-            lastVerifiedPrizeReserve,
-            block.timestamp,
-            len
-        );
+        emit DrawExecuted(currentDrawId, request.requestHash, request.prizeAmount, block.timestamp, len);
     }
 
     /**
@@ -511,14 +497,14 @@ contract ConfidentialPool is
     }
 
     /**
-     * @dev Maps a full-width encrypted random value into [0, upperBound) without requiring
-     *      upperBound to be a power of two. The 128-bit intermediate cannot overflow because
-     *      both factors are uint64. Multiply-high reduction gives each ticket either floor or
-     *      ceil(2^64 / upperBound) source values, so bucket probabilities differ by at most 2^-64.
+     * @dev Maps a full-width encrypted random value into [0, encryptedUpperBound) without
+     *      revealing the bound. The 128-bit intermediate cannot overflow because both factors
+     *      are uint64. Multiply-high reduction gives each ticket either floor or ceil of
+     *      2^64 / upperBound source values, so bucket probabilities differ by at most 2^-64.
      */
-    function _sampleWeightedTicket(uint64 upperBound) internal returns (euint64) {
+    function _sampleWeightedTicket(euint64 encryptedUpperBound) internal returns (euint64) {
         euint128 random = FHE.asEuint128(FHE.randEuint64());
-        euint128 product = FHE.mul(random, uint128(upperBound));
+        euint128 product = FHE.mul(random, FHE.asEuint128(encryptedUpperBound));
         euint128 scaled = FHE.div(product, uint128(1) << 64);
         return FHE.asEuint64(scaled);
     }

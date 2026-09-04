@@ -2,7 +2,7 @@
 
 ## Honest Testnet Model
 
-Veylott’s Sepolia reserve is funded by voluntary sponsor contributions of official `cUSDCMock`. It is not described as generated yield. Contributions use the same ERC-7984 transfer-and-callback path as deposits but carry `CIPHERPOOL_PRIZE_RESERVE_V1`, so the pool credits only the encrypted amount actually transferred. `PrizeReserveFunded` records the sponsor and ciphertext handle without exposing the amount.
+Veylott’s Sepolia reserve is funded by voluntary sponsor contributions of official `cUSDCMock`. It is not described as generated yield. Contributions use the same ERC-7984 transfer-and-callback path as deposits but carry the value returned by `PRIZE_RESERVE_ACTION()`, so the pool credits only the encrypted amount actually transferred. `PrizeReserveFunded` records the sponsor and ciphertext handle without exposing the amount.
 
 The former `ConfidentialVault` was removed because it only held plaintext tokens and treated unsolicited balance increases as yield. It had no lending or ERC-4626 integration and could not prove where an increase originated.
 
@@ -45,7 +45,7 @@ Sponsor funds enter `_prizeReserve`, never a saver’s position or `_totalAccoun
 | Condition | Sepolia behavior |
 | --- | --- |
 | Strategy loss | Not applicable: no strategy or saver principal is deployed. |
-| Zero reserve | KMS verifies zero and `finalizeDraw` rejects any positive prize. |
+| Zero reserve | KMS verifies the encrypted readiness predicate as false and `finalizeDraw` skips the prize. |
 | Unavailable strategy liquidity | Not applicable: saver withdrawals use liquid pool-held cUSDC directly. |
 | Failed or insufficient sponsor transfer | The official token returns encrypted zero; the pool can credit only that result, which cannot cover a positive draw. |
 | Concurrent reserve mutation | Reserve callbacks are rejected while a draw snapshot is active. |
