@@ -53,8 +53,14 @@ export const POOL_ABI_READINESS_V2 = [
   "event DrawExecuted(uint256 indexed drawId, bytes32 indexed requestHash, uint64 prizeAmount, uint256 timestamp, uint256 participantCount)",
 ];
 
-export function getPoolAbi(version: "aggregate-v1" | "readiness-v2"): readonly string[] {
-  return version === "readiness-v2" ? POOL_ABI_READINESS_V2 : POOL_ABI;
+export const POOL_ABI_SNAPSHOT_V3 = [
+  ...POOL_ABI_READINESS_V2,
+  "function withdrawalSnapshotsEnabled() external view returns (bool)",
+];
+
+export function getPoolAbi(version: "aggregate-v1" | "readiness-v2" | "snapshot-v3"): readonly string[] {
+  if (version === "snapshot-v3") return POOL_ABI_SNAPSHOT_V3;
+  return version !== "aggregate-v1" ? POOL_ABI_READINESS_V2 : POOL_ABI;
 }
 
 export const ERC7984_ABI = [

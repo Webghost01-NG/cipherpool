@@ -9,7 +9,7 @@ import {
   type PoolRuntimeVersion,
 } from "../contracts/config.js";
 import { validateDeploymentEvidence } from "../contracts/deployment.js";
-import { getRuntimeCapabilities, resolveRuntimeProfile } from "../contracts/runtimeProfiles.js";
+import { allowsWithdrawalDuringSettlement, getRuntimeCapabilities, resolveRuntimeProfile } from "../contracts/runtimeProfiles.js";
 import { describeRpcFailure, withTimeout } from "../utils/rpcDiagnostics.js";
 import { canReadSepoliaContracts, canUseWalletTransactionRoute } from "../utils/networkStatus.js";
 
@@ -242,6 +242,9 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       }
       const capabilities = getRuntimeCapabilities(runtimeProfile.version);
       const pool = new ethers.Contract(contractAddress, getPoolAbi(runtimeProfile.version), provider);
+      if (runtimeProfile.version === "snapshot-v3" && !(await withTimeout(pool.withdrawalSnapshotsEnabled() as Promise<boolean>, 8_000))) {
+        throw new Error("Deployment verification failed: withdrawal snapshots are not enabled on this runtime.");
+      }
 
       const [
         verifiedAt,
@@ -289,10 +292,10 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
               active: false,
               requestHash: ZERO_HASH,
             }),
-        address && runtimeProfile.version === "readiness-v2"
+        address && runtimeProfile.version !== "aggregate-v1"
           ? pool.isParticipant(address) as Promise<boolean>
           : Promise.resolve(false),
-        address && runtimeProfile.version === "readiness-v2"
+        address && runtimeProfile.version !== "aggregate-v1"
           ? pool.getPendingParticipantDeactivation(address) as Promise<{
               zeroBalanceHandle: string;
               timestamp: bigint;
@@ -449,13 +452,14 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     return () => window.clearInterval(interval);
   }, [refreshPoolData]);
 
-  const requireVerifiedWrites = useCallback(() => {
+  const requireVerifiedWrites = useCallback((withdrawal = false) => {
     if (!runtimeConfig.protocolWritesEnabled) throw new Error("Protocol writes are disabled by the safety switch.");
     if (deploymentVerification.status !== "verified") throw new Error("Protocol writes require verified Sepolia bytecode and ERC-7984 custody.");
     if (walletRpcVerification.status !== "ready") throw new Error(walletRpcVerification.message);
     if (!activeRuntimeVersion) throw new Error("The verified contract runtime profile is unavailable.");
-    if (poolStats.isPaused) throw new Error("Protocol writes are disabled while the pool is paused.");
-    if (poolStats.pendingDraw.active) throw new Error("Protocol writes are locked while a prize draw awaits settlement or cancellation.");
+    const exitAllowed = withdrawal && allowsWithdrawalDuringSettlement(activeRuntimeVersion);
+    if (poolStats.isPaused && !exitAllowed) throw new Error("Protocol writes are disabled while the pool is paused.");
+    if (poolStats.pendingDraw.active && !exitAllowed) throw new Error("Protocol writes are locked while a prize draw awaits settlement or cancellation.");
     return activeRuntimeVersion;
   }, [activeRuntimeVersion, deploymentVerification.status, poolStats.isPaused, poolStats.pendingDraw.active, walletRpcVerification]);
 
@@ -526,7 +530,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
 
   const withdraw = useCallback(async (amount: bigint, callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
-    const runtimeVersion = requireVerifiedWrites();
+    const runtimeVersion = requireVerifiedWrites(true);
     setIsLoading(true);
     try {
       const [{ ethers }, { InputEncryptionAdapter }] = await Promise.all([
@@ -549,7 +553,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
   const deactivateParticipant = useCallback(async (callbacks: TransactionCallbacks = {}) => {
     if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
     const runtimeVersion = requireVerifiedWrites();
-    if (runtimeVersion !== "readiness-v2") throw new Error("Participant slot reclamation is unavailable on this archived runtime.");
+    if (runtimeVersion === "aggregate-v1") throw new Error("Participant slot reclamation is unavailable on this archived runtime.");
     setIsLoading(true);
     try {
       const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
@@ -748,7 +752,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       callbacks.onProofRequested?.(pending.requestHash);
       const fhevm = await getBrowserFhevmInstance();
       let finalizeTx;
-      if (runtimeVersion === "readiness-v2") {
+      if (runtimeVersion !== "aggregate-v1") {
         const result = await fhevm.publicDecrypt([pending.readinessHandle]);
         const ready = readClearBoolean(result.clearValues, pending.readinessHandle);
         finalizeTx = await pool.finalizeDraw(ready, result.decryptionProof);
@@ -794,6 +798,13 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     activeRuntimeVersion,
     deploymentVerification,
     walletRpcVerification,
+    withdrawalsEnabled:
+      runtimeConfig.protocolWritesEnabled &&
+      deploymentVerification.status === "verified" &&
+      walletRpcVerification.status === "ready" &&
+      activeRuntimeVersion !== null &&
+      status === "connected" &&
+      (allowsWithdrawalDuringSettlement(activeRuntimeVersion) || (!poolStats.isPaused && !poolStats.pendingDraw.active)),
     writesEnabled:
       runtimeConfig.protocolWritesEnabled &&
       deploymentVerification.status === "verified" &&

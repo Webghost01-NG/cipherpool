@@ -168,6 +168,9 @@ contract ParticipantActivationTest is ConfidentialPoolTestBase, IPoolErrors {
         assertEq(pool.getParticipantCount(), maximum);
         assertFalse(pool.isParticipant(overflowUser));
         assertTrue(pool.getPendingParticipantActivation(overflowUser).active);
+        // A lost admission race must not strand the already accepted deposit.
+        _withdraw(overflowUser, 1_000);
+        assertEq(pool.userWithdrawalNonces(overflowUser), 1);
     }
 
     function test_DepositCallbackRejectsNewPositionAtCapacity() public {

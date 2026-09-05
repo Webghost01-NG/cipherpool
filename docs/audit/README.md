@@ -2,6 +2,8 @@
 
 ## Audit Status
 
+The snapshot-withdrawal candidate changes contract source after the frozen deployment below. Its [release acceptance checklist](../operations/snapshot-withdrawal-release.md) requires a new deployment and scope before verification can pass. The existing scope remains historical deployment evidence, not coverage of the candidate.
+
 Veylott is unaudited. This package prepares a reproducible external review; it is not an audit opinion. The immutable source scope is commit [`92a51ab869e706a3b53e3be63d411b01eb06ac09`](https://github.com/Webghost01-NG/veylott/commit/92a51ab869e706a3b53e3be63d411b01eb06ac09), whose contract and deployment-script files remain unchanged on `main`.
 
 ## Scope

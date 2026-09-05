@@ -10,6 +10,7 @@ export interface WithdrawalCardProps {
   onDeactivate: () => Promise<void>;
   participantActive: boolean;
   deactivationPending: boolean;
+  deactivationEnabled?: boolean;
   isLoading: boolean;
   walletConnected: boolean;
   walletStatus: WalletStatus;
@@ -25,6 +26,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
   onDeactivate,
   participantActive,
   deactivationPending,
+  deactivationEnabled = true,
   isLoading,
   walletConnected,
   walletStatus,
@@ -67,7 +69,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
               autoComplete="off"
               value={amount}
               onChange={(event) => { setAmount(event.target.value); setValidationError(null); }}
-              disabled={isLoading || !walletConnected || !writesEnabled}
+              disabled={isLoading || !walletConnected || !writesEnabled || !deactivationEnabled}
               placeholder="0.00"
             />
             <span>{tokenSymbol}</span>
