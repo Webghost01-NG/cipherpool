@@ -9,7 +9,7 @@ The protected assets are confidential cUSDC custody, encrypted saver positions, 
 - Users, callers, keepers, calldata, public RPCs, the indexer, and the frontend are untrusted for contract safety.
 - The configured cUSDC contract is trusted to enforce ERC-7984 encrypted transfers and return the actual transferred ciphertext. Its proxy administrator and upgrades are external risks.
 - Zama's Sepolia ACL, coprocessor, and KMS are trusted for FHE execution, permissions, confidentiality, and proof validity.
-- The owner can pause/unpause but cannot choose a winner, prize amount, or draw time. Owner-key loss can prevent emergency pauses; it cannot block permissionless draws or withdrawals while unpaused.
+- The owner can pause/unpause but cannot choose a winner or change the fixed prize/cadence. Pause blocks new activity but not snapshot-v3 withdrawals or pending-draw finalization. Owner-key loss cannot prevent those exits; token and FHE execution availability remain dependencies.
 
 ## Adversaries
 
@@ -19,7 +19,7 @@ A malicious saver may submit arbitrary external ciphertexts, zero transfers, rep
 
 - Credits use only the configured token callback's returned ciphertext.
 - Participant activation/deactivation and draw readiness proofs are bound to storage-anchored handles and single-use request hashes.
-- Draw mutation locks prevent balances or reserve handles changing during settlement.
+- Draw locks freeze membership and reserve mutations. Encrypted request-time weights preserve eligibility while current user balances can decrease through withdrawals; settlement credits current balances, never restores withdrawn principal.
 - A fixed prize is encrypted-debited before encrypted winner credit; the readiness proof covers positive weight and sufficient reserve.
 - Full-width encrypted sampling and 128-bit scaling avoid power-of-two restrictions and arithmetic overflow.
 - Active participants are capped at 12; proof-bound zero-position removal reclaims slots.

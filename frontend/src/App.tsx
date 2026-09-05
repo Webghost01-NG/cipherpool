@@ -438,6 +438,15 @@ export const App: React.FC = () => {
           </div>
         )}
 
+        {activeTab === "pool" && runtimeConfig.previousPoolAppUrl && (
+          <aside className="privacy-note">
+            <div>
+              <strong>Deposited before the withdrawal upgrade?</strong>
+              <p>Your funds do not move automatically. <a href={runtimeConfig.previousPoolAppUrl} target="_blank" rel="noopener noreferrer">Open the previous pool to withdraw your position.</a> Check the pool address before signing; its original restrictions still apply.</p>
+            </div>
+          </aside>
+        )}
+
         {activeTab === "pool" && DEFAULT_LEGACY_POOL_ADDRESS && (
           <section className="legacy-stage" aria-label="Archived pool exit actions">
             <LegacyExitCard

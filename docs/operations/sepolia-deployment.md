@@ -1,6 +1,10 @@
 # Sepolia Deployment and Rollback
 
-## Active Deployment Evidence
+## Current Snapshot-Withdrawal Successor
+
+The current successor is `0x90F72615Be5f05A2ce9DCA540D756a4415CE0AD1`, deployed at block `11639494`. Use the [snapshot release evidence](snapshot-withdrawal-release.md) and [machine-readable audit scope](../audit/scope.json) for its runtime hash, receipt, live withdrawal validation, and remaining limitations. The frontend requires `snapshot-v3`; the backend starts at that deployment block with its pool-specific checkpoint. Older receipts below are historical and must not be attributed to the successor.
+
+## Historical Readiness-v2 Deployment Evidence
 
 The active pool uses the official Zama `cUSDCMock` ERC-7984 wrapper on Ethereum Sepolia (`11155111`). The broadcast creation input was compared byte-for-byte with the locally compiled creation bytecode and ABI-encoded constructor arguments.
 
@@ -49,7 +53,7 @@ An earlier predecessor pool accepted a real 8 cUSDC deposit and draw request, bu
 
 Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow before the permissionless-finalization migration: encrypted 0.5 cUSDC deposit, KMS-verified draw request and finalization, private winner check, prize claim through the ordinary withdrawal path, and principal withdrawal. Draw 1 finalized in block `11634933` with total weight `500,000`, prize `500,000`, and zero remaining reserve. Post-settlement authorized KMS verification returned a zero private position and zero prize counter. See the [phase-by-phase evidence](live-prize-lifecycle.md) for every confirmed transaction.
 
-## Runtime Activation
+## Historical Readiness-v2 Runtime Activation
 
 The backend uses `INDEXER_START_BLOCK=11636641` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. Historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation and zero-balance slot reclamation are active in this runtime.
 

@@ -2,6 +2,8 @@
 
 ## Honest Testnet Model
 
+The bounty-form clarification supplied for this submission explicitly permits a mock yield source such as an admin-funded reserve, provided the README explains its operation and real-yield integration path. This implementation uses that allowance. A passive external vault is therefore a future production-integration limitation, not a reason to fabricate yield or replace the working Sepolia reserve.
+
 Veylott’s Sepolia reserve is funded by voluntary sponsor contributions of official `cUSDCMock`. It is not described as generated yield. Contributions use the same ERC-7984 transfer-and-callback path as deposits but carry the value returned by `PRIZE_RESERVE_ACTION()`, so the pool credits only the encrypted amount actually transferred. `PrizeReserveFunded` records the sponsor and ciphertext handle without exposing the amount.
 
 The former `ConfidentialVault` was removed because it only held plaintext tokens and treated unsolicited balance increases as yield. It had no lending or ERC-4626 integration and could not prove where an increase originated.

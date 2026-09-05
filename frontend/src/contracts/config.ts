@@ -63,6 +63,7 @@ function readBytes32(name: string): string {
 export const runtimeConfig = Object.freeze({
   chainId: readPositiveInteger("VITE_CHAIN_ID"),
   poolAddress: readAddress("VITE_POOL_ADDRESS"),
+  previousPoolAppUrl: readUrlList("VITE_PREVIOUS_POOL_APP_URL")[0] ?? "",
   legacyPoolAddress: readAddress("VITE_LEGACY_POOL_ADDRESS"),
   custodyAssetAddress: readAddress("VITE_CONFIDENTIAL_ASSET_ADDRESS"),
   poolRuntimeCodeHash: readBytes32("VITE_POOL_RUNTIME_CODE_HASH"),
