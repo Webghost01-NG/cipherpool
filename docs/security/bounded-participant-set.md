@@ -4,6 +4,8 @@ Veylott bounds the encrypted weighted-selection loop at 12 active participants. 
 
 ## Slot Reclamation
 
+Admission proves a positive position, not a unique person. One actor with multiple funded addresses can occupy all 12 slots. Capacity races do not reserve a place for pending deposits; the losing account must retain its withdrawal path. This is a known availability/fairness limit, not Sybil protection. The snapshot successor preserves request-time eligibility after withdrawal, so last-minute admission can gain that round's weight; it does not implement time-weighted savings.
+
 An active participant withdrawal creates an encrypted `balance == 0` predicate and a request bound to the chain, pool, wallet, nonce, timestamp, balance handle, and predicate handle. Anyone may relay the matching KMS proof. A verified zero removes the address with swap-and-pop; a verified nonzero clears only the request. The participant can request a fresh check if settlement was interrupted.
 
 Every later deposit or draw award invalidates the prior removal request before its stored balance handle can be reused. Removal therefore cannot subtract a positive balance or replay against new position state. Zero-value callbacks cannot reserve slots because only KMS-verified positive positions are admitted.

@@ -2,16 +2,18 @@
 
 ## Audit Status
 
-Veylott is unaudited. This package prepares a reproducible external review; it is not an audit opinion. The immutable source scope is commit [`92a51ab869e706a3b53e3be63d411b01eb06ac09`](https://github.com/Webghost01-NG/veylott/commit/92a51ab869e706a3b53e3be63d411b01eb06ac09), whose contract and deployment-script files remain unchanged on `main`.
+This scope covers the snapshot-withdrawal successor. The [release evidence](../operations/snapshot-withdrawal-release.md) records its two-provider deployment verification and operator-owned live lifecycle. Earlier three-wallet evidence belongs to the predecessor and is not independent validation of this revision.
+
+Veylott is unaudited. This package prepares a reproducible external review; it is not an audit opinion. The immutable source scope is commit [`4510d62995f17e4fec53e5828075d23271c263c8`](https://github.com/Webghost01-NG/veylott/commit/4510d62995f17e4fec53e5828075d23271c263c8), whose contract and deployment-script files remain unchanged on `main`.
 
 ## Scope
 
 | Item | Frozen value |
 | --- | --- |
 | Contract | `contracts/ConfidentialPool.sol` and its imported local interfaces |
-| Deployment | `0x2150d7D82117b927Dd3253935E34f67D8B37d424`, Ethereum Sepolia |
-| Runtime hash | `0x38dcfee7fcbecb12f8be9c4d73c596e7f9bc1b0a3d910e49cc8d8a3cc7af4ed4` |
-| Deployment receipt | [`0x89f75d…19f0`](https://sepolia.etherscan.io/tx/0x89f75d0986b7d4bd5000a5e72acec640cfd32d00c09f78f96a060087f48a19f0), block `11636641` |
+| Deployment | `0x90F72615Be5f05A2ce9DCA540D756a4415CE0AD1`, Ethereum Sepolia |
+| Runtime hash | `0x633df4b2049aa628ee2395813aeacb8efbc054cc32c1d6dc524f965db661311b` |
+| Deployment receipt | [`0x9166ff…ea1b`](https://sepolia.etherscan.io/tx/0x9166ffbdea9c2a2aabf8d2c95d2b5ac0ba79bb39fd6819111b98ff765b4aea1b), block `11639494` |
 | Custody dependency | Zama cUSDCMock `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` |
 | Compiler | Solidity `0.8.27`, optimizer enabled, 200 runs |
 
@@ -42,7 +44,7 @@ npm run build:frontend
 AUDIT_RPC_URLS=https://ethereum-sepolia-rpc.publicnode.com,https://sepolia.gateway.tenderly.co npm run verify:audit-scope
 ```
 
-The core pool currently has 100% line and function coverage. Coverage is not a proof of correctness; branch coverage and the external dependencies still require manual review.
+Recompute coverage for this revision; historical percentages do not establish coverage of new snapshot paths. Coverage is not a proof of correctness, and external dependencies require manual review.
 
 ## Deliverable Requirements
 

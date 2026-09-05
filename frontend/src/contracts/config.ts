@@ -38,11 +38,11 @@ function readUrlList(name: string): string[] {
   return [...new Set(urls)];
 }
 
-export type PoolRuntimeVersion = "aggregate-v1" | "readiness-v2";
+export type PoolRuntimeVersion = "aggregate-v1" | "readiness-v2" | "snapshot-v3";
 
 function readRuntimeVersion(): PoolRuntimeVersion | "" {
   const value = environment.VITE_POOL_RUNTIME_VERSION?.trim();
-  return value === "aggregate-v1" || value === "readiness-v2" ? value : "";
+  return value === "aggregate-v1" || value === "readiness-v2" || value === "snapshot-v3" ? value : "";
 }
 
 function readTokenDecimals(): number {
@@ -63,6 +63,7 @@ function readBytes32(name: string): string {
 export const runtimeConfig = Object.freeze({
   chainId: readPositiveInteger("VITE_CHAIN_ID"),
   poolAddress: readAddress("VITE_POOL_ADDRESS"),
+  previousPoolAppUrl: readUrlList("VITE_PREVIOUS_POOL_APP_URL")[0] ?? "",
   legacyPoolAddress: readAddress("VITE_LEGACY_POOL_ADDRESS"),
   custodyAssetAddress: readAddress("VITE_CONFIDENTIAL_ASSET_ADDRESS"),
   poolRuntimeCodeHash: readBytes32("VITE_POOL_RUNTIME_CODE_HASH"),
@@ -86,7 +87,7 @@ export const configurationErrors = [
     "Active and legacy pool addresses must differ.",
   !runtimeConfig.custodyAssetAddress && "VITE_CONFIDENTIAL_ASSET_ADDRESS must be a valid EVM address.",
   !runtimeConfig.poolRuntimeCodeHash && "VITE_POOL_RUNTIME_CODE_HASH must be a bytes32 hash.",
-  !runtimeConfig.poolRuntimeVersion && "VITE_POOL_RUNTIME_VERSION must be aggregate-v1 or readiness-v2.",
+  !runtimeConfig.poolRuntimeVersion && "VITE_POOL_RUNTIME_VERSION must be aggregate-v1, readiness-v2, or snapshot-v3.",
   runtimeConfig.deploymentBlock < 0 && "VITE_POOL_DEPLOYMENT_BLOCK must be a positive integer.",
   runtimeConfig.sepoliaRpcUrls.length < 2 && "VITE_SEPOLIA_RPC_URLS must contain at least two unique HTTPS RPC URLs.",
   !runtimeConfig.backendUrl && "VITE_BACKEND_URL must be a valid absolute URL.",

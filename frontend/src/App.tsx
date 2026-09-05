@@ -90,6 +90,7 @@ export const App: React.FC = () => {
     deploymentVerification,
     walletRpcVerification,
     writesEnabled,
+    withdrawalsEnabled,
     deposit,
     activateParticipant,
     withdraw,
@@ -218,7 +219,7 @@ export const App: React.FC = () => {
               </div>
               <div>
                 <dt>Transactions</dt>
-                <dd><span className={"status-dot " + (writesEnabled ? "status-dot--ok" : "status-dot--warn")} /> {writesEnabled ? "enabled" : "safety-locked"}</dd>
+                <dd><span className={"status-dot " + (writesEnabled || withdrawalsEnabled ? "status-dot--ok" : "status-dot--warn")} /> {writesEnabled ? "enabled" : withdrawalsEnabled ? "withdrawals available" : "safety-locked"}</dd>
               </div>
             </dl>
           </aside>
@@ -265,8 +266,9 @@ export const App: React.FC = () => {
             <div className="callout callout--alert" role="status">
               <Activity size={17} />
               <span>
-                A prize draw is awaiting KMS settlement or timeout cancellation. Deposits, withdrawals,
-                reserve funding, and new draw requests remain locked until it resolves.
+                {activeRuntimeVersion === "snapshot-v3"
+                  ? "A prize draw is awaiting settlement. Withdrawals remain available; this round uses balances frozen when it was requested. Deposits and participant changes wait for settlement."
+                  : "A prize draw is awaiting KMS settlement or timeout cancellation. Deposits, withdrawals, reserve funding, and new draw requests remain locked until it resolves."}
               </span>
             </div>
           )}
@@ -309,7 +311,7 @@ export const App: React.FC = () => {
               value={totalDeposits + " " + asset.symbol}
               subtext={metricFreshness.totalDeposits === "pending"
                 ? "New pool; appears after the first finalized draw"
-                : activeRuntimeVersion === "readiness-v2"
+                : activeRuntimeVersion && activeRuntimeVersion !== "aggregate-v1"
                   ? "Encrypted by design; no public aggregate is collected"
                 : "Aggregate only; individual positions stay encrypted"}
               status={metricFreshness.totalDeposits}
@@ -319,7 +321,7 @@ export const App: React.FC = () => {
               value={prizeReserve + " " + asset.symbol}
               subtext={metricFreshness.prizeReserve === "pending"
                 ? "New pool; appears after the first finalized draw"
-                : activeRuntimeVersion === "readiness-v2"
+                : activeRuntimeVersion && activeRuntimeVersion !== "aggregate-v1"
                   ? "Encrypted by design; only reserve sufficiency is revealed"
                 : "Sponsor-funded on Sepolia; last KMS-verified snapshot"}
               status={metricFreshness.prizeReserve}
@@ -415,14 +417,15 @@ export const App: React.FC = () => {
                 }
                 participantActive={poolStats.participantActive}
                 deactivationPending={poolStats.pendingDeactivation.active}
+                deactivationEnabled={writesEnabled}
                 isLoading={isLoading}
-                walletConnected={walletReady && !poolStats.isPaused}
+                walletConnected={walletReady}
                 walletStatus={status}
                 onWalletAction={() => setIsWalletModalOpen(true)}
-                walletActionEnabled={walletWriteActionEnabled}
+                walletActionEnabled={walletWriteActionEnabled || withdrawalsEnabled}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
-                writesEnabled={writesEnabled}
+                writesEnabled={withdrawalsEnabled}
               />
             </section>
             <aside className="privacy-note">
@@ -433,6 +436,15 @@ export const App: React.FC = () => {
               </div>
             </aside>
           </div>
+        )}
+
+        {activeTab === "pool" && runtimeConfig.previousPoolAppUrl && (
+          <aside className="privacy-note">
+            <div>
+              <strong>Deposited before the withdrawal upgrade?</strong>
+              <p>Your funds do not move automatically. <a href={runtimeConfig.previousPoolAppUrl} target="_blank" rel="noopener noreferrer">Open the previous pool to withdraw your position.</a> Check the pool address before signing; its original restrictions still apply.</p>
+            </div>
+          </aside>
         )}
 
         {activeTab === "pool" && DEFAULT_LEGACY_POOL_ADDRESS && (
@@ -530,7 +542,7 @@ export const App: React.FC = () => {
                 walletActionEnabled={walletConfigurationReady}
                 tokenSymbol={asset.symbol}
                 tokenDecimals={asset.decimals}
-                writesEnabled={writesEnabled && !poolStats.isPaused}
+                writesEnabled={withdrawalsEnabled}
               />
             </section>
             <aside className="privacy-note">

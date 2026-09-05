@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { getPoolAbi, POOL_ABI, POOL_ABI_READINESS_V2 } from "../src/contracts/abi.js";
-import { getRuntimeCapabilities, resolveRuntimeProfile } from "../src/contracts/runtimeProfiles.js";
+import { getPoolAbi, POOL_ABI, POOL_ABI_READINESS_V2, POOL_ABI_SNAPSHOT_V3 } from "../src/contracts/abi.js";
+import { allowsWithdrawalDuringSettlement, getRuntimeCapabilities, resolveRuntimeProfile } from "../src/contracts/runtimeProfiles.js";
 import { describeRpcFailure, withTimeout } from "../src/utils/rpcDiagnostics.js";
 
 const aggregateHash = `0x${"11".repeat(32)}`;
@@ -12,6 +12,16 @@ const profiles = [
 ];
 
 describe("Resilient Sepolia reads", () => {
+  test("snapshot exits are unavailable for old or unverified runtimes", () => {
+    assert.equal(allowsWithdrawalDuringSettlement(null), false);
+    assert.equal(allowsWithdrawalDuringSettlement("aggregate-v1"), false);
+    assert.equal(allowsWithdrawalDuringSettlement("readiness-v2"), false);
+    assert.equal(allowsWithdrawalDuringSettlement("snapshot-v3"), true);
+    assert.equal(getPoolAbi("snapshot-v3"), POOL_ABI_SNAPSHOT_V3);
+    assert.equal(POOL_ABI_READINESS_V2.some((entry) => entry.includes("withdrawalSnapshotsEnabled")), false);
+    assert.equal(POOL_ABI_SNAPSHOT_V3.some((entry) => entry.includes("withdrawalSnapshotsEnabled")), true);
+    assert.equal(getRuntimeCapabilities("snapshot-v3").exposesAggregateSnapshot, false);
+  });
   test("selects current and successor ABI profiles by observed runtime hash", () => {
     assert.equal(resolveRuntimeProfile(aggregateHash.toUpperCase().replace("0X", "0x"), profiles)?.version, "aggregate-v1");
     assert.equal(resolveRuntimeProfile(readinessHash, profiles)?.version, "readiness-v2");

@@ -6,6 +6,14 @@ Veylott is a confidential prize-savings prototype for Zama fhEVM. It uses the of
 
 The privacy claim is private winner identity and encrypted personal prize balances. The fixed per-round award, participant addresses, and timing are public; a disclosed winner or a single-participant round can reveal who received the public award.
 
+## Sepolia Funding Model
+
+This submission uses the admin-funded prize reserve allowed by the bounty form's mock-yield clarification. Funding is a real encrypted transfer of official test cUSDC; the app never invents balances or yield. Saver principal stays in pool custody and does not pay prizes. An administrator or sponsor supplies the reserve, and each settled award reduces it.
+
+To fund it, configure `RPC_URL`, `POOL_CONTRACT_ADDRESS`, `POOL_RUNTIME_CODE_HASH`, `CUSTODY_ASSET_ADDRESS`, `SPONSOR_AMOUNT`, `SPONSOR_KEYSTORE_PATH`, and `SPONSOR_KEYSTORE_PASSWORD_FILE` locally, then run `npm run fund:sponsor-reserve`. The script verifies the target and requires a successful receipt containing `PrizeReserveFunded`. See the [funding runbook](docs/operations/reserve-funding.md).
+
+A real yield integration would route pooled assets through a compatible confidential ERC-4626 batcher, restore principal cost basis on redemption, and credit only realized surplus to the encrypted reserve. The [production specification](docs/spec/production-yield-architecture.md) defines loss, liquidity, proof, and recovery requirements. That integration is future work; the Sepolia reserve is admin-funded, not earned interest.
+
 > Veylott is research software using test assets. It has not been independently audited and must not hold real funds.
 
 ## Why Veylott
@@ -39,11 +47,11 @@ Sponsor wallet
   └─ encrypted cUSDC testnet contribution ──► prize reserve
 ```
 
-Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. A new address enters the draw set only after the KMS proves its encrypted position is positive; the amount stays private, stale proofs cannot be replayed, and encrypted-zero callbacks never consume participant capacity. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. The active contract locks balance-changing operations, publicly decrypts only a proof-bound draw-readiness bit, and scales encrypted randomness by the encrypted eligible total. Neither aggregate amount enters finalization calldata or settlement events. After a round, each saver can privately reveal only their own prize counter. A positive prize is claimed through the same encrypted withdrawal path as principal, so calldata and events do not distinguish a prize claim from an ordinary private withdrawal.
+Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amount returned by the token, preventing a caller from claiming more than was transferred. A new address enters the draw set only after the KMS proves its encrypted position is positive; the amount stays private, stale proofs cannot be replayed, and encrypted-zero callbacks never consume participant capacity. Withdrawals accept an encrypted amount and debit accounting by the token’s actual encrypted transfer result. The snapshot-v3 contract freezes encrypted draw weights, membership, and reserve mutations at request time, while allowing withdrawals during pending settlement and owner pause. Exiting savers retain eligibility for that requested round. It publicly decrypts only a proof-bound draw-readiness bit and scales encrypted randomness by the frozen encrypted total. Neither aggregate amount enters finalization calldata or settlement events. Each saver can privately reveal their own prize counter and claim through the same encrypted withdrawal path as principal. Token, RPC, and FHE execution outages remain external dependencies.
 
 The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCMock wraps `0x9b5C...DFfF`, whereas Aave Sepolia’s deployed USDC market uses `0x94a9...E4C8`; treating either a passive token holder or an unrelated Aave position as pool yield would be false. The rejected strategy is documented in [the reserve funding model](docs/operations/reserve-funding.md), and the [production yield specification](docs/spec/production-yield-architecture.md) fixes the successor accounting, batching, recovery, and release gates without pretending they are already deployed.
 
-The active deployment has completed a real three-wallet round: three encrypted deposits, a readiness-only KMS settlement, one private winner reveal and ordinary withdrawal claim, three principal exits, and proof-bound participant-slot reclamation back to zero. Every confirmed receipt and the observed activation-retry path are recorded in the [live lifecycle evidence](docs/operations/live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle).
+The snapshot-withdrawal successor completed a real operator-owned round with partial and full principal exits during pending settlement, exits during owner pause, KMS finalization against the original weight, and a private prize withdrawal. The [successor release evidence](docs/operations/snapshot-withdrawal-release.md) records its receipts and limitations. The predecessor's [three-wallet lifecycle](docs/operations/live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle) is historical evidence, not proof of independent browser testing on the successor.
 
 Production rendering is reproducibly captured at desktop, tablet, and mobile widths in the [real-wallet and cross-device QA matrix](docs/qa/real-wallet-e2e-matrix.md). The matrix distinguishes confirmed live-chain activity from deterministic wallet tests and keeps independent tester steps visibly open. Independent reviewers should follow the [wallet test runbook](docs/qa/independent-wallet-runbook.md), which separates no-cost checks from the single funded route.
 
@@ -53,12 +61,13 @@ The contracts are not independently audited. The [external audit package](docs/a
 
 | Component | Address |
 | --- | --- |
-| ConfidentialPool | [`0x2150d7D82117b927Dd3253935E34f67D8B37d424`](https://sepolia.etherscan.io/address/0x2150d7D82117b927Dd3253935E34f67D8B37d424) |
+| ConfidentialPool (snapshot withdrawals) | [`0x90F72615Be5f05A2ce9DCA540D756a4415CE0AD1`](https://sepolia.etherscan.io/address/0x90F72615Be5f05A2ce9DCA540D756a4415CE0AD1) |
 | Official cUSDCMock | [`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`](https://sepolia.etherscan.io/address/0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639) |
 | Test USDCMock underlying | [`0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF`](https://sepolia.etherscan.io/address/0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF) |
 | Legacy exit-only pool | [`0x602AE8011F478EBbe87Da760C054B5C25911612a`](https://sepolia.etherscan.io/address/0x602AE8011F478EBbe87Da760C054B5C25911612a) |
 
 - Application: [Veylott live demo](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/)
+- Previous pool exit app: [readiness-v2 predecessor](https://veylott-p1wxl07lb-webghost01-ngs-projects.vercel.app/) — existing positions remain there; balances are not migrated automatically.
 - Indexer: [cipherpool-backend.onrender.com](https://cipherpool-backend.onrender.com)
 - Deployment verification and historical encrypted prize-lifecycle evidence: [Sepolia operations guide](docs/operations/sepolia-deployment.md)
 - Official Zama wrapper registry: [Sepolia confidential-token addresses](https://github.com/zama-ai/protocol-apps/blob/main/docs/addresses/testnet/sepolia.md)

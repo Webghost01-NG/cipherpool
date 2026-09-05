@@ -68,7 +68,7 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         assertTrue(pool.getPendingDraw().active);
     }
 
-    function test_RequestAnchorsBothAggregateHandlesAndLocksBalanceChanges() public {
+    function test_RequestAnchorsBothAggregateHandlesAndAllowsWithdrawal() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);
         pool.requestDraw(DRAW_PRIZE);
@@ -80,8 +80,10 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
 
         externalEuint64 encryptedAmount = _externalAmount(100);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(BalanceUpdatesLocked.selector, request.requestHash));
         pool.withdraw(encryptedAmount, "");
+        assertEq(pool.userWithdrawalNonces(alice), 1);
+        assertEq(FHE.toBytes32(pool.getPendingDraw().totalHandle), FHE.toBytes32(request.totalHandle));
+        assertTrue(pool.getTotalEligibleBalanceHandle() != FHE.toBytes32(request.totalHandle));
     }
 
     function test_FinalizeDrawConsumesReserveWithoutPublishingAggregateSnapshot() public {

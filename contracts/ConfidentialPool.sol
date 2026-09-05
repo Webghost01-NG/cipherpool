@@ -28,6 +28,7 @@ contract ConfidentialPool is
     bytes32 public constant DEPOSIT_ACTION = keccak256("VEYLOTT_DEPOSIT_V1");
     bytes32 public constant PRIZE_RESERVE_ACTION = keccak256("VEYLOTT_PRIZE_RESERVE_V1");
     uint256 public constant override MAX_PARTICIPANTS = 12;
+    bool public constant withdrawalSnapshotsEnabled = true;
 
     address public immutable override custodyAsset;
     uint64 internal immutable _drawCancellationDelay;
@@ -56,6 +57,8 @@ contract ConfidentialPool is
     mapping(address => ParticipantDeactivationRequest) internal _pendingParticipantDeactivations;
 
     DrawRequest internal _pendingDraw;
+    // Membership remains locked during a draw; encrypted weights do not change when users exit.
+    mapping(address => euint64) internal _drawWeights;
     uint256 public drawRequestNonce;
     uint64 public override nextDrawRequestTimestamp;
     uint256 public override currentDrawId;
@@ -133,8 +136,6 @@ contract ConfidentialPool is
         external
         override
         nonReentrant
-        whenNotPaused
-        whenBalanceUpdatesUnlocked
     {
         if (!_positionInitialized[msg.sender]) revert NoBalancePosition(msg.sender);
 
@@ -247,6 +248,10 @@ contract ConfidentialPool is
         if (!_eligibleTotalInitialized || participants.length == 0) revert EmptyPool();
         if (!_reserveInitialized) revert EmptyPrizeReserve();
 
+        for (uint256 i = 0; i < participants.length; i++) {
+            _drawWeights[participants[i]] = _balances[participants[i]];
+        }
+
         ebool hasEligibleWeight = FHE.gt(_totalEligibleBalance, uint64(0));
         ebool reserveSufficient = FHE.ge(_prizeReserve, prizeAmount);
         ebool ready = FHE.and(hasEligibleWeight, reserveSufficient);
@@ -306,7 +311,8 @@ contract ConfidentialPool is
             address participant = participants[i];
             _invalidateParticipantDeactivation(participant);
             euint64 cumulativeStart = cumulativeEnd;
-            cumulativeEnd = FHE.add(cumulativeEnd, _balances[participant]);
+            cumulativeEnd = FHE.add(cumulativeEnd, _drawWeights[participant]);
+            _drawWeights[participant] = euint64.wrap(bytes32(0));
             ebool isWinner = FHE.and(FHE.ge(winningTicket, cumulativeStart), FHE.lt(winningTicket, cumulativeEnd));
             euint64 award = FHE.select(isWinner, prize, FHE.asEuint64(0));
             _balances[participant] = FHE.add(_balances[participant], award);

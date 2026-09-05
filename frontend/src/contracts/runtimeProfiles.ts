@@ -19,8 +19,12 @@ export function resolveRuntimeProfile(
 }
 
 export function getRuntimeCapabilities(version: PoolRuntimeVersion): RuntimeCapabilities {
-  if (version === "readiness-v2") {
+  if (version !== "aggregate-v1") {
     return { exposesAggregateSnapshot: false, usesEncryptedReadiness: true };
   }
   return { exposesAggregateSnapshot: true, usesEncryptedReadiness: false };
+}
+
+export function allowsWithdrawalDuringSettlement(version: PoolRuntimeVersion | null): boolean {
+  return version === "snapshot-v3";
 }

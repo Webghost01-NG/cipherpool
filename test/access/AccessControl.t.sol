@@ -25,13 +25,13 @@ contract AccessControlTest is ConfidentialPoolTestBase, IPoolErrors {
         pool.pause();
     }
 
-    function test_RevertWhen_WithdrawalWhilePaused() public {
+    function test_WithdrawalRemainsAvailableWhilePaused() public {
         _deposit(stranger, 100);
         pool.pause();
         externalEuint64 encryptedAmount = _externalAmount(10);
         vm.prank(stranger);
-        vm.expectRevert(Pausable.EnforcedPause.selector);
         pool.withdraw(encryptedAmount, "");
+        assertEq(pool.userWithdrawalNonces(stranger), 1);
     }
 
     function test_RevertWhen_UntrustedTokenCallsReceiver() public {
