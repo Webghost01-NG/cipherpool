@@ -2,55 +2,54 @@
 
 ## 1. Private prize savings, built for verification
 
-Veylott is a no-loss prize savings protocol on Zama fhEVM. Principal remains withdrawable while encrypted balances and ticket weights stay confidential. This is a research deployment on Ethereum Sepolia—not production software.
+Veylott is confidential prize savings on Zama fhEVM. Principal remains withdrawable while balances and draw weights stay encrypted. This is unaudited research software on Ethereum Sepolia.
 
-## 2. Public ledgers expose private financial context
+## 2. Public ledgers expose financial context
 
-- Balance exposure reveals a saver’s position and history.
-- Visible ticket weights make whale activity easy to track.
-- Transaction timing can reveal intent around prize rounds.
+- Visible balances expose positions and history.
+- Public ticket weights reveal relative winning odds.
+- Transaction timing can reveal intent around a prize round.
 
 ## 3. Public custody, confidential accounting
 
-The official cUSDC token passes the actual encrypted transfer result to Veylott. The pool maintains balances and draw weights as `euint64` and reveals a balance only after wallet-authorized client-side decryption.
+The official cUSDC token passes the actual encrypted transfer result to Veylott. The pool stores positions and draw weights as `euint64`; only the owner can authorize a private balance reveal.
 
 ## 4. Architecture
 
-The React client reads Sepolia and submits wallet-signed transactions. `ConfidentialPool` owns encrypted accounting, requests, and prize liabilities. Sponsors contribute encrypted cUSDC to the Sepolia prize reserve without any false yield claim. The Zama relayer/KMS supplies threshold-decryption evidence. A Node indexer exposes public protocol state and persists checkpoints in PostgreSQL.
+The React client submits wallet-signed Sepolia transactions. `ConfidentialPool` owns encrypted accounting and liabilities. Sponsors fund the encrypted testnet reserve without a false yield claim. Zama’s relayer/KMS returns proof-bound predicates. A Node indexer exposes public state and persists checkpoints in PostgreSQL.
 
 ## 5. The product is live
 
-The white-and-blue console shows public pool health without exposing private positions. Wallet identity is rendered only after a provider returns an account. Runtime code, chain, and custody bindings are checked before writes are enabled.
+The white-and-blue console exposes public health without exposing private positions. An address appears only after a provider returns an account. Chain, bytecode, and custody bindings must pass before writes are enabled.
 
 ## 6. One coherent user journey
 
-1. Wrap test USDC into confidential cUSDC with Zama's official Sepolia wrapper.
-2. Deposit an encrypted cUSDC amount; the pool credits only the token-returned result.
-3. Fund or monitor the sponsor reserve, then run a KMS-verified encrypted weighted draw.
-4. Withdraw with an encrypted amount; the pool debits only the token-returned transfer result.
+1. Wrap test USDC into official confidential cUSDC.
+2. Deposit an encrypted amount; credit follows the token-returned result.
+3. Activate a participant slot with a proof of a positive encrypted position, then run a readiness-verified weighted draw.
+4. Privately reveal and claim a prize or withdraw principal through the same encrypted path.
 
-## 7. Security controls that protect solvency
+## 7. Security controls
 
-- Deposit credit is derived from the token-returned encrypted custody amount.
-- Draws consume the verified sponsor reserve so assets cannot fund repeated prizes.
-- Winner credits enter both the encrypted position and aggregate liability during draw finalization; compounding only clears the separate prize counter.
-- Withdrawals debit accounting by the token-returned encrypted transfer result.
-- KMS proofs are bound to the stored aggregate and reserve handles; anyone can cancel a stale draw lock after 24 hours.
-- Immutable prize and cadence parameters let any wallet request an eligible round without operator discretion or repeated lock spam.
+- Deposits and withdrawals follow token-returned encrypted custody amounts.
+- Every award consumes the sponsor reserve and enters aggregate liabilities.
+- The KMS reveals only a request-bound readiness bit; aggregate weight and reserve remain encrypted.
+- Any keeper can finalize a valid request, and anyone can cancel a stale lock after 24 hours.
+- Fixed cadence/prize policy and a 12-participant cap bound discretion and computation.
 
-## 8. Verified full Sepolia lifecycle
+## 8. Verified active-pool lifecycle
 
-- Deposit: `0xe36db7…b39f`
-- Draw finalization: `0x504862…ce6c`
-- Private prize claim: `0x5763be…c969`
-- Principal withdrawal: `0x767d89…5262`
+- Three encrypted deposits: [`A`](https://sepolia.etherscan.io/tx/0x5fcdac841c699f4353e90d29b62509bf243af48e1fbbc2ee642b4778cbb7c676), [`B`](https://sepolia.etherscan.io/tx/0xfd5a430a141883ba45c07c06a275bd1e1af138a2d775c204e5dd5c5a62b6c962), [`C`](https://sepolia.etherscan.io/tx/0xce756c038c7a334f084e5b75df0bafe4404e28a667fe7780215ccd5eb82b4e97)
+- Draw request: [`0x7d4913…bf54`](https://sepolia.etherscan.io/tx/0x7d49133e11b8685a080ee3303ecedbd3ebd4441b5631922c4ba6ad87cc56bf54)
+- KMS finalization: [`0x0970ff…b320`](https://sepolia.etherscan.io/tx/0x0970fff858788dcbf926730c495fac1bd9ded55114d730aeae0c20b9d642b320)
+- Private winner claim: [`0xb8f291…d50a`](https://sepolia.etherscan.io/tx/0xb8f29170094ac40f14df409838a08b5303265d6a3b6988a49a7f796db33fd50a)
 
-All receipts succeeded on predecessor pool `0x9c939b82…191e0`. Zama KMS finalized draw 1 with a verified 0.5 cUSDC weight and prize. The winner privately detected and claimed the prize through the ordinary withdrawal path; post-settlement KMS verification returned zero position and prize balances. The active pool adds permissionless draw policy and KMS-verified participant activation, and began from empty state.
+The fixed 0.5 cUSDC prize was sponsor-funded. All principals exited and zero-position proofs returned the participant count to zero. The three wallets used separate keys but were operated for protocol evidence, not by three independent testers.
 
 ## 9. Engineering evidence
 
-The reproducible validation covers Foundry contract invariants, backend API and indexer behavior, the client encryption adapter, and frontend UX. Vercel serves the client, Render serves the read-only indexer/API, and PostgreSQL preserves indexer checkpoints across restarts. The deck intentionally avoids a fixed test count that would become stale as coverage grows.
+The 163-test suite covers Foundry invariants, backend/indexer behavior, the encryption adapter, and frontend UX. A reproducible audit-scope verifier binds source, creation input, runtime hash, custody, and policy across independent RPCs. No external audit is claimed.
 
-## 10. Confidential savings, without blind trust
+## 10. Inspect the evidence
 
-Try the research app at `https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/`. Inspect the active pool on Sepolia at `0x54FdC46D0EA722EfA4853192678b35fCABFad99C`. Review the source and evidence at `github.com/Webghost01-NG/veylott`.
+Open the [canonical app](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/), inspect pool [`0x2150d7D82117b927Dd3253935E34f67D8B37d424`](https://sepolia.etherscan.io/address/0x2150d7D82117b927Dd3253935E34f67D8B37d424), and review the [source repository](https://github.com/Webghost01-NG/veylott).

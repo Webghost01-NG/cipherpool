@@ -14,16 +14,16 @@ ASSETS = SHOWCASE / "assets"
 OUTPUT = SHOWCASE / "Veylott-Demo.mp4"
 
 NARRATION = [
-    "Veylott is private prize savings built on Zama F H E V M. It protects balances and ticket weights while keeping custody and settlement independently verifiable. The current deployment is research software on Ethereum Sepolia.",
-    "Public ledgers make financial state easy to inspect. A savings balance, ticket weight, and transaction timing can expose intent or make high value users easy to track. Veylott preserves auditability without publishing every private position.",
-    "A deposit transfers confidential c U S D C, and the pool credits only the token returned encrypted result. Balances and draw weights remain encrypted. A saver can reveal a balance locally only after signing a wallet authorization.",
-    "The React application reads Ethereum Sepolia and sends explicit wallet signed transactions. The pool owns encrypted accounting and prize liabilities, while sponsors fund the encrypted testnet prize reserve. Zama's relayer and K M S prepare decryption evidence. The public indexer stores durable checkpoints in Postgre S Q L.",
-    "This is the production interface captured from Vercel. A disconnected session shows only Connect wallet. An address appears only after the provider returns one. Public protocol status remains visible, and deployment bindings are verified before writes can proceed.",
-    "The journey has four explicit steps. Wrap test U S D C into official confidential c U S D C. Deposit an encrypted amount. Fund or monitor a K M S verified prize round. Then withdraw c U S D C directly. Every transaction still requires wallet confirmation.",
-    "The contracts bind encrypted credit to the token returned transfer, consume sponsor funded reserves when awarding prizes, and keep winner credits in the aggregate liability. Draw proofs are bound to stored handles. Anyone can release a stale draw lock after twenty four hours. Sepolia does not claim generated yield.",
-    "This is not a simulated transaction. On a documented predecessor deployment, a real encrypted half c U S D C deposit entered draw one. Zama K M S finalized the winner selection. The winner privately detected and claimed the prize through an ordinary withdrawal, then recovered the remaining principal. Every historical receipt and the authorized post settlement check are linked in the repository.",
-    "Reproducible validation covers Solidity invariants, backend A P I and indexer behavior, the client encryption adapter, and frontend user experience. The frontend runs on Vercel, the read only indexer A P I on Render, and Postgre S Q L storage lets the indexer resume from its saved checkpoint after restart.",
-    "Veylott demonstrates that private savings can remain usable and verifiable. Open the live research app, inspect the active Sepolia contracts, and review every security decision and test in the public repository.",
+    "Veylott is confidential prize savings on Zama F H E V M. Principal stays withdrawable while balances, draw weights, and winner state remain encrypted. This is unaudited research software on Ethereum Sepolia.",
+    "Public prize pools expose balances, relative winning odds, and transaction timing. Veylott keeps custody and receipts verifiable without publishing every saver position.",
+    "Official confidential c U S D C moves the encrypted asset first. Veylott credits only the token returned result and stores positions and draw weights as encrypted unsigned integers. Only the owner can authorize a private balance reveal.",
+    "The React client submits wallet signed Sepolia transactions. Confidential Pool owns encrypted accounting. Sponsors fund the encrypted testnet reserve. Zama's relayer and K M S return proof bound predicates, while the indexer publishes only public metadata and stores durable checkpoints.",
+    "This screenshot was captured from the canonical Vercel deployment. A disconnected session shows Connect wallet, never a placeholder address. Chain, bytecode, and custody bindings must verify before writes are enabled.",
+    "The user wraps test U S D C, deposits confidential c U S D C, proves only that the encrypted position is positive, then enters a weighted draw. Prize and principal leave through the same encrypted withdrawal path.",
+    "Deposits and withdrawals follow token returned custody amounts. Every award consumes the sponsor reserve and enters aggregate liabilities. The K M S reveals only request bound readiness. Aggregate weight, reserve, and winner remain encrypted. A twelve participant cap bounds computation.",
+    "This active pool evidence is real. Three separately keyed wallets deposited, draw one received a readiness proof, and the K M S finalized encrypted winner selection. The winner privately detected and claimed half a c U S D C. All principals exited and participant slots returned to zero.",
+    "One hundred sixty three tests cover Solidity invariants, backend and indexer behavior, the encryption adapter, and frontend. A reproducible audit scope check binds deployed source, constructor input, runtime code, custody, and draw policy across two independent R P C endpoints.",
+    "Sepolia prizes are sponsor funded, not generated yield. The protocol is capped at twelve participants and is not externally audited. Open the canonical app, inspect the active pool, and review every limitation and confirmed receipt in the public repository.",
 ]
 
 
@@ -71,18 +71,18 @@ def main():
         for index, (slide, narration) in enumerate(zip(slides, NARRATION), start=1):
             audio = temp / f"audio-{index:02d}.wav"
             segment = temp / f"segment-{index:02d}.mp4"
-            run(["espeak-ng", "-v", "en-us", "-s", "150", "-p", "42", "-w", str(audio), narration])
-            duration = probe_duration(audio) + 0.8
+            run(["espeak-ng", "-v", "en-us", "-s", "170", "-p", "42", "-w", str(audio), narration])
+            duration = probe_duration(audio) + 0.45
             run([
                 "ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-framerate", "30", "-i", str(slide),
                 "-i", str(audio), "-f", "lavfi", "-t", str(duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
-                "-filter_complex", "[1:a]apad=pad_dur=1[a1]", "-map", "0:v", "-map", "[a1]",
+                "-filter_complex", "[1:a]apad=pad_dur=0.5[a1]", "-map", "0:v", "-map", "[a1]",
                 "-t", f"{duration:.3f}", "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:white,format=yuv420p",
                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-c:a", "aac", "-b:a", "160k", str(segment),
             ])
             segments.append(segment)
             sentences = re.split(r"(?<=[.!?])\s+", narration)
-            spoken_duration = duration - 0.8
+            spoken_duration = duration - 0.45
             weight_total = sum(len(sentence) for sentence in sentences)
             sentence_start = elapsed
             for sentence_index, sentence in enumerate(sentences):

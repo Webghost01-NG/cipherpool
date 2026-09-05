@@ -31,7 +31,7 @@ ConfidentialPool
   └─ two-step, KMS-verified weighted draws
           │
           ▼
-Backend indexer (event counts + verified aggregate snapshots only)
+Backend indexer (public events and protocol metadata only)
 
 Sponsor wallet
   └─ encrypted cUSDC testnet contribution ──► prize reserve
@@ -66,6 +66,8 @@ The contracts are not independently audited. The [external audit package](docs/a
 - [Captioned demo video](docs/showcase/presentation/Veylott-Demo.mp4)
 - [Presentation PDF](docs/showcase/presentation/Veylott-Presentation.pdf)
 - [Editable PowerPoint deck](docs/showcase/presentation/Veylott-Presentation.pptx)
+- [Under-three-minute presenter script](docs/showcase/presentation/demo-script.md)
+- [Evidence-linked X thread](docs/showcase/x-thread.md)
 
 To explore safely, open the application, connect the intended wallet on Ethereum Sepolia, and wait for runtime assurance to verify the chain, bytecode, and custody asset. Obtain test USDC, wrap it with the official cUSDC contract, then use Veylott's encrypted deposit, prize-round, private prize claim, and direct-withdrawal actions. Review every wallet prompt before signing and treat only a confirmed receipt as success. The recorded transactions above are historical evidence, not a promise that a new transaction has completed.
 
@@ -118,7 +120,7 @@ Run the backend with `npm run build:backend && node dist/backend/src/index.js`. 
 
 - Sepolia prizes are funded by voluntary encrypted sponsor contributions, not generated yield. A production deployment should adopt Zama’s audited confidential batching pattern for an ERC-4626 strategy whose underlying asset matches the pool’s cUSDC wrapper.
 - Winner selection remains linear, and the active runtime caps the draw set at 12 participants using the documented Zama HCU budget.
-- KMS-verified participant activation is live. The 12-member ceiling and proof-bound removal lifecycle are implemented in source and require a verified contract/service migration before use.
+- KMS-verified participant activation, the 12-member ceiling, and proof-bound slot reclamation are live in the active Sepolia runtime.
 - The active Sepolia runtime reveals only the proof-bound readiness bit during settlement; exact eligible weight and reserve remain encrypted.
 - The active Sepolia pool enforces permissionless, fixed-prize, cadence-controlled draw requests; see [the draw policy](docs/operations/draw-policy.md).
 

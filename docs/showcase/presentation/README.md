@@ -1,23 +1,20 @@
 # Veylott Showcase Assets
 
-This directory contains the editable presentation, PDF export, captioned demo video, source copy, and the live-product screenshot used in the materials.
-
-The generated assets were refreshed against the active ERC-7984 deployment on 4 September 2026. Transaction claims link to previously confirmed Sepolia receipts; the video does not simulate a wallet, proof, or new transaction.
+This directory contains the editable deck, PDF export, captioned video, verified source copy, and production screenshots. Assets were refreshed against the active ERC-7984 deployment and canonical application on 5 September 2026. The video uses already-confirmed receipts and does not simulate wallet, KMS, or transaction success.
 
 ## Deliverables
 
 - `Veylott-Presentation.pptx` — editable 16:9 PowerPoint deck.
 - `Veylott-Presentation.pdf` — portable 10-slide export.
-- `Veylott-Demo.mp4` — 1080p H.264/AAC narrated walkthrough with burned-in captions.
-- `deck-content.md` — approved slide claims and evidence.
-- `demo-script.md` — presenter narration and manual demo guide.
-- `assets/live-dashboard.png` — production UI captured from the public Vercel deployment.
-- `assets/prize-claim-desktop.png` — desktop QA capture of the private prize flow.
-- `assets/prize-claim-mobile.png` — 390px mobile QA capture with no horizontal overflow.
+- `Veylott-Demo.mp4` — under-three-minute, 1080p H.264/AAC walkthrough with captions.
+- `deck-content.md` — source claims and evidence links.
+- `demo-script.md` — human presenter run-of-show and recording checklist.
+- `assets/live-dashboard.png` — canonical production capture.
+- `../../qa/evidence/live-{desktop,tablet,mobile}.png` — reproducible cross-device captures.
 
-## Reproduce the deck
+## Reproduce
 
-The generators do not add runtime dependencies to the application. Use an isolated Python environment:
+The generators add no application dependency:
 
 ```bash
 python3 -m venv /tmp/veylott-showcase-venv
@@ -30,8 +27,8 @@ pdftoppm -png -r 144 docs/showcase/presentation/Veylott-Presentation.pdf \
 python3 scripts/generate-showcase-video.py
 ```
 
-The video generator requires `espeak-ng`, `ffmpeg`, and `ffprobe`. It uses deterministic local text-to-speech and burns the narration into the frame as captions. No wallet provider or blockchain response is mocked.
+The video generator requires `espeak-ng`, `ffmpeg`, and `ffprobe`. Local text-to-speech and captions are deterministic.
 
-## Live demo handoff
+## Live Demo Handoff
 
-Open the [Veylott live demo](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/) on Sepolia. Connect the intended wallet, confirm the address shown in the header, and verify runtime assurance before signing. Do not claim a transaction succeeded until its receipt is confirmed. The deck’s transaction evidence is the completed predecessor-deployment lifecycle documented in [`../SUBMISSION_OVERVIEW.md`](../SUBMISSION_OVERVIEW.md).
+Open the [canonical Veylott app](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/) on Sepolia. Confirm the selected wallet and runtime assurance before signing. Never claim success before a confirmed receipt. The deck uses the completed active-pool evidence in the [submission overview](../SUBMISSION_OVERVIEW.md) and [lifecycle record](../../operations/live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle).
