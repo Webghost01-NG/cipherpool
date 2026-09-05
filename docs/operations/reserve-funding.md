@@ -71,4 +71,4 @@ Sponsor funds enter `_prizeReserve`, never a saver’s position or `_totalAccoun
 
 ## Production Path
 
-Adopt the verified batchers only after their exact-asset vault has a real strategy, then implement deposit and redemption recovery, test loss and unavailable liquidity, and independently audit the resulting contracts. Until then, product copy and submission material must say “sponsor-funded prize reserve,” not “yield.”
+Adopt the verified batchers only after their exact-asset vault has a real strategy. The [production yield architecture](../spec/production-yield-architecture.md) defines the required ledgers, batch state machine, yield-attribution proof, loss and recovery behavior, authority limits, tests, and release gates. Until every gate passes, product copy and submission material must say “sponsor-funded prize reserve,” not “yield.”
