@@ -46,4 +46,4 @@ The core pool currently has 100% line and function coverage. Coverage is not a p
 
 ## Deliverable Requirements
 
-An acceptable final report must identify the auditor, scope commit, methodology, findings with severity and proof of impact, remediation status, residual risks, and a signature or independently verifiable publication. Findings must be fixed through separate reviewed PRs and the deployed-runtime correspondence repeated before this package links any report as final.
+The [auditor engagement brief](engagement-brief.md) provides a direct frozen-source download, reviewer independence requirements, minimum manual review procedure, and finding format. An acceptable final report must identify the auditor, scope commit, methodology, findings with severity and proof of impact, remediation status, residual risks, and a signature or independently verifiable publication. Findings must be fixed through separate reviewed PRs and the deployed-runtime correspondence repeated before this package links any report as final.
