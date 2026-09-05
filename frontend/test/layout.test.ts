@@ -44,6 +44,16 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.ok(content.indexOf("<DepositCard") < content.indexOf("<WithdrawalCard"), "Funding appears before withdrawal");
   });
 
+  test("App receives the verified runtime version from the pool hook", () => {
+    const app = fs.readFileSync(path.join(process.cwd(), "frontend/src/App.tsx"), "utf-8");
+    const hook = fs.readFileSync(path.join(process.cwd(), "frontend/src/hooks/usePool.ts"), "utf-8");
+    const appBinding = app.match(/const\s*\{([\s\S]*?)\}\s*=\s*usePool\(DEFAULT_POOL_ADDRESS\)/)?.[1] ?? "";
+    const hookResult = hook.match(/return\s*\{([\s\S]*?)\};\s*\n};\s*$/)?.[1] ?? "";
+
+    assert.match(appBinding, /\bactiveRuntimeVersion\b/, "App must bind the runtime version it renders");
+    assert.match(hookResult, /\bactiveRuntimeVersion\b/, "usePool must expose the verified runtime version");
+  });
+
   test("Layout components export properly as valid React elements", () => {
     assert.equal(typeof App, "function");
     assert.equal(typeof Header, "function");

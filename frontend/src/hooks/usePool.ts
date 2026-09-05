@@ -703,6 +703,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     dataError,
     lastUpdatedAt,
     metricFreshness,
+    activeRuntimeVersion,
     deploymentVerification,
     walletRpcVerification,
     writesEnabled:
