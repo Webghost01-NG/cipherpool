@@ -68,6 +68,7 @@ The contracts are not independently audited. The [external audit package](docs/a
 - [Editable PowerPoint deck](docs/showcase/presentation/Veylott-Presentation.pptx)
 - [Under-three-minute presenter script](docs/showcase/presentation/demo-script.md)
 - [Evidence-linked X thread](docs/showcase/x-thread.md)
+- [Downloadable X thread image pack](docs/showcase/x-thread-assets/)
 
 To explore safely, open the application, connect the intended wallet on Ethereum Sepolia, and wait for runtime assurance to verify the chain, bytecode, and custody asset. Obtain test USDC, wrap it with the official cUSDC contract, then use Veylott's encrypted deposit, prize-round, private prize claim, and direct-withdrawal actions. Review every wallet prompt before signing and treat only a confirmed receipt as success. The recorded transactions above are historical evidence, not a promise that a new transaction has completed.
 
