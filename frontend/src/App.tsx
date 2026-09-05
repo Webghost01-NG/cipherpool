@@ -86,6 +86,7 @@ export const App: React.FC = () => {
     dataError,
     lastUpdatedAt,
     metricFreshness,
+    activeRuntimeVersion,
     deploymentVerification,
     walletRpcVerification,
     writesEnabled,
