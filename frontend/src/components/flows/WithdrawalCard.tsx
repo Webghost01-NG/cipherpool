@@ -1,12 +1,15 @@
 import React, { useState } from "react";
-import { ArrowUpRight, Info } from "lucide-react";
-import { Badge, Card } from "../common/UIPrimitives.js";
+import { ArrowUpRight, Info, ShieldCheck } from "lucide-react";
+import { Badge, Button, Card } from "../common/UIPrimitives.js";
 import { WalletGateButton } from "../wallet/WalletGateButton.js";
 import type { WalletStatus } from "../../hooks/useWallet.js";
 import { parseTokenAmount } from "../../utils/tokenAmount.js";
 
 export interface WithdrawalCardProps {
   onWithdraw: (amount: bigint) => Promise<void>;
+  onDeactivate: () => Promise<void>;
+  participantActive: boolean;
+  deactivationPending: boolean;
   isLoading: boolean;
   walletConnected: boolean;
   walletStatus: WalletStatus;
@@ -19,6 +22,9 @@ export interface WithdrawalCardProps {
 
 export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
   onWithdraw,
+  onDeactivate,
+  participantActive,
+  deactivationPending,
   isLoading,
   walletConnected,
   walletStatus,
@@ -72,6 +78,23 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
           <Info size={17} aria-hidden="true" />
           <span>ERC-7984 transfers zero if your private balance is insufficient. Reveal your position afterward to verify the result.</span>
         </div>
+        {participantActive && (
+          <div className="pending-box" role="status">
+            <div className="pending-box__title"><ShieldCheck size={16} /> {deactivationPending ? "Participant-slot check pending" : "Draw slot still active"}</div>
+            <p>{deactivationPending
+              ? "Finalize the KMS zero-position proof to reclaim this wallet's bounded draw slot."
+              : "After withdrawing the full private position, request a fresh zero-position proof to leave the draw set."}</p>
+            <Button
+              className="button--wide"
+              type="button"
+              variant="secondary"
+              disabled={isLoading || !walletConnected || !writesEnabled}
+              onClick={() => void onDeactivate()}
+            >
+              {deactivationPending ? "Finalize slot reclamation" : "Check and reclaim draw slot"}
+            </Button>
+          </div>
+        )}
         <WalletGateButton
           className="button--wide"
           type="submit"

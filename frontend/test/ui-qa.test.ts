@@ -105,6 +105,9 @@ describe("Frontend QA: Responsive Layout & Accessibility Standards", () => {
 
     const withdrawalCard = React.createElement(WithdrawalCard, {
       onWithdraw: async () => {},
+      onDeactivate: async () => {},
+      participantActive: false,
+      deactivationPending: false,
       isLoading: false,
       walletConnected: true,
       walletStatus: "connected",

@@ -25,4 +25,6 @@ QA_URL=https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.a
 
 Independent testers must repeat connect, disconnect, account switch, rejected signature, private reveal, and one funded write in their own MetaMask-compatible browser. Record browser/wallet version, device, public address, transaction target, receipt, and whether retry guidance was needed. Never record seed phrases, private keys, encrypted-balance cleartexts, or wallet telemetry. Mobile Chrome/Safari without an injected EIP-1193 provider is expected to show the no-wallet path; use a wallet's in-app browser for an actual mobile-wallet test.
 
+Give each tester the [independent wallet test runbook](independent-wallet-runbook.md). It separates no-cost connection checks from funded writes and includes a paste-ready evidence record, so reviewers can reproduce the result without collecting private wallet data.
+
 This external row remains open because local automation and operator-controlled keys cannot prove an independent wallet or device. The completed protocol receipts demonstrate real writes, while the matrix avoids overstating who controlled the clients.
