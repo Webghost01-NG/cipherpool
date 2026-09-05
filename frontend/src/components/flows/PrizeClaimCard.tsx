@@ -52,7 +52,7 @@ export const PrizeClaimCard: React.FC<PrizeClaimCardProps> = ({
       className="panel--ink"
       eyebrow="Private prize"
       title="Reveal and claim your winnings"
-      subtitle="Only your wallet can decrypt whether this position won a round."
+      subtitle="Your wallet reveals your encrypted prize balance. The fixed per-round award is public; the contract does not announce the winner."
       headerAction={<Badge variant="success"><LockKeyhole size={11} /> Wallet private</Badge>}
     >
       <div className="balance-display">

@@ -4,6 +4,8 @@
 
 Veylott is a confidential prize-savings prototype for Zama fhEVM. It uses the official ERC-7984 `cUSDCMock` wrapper on Ethereum Sepolia so deposit amounts, saved positions, withdrawals, prize reserves, and winner credits remain encrypted on-chain.
 
+The privacy claim is private winner identity and encrypted personal prize balances. The fixed per-round award, participant addresses, and timing are public; a disclosed winner or a single-participant round can reveal who received the public award.
+
 > Veylott is research software using test assets. It has not been independently audited and must not hold real funds.
 
 ## Why Veylott

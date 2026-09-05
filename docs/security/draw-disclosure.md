@@ -8,6 +8,16 @@ A keeper submits `finalizeDraw(ready, proof)`. `FHE.checkSignatures` rejects a c
 
 ## Public Information
 
+Product wording: **private winner identity and encrypted personal prize balances**. The fixed per-round award is public. If a winner reveals their identity, observers can infer that round's award; singleton participation can also reveal the winner. Ciphertext storage does not prevent these inferences.
+
+| Value | Public observer | Position owner |
+| --- | --- | --- |
+| Participant addresses, count, fixed prize, timing | Visible | Visible |
+| Individual balance and ticket weight | Encrypted | Authorized private reveal |
+| Personal prize counter | Encrypted; inference possible from disclosed wins | Authorized private reveal |
+| Aggregate weight and reserve | Encrypted; readiness leaks threshold information | No extra access solely from participation |
+| Winner identity | No explicit winner event; singleton/disclosure inference possible | Can inspect own prize counter |
+
 Observers still learn the participant addresses and count, fixed prize, request and settlement timing, readiness bit, finalized-round count, and timeout/cancellation status. Individual positions, aggregate eligible weight, exact reserve, winner, and prize balance remain ciphertexts. The readiness bit is necessary because the contract must branch truthfully between settlement and skip without allowing encrypted arithmetic wraparound to create an unfunded award.
 
 The active Sepolia deployment uses readiness-only settlement. The backend records round metadata but its API does not collect or expose aggregate eligible weight or reserve values.
