@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { ethers, type Eip1193Provider } from "ethers";
 import { createInstance, SepoliaConfig, type FhevmInstance } from "@zama-fhe/relayer-sdk/node";
 
-const ACTIONS = ["preflight", "deposit", "draw", "reveal-prize", "claim-prize", "withdraw"] as const;
+const ACTIONS = ["preflight", "deposit", "activate", "deactivate", "draw", "reveal-prize", "claim-prize", "withdraw"] as const;
 export type LifecycleAction = typeof ACTIONS[number];
 
 const POOL_ABI = [
@@ -17,23 +17,26 @@ const POOL_ABI = [
   "function drawPrizeAmount() view returns (uint64)",
   "function nextDrawRequestTimestamp() view returns (uint64)",
   "function participants(uint256) view returns (address)",
-  "function getPendingDraw() view returns (tuple(bytes32 totalHandle,bytes32 reserveHandle,uint64 prizeAmount,uint64 timestamp,bool active,bytes32 requestHash))",
+  "function getPendingDraw() view returns (tuple(bytes32 totalHandle,bytes32 reserveHandle,bytes32 readinessHandle,uint64 prizeAmount,uint64 timestamp,bool active,bytes32 requestHash))",
   "function getPendingParticipantActivation(address) view returns (tuple(bytes32 eligibilityHandle,uint64 timestamp,bool active,bytes32 requestHash))",
+  "function getPendingParticipantDeactivation(address) view returns (tuple(bytes32 zeroBalanceHandle,uint64 timestamp,bool active,bytes32 requestHash))",
   "function getBalanceHandle(address) view returns (bytes32)",
   "function getPrizeHandle(address) view returns (bytes32)",
   "function getTotalEligibleBalanceHandle() view returns (bytes32)",
   "function getPrizeReserveHandle() view returns (bytes32)",
   "function withdraw(bytes32 encryptedAmount,bytes inputProof)",
   "function finalizeParticipantActivation(address user,bool eligible,bytes decryptionProof)",
+  "function finalizeParticipantDeactivation(address user,bool zeroBalance,bytes decryptionProof)",
   "function requestDraw(uint64 prizeAmount)",
-  "function finalizeDraw(uint64 totalEligibleBalance,uint64 prizeReserve,bytes decryptionProof)",
+  "function finalizeDraw(bool ready,bytes decryptionProof)",
   "event Deposited(address indexed user,uint256 indexed nonce,bytes32 indexed encryptedAmountHandle)",
   "event Withdrawn(address indexed user,uint256 indexed nonce,bytes32 indexed encryptedAmountHandle)",
   "event ParticipantActivationRequested(address indexed user,uint256 indexed nonce,bytes32 indexed requestHash,bytes32 eligibilityHandle)",
   "event ParticipantActivationFinalized(address indexed user,bytes32 indexed requestHash,bool eligible,uint256 participantCount)",
-  "event DrawRequested(uint256 indexed nonce,bytes32 indexed requestHash,uint64 prizeAmount,bytes32 totalHandle,bytes32 reserveHandle)",
-  "event DrawSkipped(bytes32 indexed requestHash,uint64 totalWeight,uint64 prizeReserve,uint64 requiredPrizeAmount,uint256 timestamp)",
-  "event DrawExecuted(uint256 indexed drawId,bytes32 indexed requestHash,uint64 prizeAmount,uint64 totalWeight,uint64 remainingPrizeReserve,uint256 timestamp,uint256 participantCount)",
+  "event ParticipantDeactivationFinalized(address indexed user,bytes32 indexed requestHash,bool zeroBalance,uint256 participantCount)",
+  "event DrawRequested(uint256 indexed nonce,bytes32 indexed requestHash,uint64 prizeAmount,bytes32 totalHandle,bytes32 reserveHandle,bytes32 readinessHandle)",
+  "event DrawSkipped(bytes32 indexed requestHash,uint64 requiredPrizeAmount,uint256 timestamp)",
+  "event DrawExecuted(uint256 indexed drawId,bytes32 indexed requestHash,uint64 prizeAmount,uint256 timestamp,uint256 participantCount)",
 ];
 
 const TOKEN_ABI = [
@@ -276,6 +279,7 @@ async function main(): Promise<void> {
   const pendingDraw = await readPublic("pending draw", () => pool.getPendingDraw() as Promise<{
       totalHandle: string;
       reserveHandle: string;
+      readinessHandle: string;
       prizeAmount: bigint;
       timestamp: bigint;
       active: boolean;
@@ -305,7 +309,7 @@ async function main(): Promise<void> {
     prize: prizeHandle,
   };
 
-  const writeAction = action === "deposit" || action === "draw" || action === "claim-prize" || action === "withdraw";
+  const writeAction = action === "deposit" || action === "activate" || action === "deactivate" || action === "draw" || action === "claim-prize" || action === "withdraw";
   if (writeAction || process.env.LIFECYCLE_EXPECTED_PARTICIPANTS?.trim()) {
     assertExpectedParticipants(participants, requiredEnvironment("LIFECYCLE_EXPECTED_PARTICIPANTS"));
   }
@@ -393,7 +397,7 @@ async function main(): Promise<void> {
   if (action === "preflight" || action === "reveal-prize") return;
   if (!wallet || !instance) throw new Error("The signing context was not initialized.");
   const numericDecimals = Number(decimals);
-  const amountLabel = action === "claim-prize"
+  const amountLabel = action === "claim-prize" || action === "activate" || action === "deactivate"
     ? "auto"
     : action === "draw"
       ? ethers.formatUnits(drawPrizeAmount, numericDecimals)
@@ -405,6 +409,65 @@ async function main(): Promise<void> {
 
   const signedPool = pool.connect(wallet) as ethers.Contract;
   const signedToken = token.connect(wallet) as ethers.Contract;
+
+  if (action === "activate") {
+    const activation = await pool.getPendingParticipantActivation(actorAddress) as {
+      eligibilityHandle: string;
+      active: boolean;
+      requestHash: string;
+    };
+    if (!activation.active) throw new Error("This wallet has no pending participant activation.");
+    const decrypted = await instance.publicDecrypt([activation.eligibilityHandle]);
+    const eligible = readClearBoolean(decrypted.clearValues, activation.eligibilityHandle);
+    const transaction = await signedPool.finalizeParticipantActivation(
+      actorAddress,
+      eligible,
+      decrypted.decryptionProof
+    );
+    const receipt = requireConfirmedReceipt(await transaction.wait());
+    const event = parseReceiptEvent(receipt, pool, "ParticipantActivationFinalized");
+    if (!event || event.args.requestHash !== activation.requestHash) {
+      throw new Error("Confirmed receipt is missing the expected participant activation result.");
+    }
+    printEvidence({
+      phase: "participant-activation-finalized",
+      transactionHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      eligible,
+      requestHash: activation.requestHash,
+    });
+    return;
+  }
+
+  if (action === "deactivate") {
+    const deactivation = await pool.getPendingParticipantDeactivation(actorAddress) as {
+      zeroBalanceHandle: string;
+      active: boolean;
+      requestHash: string;
+    };
+    if (!deactivation.active) throw new Error("This wallet has no pending participant deactivation.");
+    const decrypted = await instance.publicDecrypt([deactivation.zeroBalanceHandle]);
+    const zeroBalance = readClearBoolean(decrypted.clearValues, deactivation.zeroBalanceHandle);
+    const transaction = await signedPool.finalizeParticipantDeactivation(
+      actorAddress,
+      zeroBalance,
+      decrypted.decryptionProof
+    );
+    const receipt = requireConfirmedReceipt(await transaction.wait());
+    const event = parseReceiptEvent(receipt, pool, "ParticipantDeactivationFinalized");
+    if (!event || event.args.requestHash !== deactivation.requestHash) {
+      throw new Error("Confirmed receipt is missing the expected participant deactivation result.");
+    }
+    printEvidence({
+      phase: "participant-deactivation-finalized",
+      transactionHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      zeroBalance,
+      participantCount: event.args.participantCount,
+      requestHash: deactivation.requestHash,
+    });
+    return;
+  }
 
   if (action === "deposit") {
     const walletBalance = requiredPrivateValue(privateValues, "walletBalance");
@@ -467,17 +530,16 @@ async function main(): Promise<void> {
     const request = await pool.getPendingDraw() as {
       totalHandle: string;
       reserveHandle: string;
+      readinessHandle: string;
       prizeAmount: bigint;
       active: boolean;
       requestHash: string;
     };
     if (!request.active || request.requestHash !== requestedEvent.args.requestHash) throw new Error("Pending draw does not match the confirmed request.");
-    const decrypted = await instance.publicDecrypt([request.totalHandle, request.reserveHandle]);
-    const total = readClearValue(decrypted.clearValues, request.totalHandle);
-    const reserve = readClearValue(decrypted.clearValues, request.reserveHandle);
-    if (total >= UINT64_LIMIT || reserve >= UINT64_LIMIT) throw new Error("KMS aggregate exceeds the uint64 protocol limit.");
+    const decrypted = await instance.publicDecrypt([request.readinessHandle]);
+    const ready = readClearBoolean(decrypted.clearValues, request.readinessHandle);
 
-    const finalizeTransaction = await signedPool.finalizeDraw(total, reserve, decrypted.decryptionProof);
+    const finalizeTransaction = await signedPool.finalizeDraw(ready, decrypted.decryptionProof);
     const finalizeReceipt = requireConfirmedReceipt(await finalizeTransaction.wait());
     const executedEvent = parseReceiptEvent(finalizeReceipt, pool, "DrawExecuted");
     const skippedEvent = parseReceiptEvent(finalizeReceipt, pool, "DrawSkipped");
@@ -487,9 +549,8 @@ async function main(): Promise<void> {
         requestTransactionHash: requestReceipt.hash,
         finalizeTransactionHash: finalizeReceipt.hash,
         blockNumber: finalizeReceipt.blockNumber,
-        totalWeight: skippedEvent.args.totalWeight,
-        prizeReserve: skippedEvent.args.prizeReserve,
         requiredPrizeAmount: skippedEvent.args.requiredPrizeAmount,
+        readiness: false,
       });
       return;
     }
@@ -503,8 +564,8 @@ async function main(): Promise<void> {
       blockNumber: finalizeReceipt.blockNumber,
       drawId: executedEvent.args.drawId,
       prizeAmount: executedEvent.args.prizeAmount,
-      totalWeight: executedEvent.args.totalWeight,
-      remainingPrizeReserve: executedEvent.args.remainingPrizeReserve,
+      participantCount: executedEvent.args.participantCount,
+      readiness: true,
     });
     return;
   }

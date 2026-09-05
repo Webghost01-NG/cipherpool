@@ -15,6 +15,8 @@ describe("Live Sepolia lifecycle safeguards", () => {
 
   test("defaults to read-only preflight and rejects unknown actions", () => {
     assert.equal(parseLifecycleAction(undefined), "preflight");
+    assert.equal(parseLifecycleAction("activate"), "activate");
+    assert.equal(parseLifecycleAction("deactivate"), "deactivate");
     assert.throws(() => parseLifecycleAction("full-send"), /must be one of/);
   });
 
@@ -37,6 +39,10 @@ describe("Live Sepolia lifecycle safeguards", () => {
     assert.equal(
       buildConfirmationPhrase("deposit", "8", 0n, pool, wallet),
       `deposit:8:draw-0:${pool}:${wallet}`
+    );
+    assert.equal(
+      buildConfirmationPhrase("activate", "auto", 0n, pool, wallet),
+      `activate:auto:draw-0:${pool}:${wallet}`
     );
   });
 
