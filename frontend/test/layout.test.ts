@@ -54,6 +54,14 @@ describe("Frontend Foundation & Design System Tests", () => {
     assert.match(hookResult, /\bactiveRuntimeVersion\b/, "usePool must expose the verified runtime version");
   });
 
+  test("Prize-round copy matches the readiness-only disclosure boundary", () => {
+    const app = fs.readFileSync(path.join(process.cwd(), "frontend/src/App.tsx"), "utf-8");
+
+    assert.match(app, /KMS publicly verifies only the request-bound readiness bit/);
+    assert.match(app, /eligible weight and prize reserve remain encrypted/);
+    assert.doesNotMatch(app, /KMS verifies aggregate weight and reserve/);
+  });
+
   test("Layout components export properly as valid React elements", () => {
     assert.equal(typeof App, "function");
     assert.equal(typeof Header, "function");

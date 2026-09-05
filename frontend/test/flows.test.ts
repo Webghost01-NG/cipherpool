@@ -13,6 +13,7 @@ import { PrizeClaimCard } from "../src/components/flows/PrizeClaimCard.js";
 import { LegacyExitCard } from "../src/components/flows/LegacyExitCard.js";
 import { WalletGateButton } from "../src/components/wallet/WalletGateButton.js";
 import { StatBox } from "../src/components/common/UIPrimitives.js";
+import { POOL_ABI, POOL_ABI_READINESS_V2 } from "../src/contracts/abi.js";
 
 describe("Core Product Flows & Interactive Cards Tests", () => {
   test("new-pool metrics distinguish pending history from unavailable data", () => {
@@ -163,6 +164,9 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
   test("WithdrawalCard exposes a direct encrypted withdrawal action", () => {
     const cardPending = React.createElement(WithdrawalCard, {
       onWithdraw: async () => {},
+      onDeactivate: async () => {},
+      participantActive: false,
+      deactivationPending: false,
       isLoading: false,
       walletConnected: true,
       walletStatus: "connected",
@@ -174,6 +178,42 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     });
     assert.ok(cardPending);
     assert.equal(typeof cardPending.props.onWithdraw, "function");
+  });
+
+  test("WithdrawalCard exposes KMS-backed participant-slot recovery", () => {
+    const pending = renderToStaticMarkup(React.createElement(WithdrawalCard, {
+      onWithdraw: async () => {},
+      onDeactivate: async () => {},
+      participantActive: true,
+      deactivationPending: true,
+      isLoading: false,
+      walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
+      tokenSymbol: "cUSDCMock",
+      tokenDecimals: 6,
+      writesEnabled: true,
+    }));
+    const invalidated = renderToStaticMarkup(React.createElement(WithdrawalCard, {
+      onWithdraw: async () => {},
+      onDeactivate: async () => {},
+      participantActive: true,
+      deactivationPending: false,
+      isLoading: false,
+      walletConnected: true,
+      walletStatus: "connected",
+      onWalletAction: () => {},
+      walletActionEnabled: true,
+      tokenSymbol: "cUSDCMock",
+      tokenDecimals: 6,
+      writesEnabled: true,
+    }));
+
+    assert.match(pending, /Participant-slot check pending/);
+    assert.match(pending, /Finalize slot reclamation/);
+    assert.match(invalidated, /Draw slot still active/);
+    assert.match(invalidated, /Check and reclaim draw slot/);
   });
 
   test("LotteryDrawCard displays prize and executes round draw", () => {
@@ -281,6 +321,19 @@ describe("Core Product Flows & Interactive Cards Tests", () => {
     assert.match(hookSource, /await pool\.DEPOSIT_ACTION\(\)/);
     assert.match(hookSource, /await pool\.PRIZE_RESERVE_ACTION\(\)/);
     assert.doesNotMatch(hookSource, /ethers\.id\(/);
+  });
+
+  test("participant-slot reclamation uses the deployed KMS proof path", () => {
+    const hookSource = fs.readFileSync(path.join(process.cwd(), "frontend/src/hooks/usePool.ts"), "utf8");
+    const frontendAbi = fs.readFileSync(path.join(process.cwd(), "frontend/src/contracts/abi.ts"), "utf8");
+
+    assert.match(frontendAbi, /function requestParticipantDeactivation\(\)/);
+    assert.match(frontendAbi, /function getPendingParticipantDeactivation\(address user\)/);
+    assert.match(frontendAbi, /function finalizeParticipantDeactivation\(address user, bool zeroBalance/);
+    assert.match(hookSource, /publicDecrypt\(\[pending\.zeroBalanceHandle\]\)/);
+    assert.match(hookSource, /finalizeParticipantDeactivation\(address, zeroBalance, result\.decryptionProof\)/);
+    assert.equal(POOL_ABI.some((entry) => entry.includes("ParticipantDeactivation")), false);
+    assert.equal(POOL_ABI_READINESS_V2.some((entry) => entry.includes("finalizeParticipantDeactivation")), true);
   });
 
   test("LegacyExitCard exposes settlement without enabling new legacy requests", () => {

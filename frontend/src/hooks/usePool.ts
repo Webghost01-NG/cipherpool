@@ -36,6 +36,13 @@ export interface PoolStats {
     requestHash: string;
     eligibilityHandle: string;
   };
+  participantActive: boolean;
+  pendingDeactivation: {
+    active: boolean;
+    timestamp: number;
+    requestHash: string;
+    zeroBalanceHandle: string;
+  };
 }
 
 export interface AssetMetadata {
@@ -103,7 +110,7 @@ function readClearBoolean(clearValues: Record<string, unknown>, handle: string):
   const value = Object.entries(clearValues).find(([key]) => key.toLowerCase() === handle.toLowerCase())?.[1];
   if (typeof value === "boolean") return value;
   if (typeof value === "bigint") return value !== 0n;
-  throw new Error("Zama KMS returned an invalid participant eligibility value.");
+  throw new Error("Zama KMS returned an invalid proof-bound predicate value.");
 }
 
 export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
@@ -130,6 +137,13 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       timestamp: 0,
       requestHash: ZERO_HASH,
       eligibilityHandle: ZERO_HASH,
+    },
+    participantActive: false,
+    pendingDeactivation: {
+      active: false,
+      timestamp: 0,
+      requestHash: ZERO_HASH,
+      zeroBalanceHandle: ZERO_HASH,
     },
   });
   const [asset, setAsset] = useState<AssetMetadata>({
@@ -241,6 +255,8 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
         custodyAddress,
         pendingDraw,
         pendingActivation,
+        participantActive,
+        pendingDeactivation,
       ] = await withTimeout(Promise.all([
         pool.lastDrawVerificationTimestamp() as Promise<bigint>,
         pool.currentDrawId() as Promise<bigint>,
@@ -269,6 +285,22 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
             }>
           : Promise.resolve({
               eligibilityHandle: ZERO_HASH,
+              timestamp: 0n,
+              active: false,
+              requestHash: ZERO_HASH,
+            }),
+        address && runtimeProfile.version === "readiness-v2"
+          ? pool.isParticipant(address) as Promise<boolean>
+          : Promise.resolve(false),
+        address && runtimeProfile.version === "readiness-v2"
+          ? pool.getPendingParticipantDeactivation(address) as Promise<{
+              zeroBalanceHandle: string;
+              timestamp: bigint;
+              active: boolean;
+              requestHash: string;
+            }>
+          : Promise.resolve({
+              zeroBalanceHandle: ZERO_HASH,
               timestamp: 0n,
               active: false,
               requestHash: ZERO_HASH,
@@ -339,6 +371,13 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
           timestamp: Number(pendingActivation.timestamp),
           requestHash: pendingActivation.requestHash,
           eligibilityHandle: pendingActivation.eligibilityHandle,
+        },
+        participantActive,
+        pendingDeactivation: {
+          active: pendingDeactivation.active,
+          timestamp: Number(pendingDeactivation.timestamp),
+          requestHash: pendingDeactivation.requestHash,
+          zeroBalanceHandle: pendingDeactivation.zeroBalanceHandle,
         },
       });
       setMetricFreshness({
@@ -503,6 +542,55 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
       await refreshPoolData();
       return { txHash: receipt.hash };
     } finally {
+      setIsLoading(false);
+    }
+  }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
+
+  const deactivateParticipant = useCallback(async (callbacks: TransactionCallbacks = {}) => {
+    if (!address || status !== "connected" || !window.ethereum) throw new Error("Connect a Sepolia wallet first.");
+    const runtimeVersion = requireVerifiedWrites();
+    if (runtimeVersion !== "readiness-v2") throw new Error("Participant slot reclamation is unavailable on this archived runtime.");
+    setIsLoading(true);
+    try {
+      const [{ ethers }, { getBrowserFhevmInstance }] = await Promise.all([
+        import("../utils/walletRuntime.js"),
+        import("../../../client/src/adapters/InputEncryption.js"),
+      ]);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const pool = new ethers.Contract(contractAddress, getPoolAbi(runtimeVersion), await provider.getSigner());
+      if (!(await pool.isParticipant(address) as boolean)) {
+        throw new Error("This wallet does not occupy an active participant slot.");
+      }
+
+      let pending = await pool.getPendingParticipantDeactivation(address) as {
+        zeroBalanceHandle: string;
+        active: boolean;
+        requestHash: string;
+      };
+      if (!pending.active) {
+        const requestTransaction = await pool.requestParticipantDeactivation();
+        callbacks.onBroadcast?.(requestTransaction.hash);
+        ensureReceipt(await requestTransaction.wait());
+        pending = await pool.getPendingParticipantDeactivation(address) as typeof pending;
+      }
+      if (!pending.active || pending.zeroBalanceHandle === ethers.ZeroHash) {
+        throw new Error("The participant slot check was not created on-chain.");
+      }
+
+      callbacks.onProofRequested?.(pending.requestHash);
+      const result = await (await getBrowserFhevmInstance()).publicDecrypt([pending.zeroBalanceHandle]);
+      const zeroBalance = readClearBoolean(result.clearValues, pending.zeroBalanceHandle);
+      const transaction = await pool.finalizeParticipantDeactivation(address, zeroBalance, result.decryptionProof);
+      callbacks.onBroadcast?.(transaction.hash);
+      const receipt = ensureReceipt(await transaction.wait());
+      return {
+        txHash: receipt.hash,
+        successMessage: zeroBalance
+          ? "KMS verified a zero position and reclaimed the participant slot."
+          : "KMS verified that the private position is still positive, so the participant slot remains active.",
+      };
+    } finally {
+      await refreshPoolData();
       setIsLoading(false);
     }
   }, [address, contractAddress, refreshPoolData, requireVerifiedWrites, status]);
@@ -717,6 +805,7 @@ export const usePool = (contractAddress: string = DEFAULT_POOL_ADDRESS) => {
     deposit,
     activateParticipant,
     withdraw,
+    deactivateParticipant,
     fundPrizeReserve,
     revealBalance,
     hideBalance,

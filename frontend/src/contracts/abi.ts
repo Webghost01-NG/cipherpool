@@ -40,6 +40,10 @@ export const POOL_ABI = [
 
 export const POOL_ABI_READINESS_V2 = [
   ...COMMON_POOL_ABI,
+  "function requestParticipantDeactivation() external",
+  "function finalizeParticipantDeactivation(address user, bool zeroBalance, bytes calldata decryptionProof) external",
+  "function getPendingParticipantDeactivation(address user) external view returns (tuple(bytes32 zeroBalanceHandle, uint64 timestamp, bool active, bytes32 requestHash))",
+  "function isParticipant(address user) external view returns (bool)",
   "function finalizeDraw(bool ready, bytes calldata decryptionProof) external",
   "function getPendingDraw() external view returns (tuple(bytes32 totalHandle, bytes32 reserveHandle, bytes32 readinessHandle, uint64 prizeAmount, uint64 timestamp, bool active, bytes32 requestHash))",
   "function lastDrawReady() external view returns (bool)",

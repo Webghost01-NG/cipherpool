@@ -43,7 +43,7 @@ The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCM
 
 The active deployment has completed a real three-wallet round: three encrypted deposits, a readiness-only KMS settlement, one private winner reveal and ordinary withdrawal claim, three principal exits, and proof-bound participant-slot reclamation back to zero. Every confirmed receipt and the observed activation-retry path are recorded in the [live lifecycle evidence](docs/operations/live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle).
 
-Production rendering is reproducibly captured at desktop, tablet, and mobile widths in the [real-wallet and cross-device QA matrix](docs/qa/real-wallet-e2e-matrix.md). The matrix distinguishes confirmed live-chain activity from deterministic wallet tests and keeps independent tester steps visibly open.
+Production rendering is reproducibly captured at desktop, tablet, and mobile widths in the [real-wallet and cross-device QA matrix](docs/qa/real-wallet-e2e-matrix.md). The matrix distinguishes confirmed live-chain activity from deterministic wallet tests and keeps independent tester steps visibly open. Independent reviewers should follow the [wallet test runbook](docs/qa/independent-wallet-runbook.md), which separates no-cost checks from the single funded route.
 
 The contracts are not independently audited. The [external audit package](docs/audit/README.md) freezes the exact deployed source/hash, removes stale sign-off claims, maps current threats, and supplies reproducible verification for a qualified reviewer.
 

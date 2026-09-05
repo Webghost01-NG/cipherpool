@@ -93,6 +93,7 @@ export const App: React.FC = () => {
     deposit,
     activateParticipant,
     withdraw,
+    deactivateParticipant,
     fundPrizeReserve,
     revealBalance,
     hideBalance,
@@ -404,6 +405,16 @@ export const App: React.FC = () => {
                     { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
                   )
                 }
+                onDeactivate={() =>
+                  runAction(
+                    "Participant slot reclamation",
+                    () => deactivateParticipant(transactionCallbacks),
+                    "KMS-verified participant slot check finalized on Ethereum Sepolia.",
+                    { label: "ConfidentialPool", address: DEFAULT_POOL_ADDRESS }
+                  )
+                }
+                participantActive={poolStats.participantActive}
+                deactivationPending={poolStats.pendingDeactivation.active}
                 isLoading={isLoading}
                 walletConnected={walletReady && !poolStats.isPaused}
                 walletStatus={status}
@@ -463,7 +474,7 @@ export const App: React.FC = () => {
           <div className="tab-stage">
             <div className="section-heading">
               <div><p className="eyebrow">Prize operations</p><h2>Confidential rounds</h2></div>
-              <p>Any Sepolia wallet can request a policy-sized draw when the on-chain cadence opens. KMS verifies aggregate weight and reserve without revealing any individual position.</p>
+              <p>Any Sepolia wallet can request a policy-sized draw when the on-chain cadence opens. KMS publicly verifies only the request-bound readiness bit; eligible weight and prize reserve remain encrypted.</p>
             </div>
             <section className="workspace" aria-label="Prize round">
               <LotteryDrawCard
