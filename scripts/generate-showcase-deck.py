@@ -159,7 +159,7 @@ def slide_1(prs):
              align=PP_ALIGN.CENTER, valign=MSO_ANCHOR.MIDDLE)
     add_text(slide, "PUBLIC CUSTODY", 8.85, 4.95, 3.2, 0.25, size=8, color=RGBColor(205, 218, 255), font=MONO)
     add_text(slide, "PRIVATE ACCOUNTING", 8.85, 5.3, 3.2, 0.3, size=16, color=WHITE, bold=True)
-    add_pill(slide, "Research software · not production", 0.75, 5.85, 2.7, fill=AMBER_PALE, color=AMBER)
+    add_pill(slide, "Unaudited research · not production", 0.75, 5.85, 3.05, fill=AMBER_PALE, color=AMBER)
     add_footer(slide)
 
 
@@ -180,7 +180,7 @@ def slide_3(prs):
     add_box(slide, 0.68, 2.55, 5.75, 3.65, fill=WHITE, line=LINE)
     add_pill(slide, "Public · independently verifiable", 0.98, 2.87, 2.45, fill=GREEN_PALE, color=GREEN)
     add_text(slide, "Custody layer", 0.98, 3.42, 4.7, 0.42, size=22, bold=True)
-    add_text(slide, "• Deposited testnet cUSDC\n• Contract and custody bindings\n• Transaction receipts\n• Aggregate solvency", 0.98, 4.05, 4.65, 1.6, size=14, color=MUTED, line_spacing=1.25)
+    add_text(slide, "• Deposited testnet cUSDC\n• Contract and custody bindings\n• Transaction receipts\n• Runtime and policy", 0.98, 4.05, 4.65, 1.6, size=14, color=MUTED, line_spacing=1.25)
     arrow = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(6.12), Inches(3.85), Inches(1.1), Inches(0.7))
     arrow.fill.solid(); arrow.fill.fore_color.rgb = BLUE; arrow.line.fill.background()
     add_box(slide, 6.9, 2.55, 5.75, 3.65, fill=BLUE_PALE, line=RGBColor(178, 195, 255))
@@ -198,7 +198,7 @@ def slide_4(prs):
         (0.7, 2.55, 2.0, "01", "React client", "Encrypts input\nRequests wallet signature", False),
         (3.25, 2.55, 2.0, "02", "Official cUSDC", "Moves encrypted assets\nReturns actual transfer", False),
         (5.8, 2.55, 2.2, "03", "ConfidentialPool", "Owns encrypted positions\nReserve + draw state", True),
-        (9.0, 2.55, 2.45, "04", "Zama relayer + KMS", "Prepares authorized proofs\nVerifies public snapshots", True),
+        (9.0, 2.55, 2.45, "04", "Zama relayer + KMS", "Prepares authorized proofs\nReturns proof-bound bits", True),
         (5.8, 5.25, 2.2, "05", "Indexer + PostgreSQL", "Observes public events\nPersists checkpoints", False),
         (2.05, 5.25, 2.2, "IN", "Sponsor wallet", "Transfers encrypted cUSDC\ninto the prize reserve", False),
     ]
@@ -243,7 +243,7 @@ def slide_5(prs):
     add_text(slide, "A disconnected user sees only Connect wallet. An address appears only after the provider returns the selected account.", 10.02, 3.58, 2.2, 1.35, size=12, color=MUTED, line_spacing=1.15)
     add_text(slide, "Runtime assurance", 10.02, 5.2, 2.25, 0.32, size=13, bold=True)
     add_text(slide, "Chain, bytecode, and custody bindings are checked before protocol writes.", 10.02, 5.65, 2.2, 0.9, size=11, color=MUTED)
-    add_footer(slide, "Captured from the Veylott live demo · 4 Sep 2026")
+    add_footer(slide, "Captured from the canonical Veylott deployment · 5 Sep 2026")
 
 
 def slide_6(prs):
@@ -278,7 +278,7 @@ def slide_7(prs):
         ("Asset-bound credit", "Encrypted deposit credit is derived from the token-returned custody amount."),
         ("Reserved prizes", "Each draw consumes verified sponsor funds so assets cannot fund repeated awards."),
         ("Complete liabilities", "Winner credit enters both the encrypted position and aggregate at finalization."),
-        ("Bound draw proofs", "KMS evidence must match the stored aggregate and reserve handles."),
+        ("Private settlement", "KMS evidence reveals only a request-bound readiness bit; aggregate amounts stay encrypted."),
         ("Timeout recovery", "Anyone can release a stale draw lock after the 24-hour cancellation delay."),
     ]
     y = 2.35
@@ -295,11 +295,11 @@ def slide_7(prs):
 def slide_8(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6]); slide.background.fill.solid(); slide.background.fill.fore_color.rgb = WHITE
     add_brand(slide, 8)
-    add_title(slide, "Verified evidence", "A completed historical prize round—not a simulated receipt", "Each transaction below links directly to its confirmed predecessor-deployment receipt.")
+    add_title(slide, "Verified evidence", "A real three-wallet round on the active pool", "Each transaction links directly to a confirmed Sepolia receipt; no result is simulated.")
     txs = [
-        ("01", "cUSDC deposit", "0xe36db7…b39f", "Encrypted position", "https://sepolia.etherscan.io/tx/0xe36db7ad47a927811971b56166ced5dd5ffa388d368f54623d09d7124ca8b39f"),
-        ("02", "KMS draw", "0x504862…ce6c", "Draw 1 finalized", "https://sepolia.etherscan.io/tx/0x504862de2aa5ad002f2314ea834b5336d394e9bf111c5652bb16c8700a1ece6c"),
-        ("03", "Private claim", "0x5763be…c969", "Ordinary withdrawal", "https://sepolia.etherscan.io/tx/0x5763bef70ffc5954c640cb1b5c39cad4bf8a56e45b37caa09e55b861184bc969"),
+        ("01", "Encrypted deposit", "0x5fcdac…c676", "3 wallets activated", "https://sepolia.etherscan.io/tx/0x5fcdac841c699f4353e90d29b62509bf243af48e1fbbc2ee642b4778cbb7c676"),
+        ("02", "Readiness KMS", "0x0970ff…b320", "Draw 1 finalized", "https://sepolia.etherscan.io/tx/0x0970fff858788dcbf926730c495fac1bd9ded55114d730aeae0c20b9d642b320"),
+        ("03", "Private claim", "0xb8f291…d50a", "Ordinary withdrawal", "https://sepolia.etherscan.io/tx/0xb8f29170094ac40f14df409838a08b5303265d6a3b6988a49a7f796db33fd50a"),
     ]
     for i, (number, title, short_hash, result, url) in enumerate(txs):
         x = 0.72 + i * 4.05
@@ -309,9 +309,9 @@ def slide_8(prs):
         add_link(slide, short_hash, url, x + 0.25, 4.22, 3.0, 0.3, size=12)
         add_text(slide, result, x + 0.25, 4.82, 3.0, 0.3, size=11, color=GREEN, bold=True)
     add_box(slide, 2.2, 5.85, 8.95, 0.55, fill=GREEN_PALE, line=GREEN_PALE)
-    add_text(slide, "Deposit → KMS draw → private claim → principal withdrawal · all confirmed", 2.35, 6.0, 8.65, 0.28,
+    add_text(slide, "3 deposits → draw 1 → private claim → all exits → participant count 0", 2.35, 6.0, 8.65, 0.28,
              size=12, color=GREEN, bold=True, align=PP_ALIGN.CENTER)
-    add_footer(slide, "Full hashes and runtime evidence: docs/operations/sepolia-deployment.md")
+    add_footer(slide, "Full hashes and runtime evidence: docs/operations/live-prize-lifecycle.md")
 
 
 def slide_9(prs):
@@ -319,8 +319,8 @@ def slide_9(prs):
     add_brand(slide, 9)
     add_title(slide, "Engineering proof", "Reproducible tests—and durable live infrastructure")
     add_box(slide, 0.7, 2.35, 4.1, 3.85, fill=BLUE_DARK, line=BLUE_DARK)
-    add_text(slide, "FULL", 1.0, 2.8, 3.5, 1.0, size=48, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
-    add_text(slide, "VALIDATION SUITE", 1.0, 3.9, 3.5, 0.35, size=10, color=RGBColor(205, 218, 255), bold=True, font=MONO, align=PP_ALIGN.CENTER)
+    add_text(slide, "163", 1.0, 2.8, 3.5, 1.0, size=48, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
+    add_text(slide, "TESTS PASSING", 1.0, 3.9, 3.5, 0.35, size=10, color=RGBColor(205, 218, 255), bold=True, font=MONO, align=PP_ALIGN.CENTER)
     add_text(slide, "Foundry contracts · backend API/indexer\nclient encryption · frontend UX", 1.0, 4.58, 3.5, 1.0, size=13, color=WHITE, align=PP_ALIGN.CENTER, line_spacing=1.2)
     infra = [
         ("Vercel", "React frontend", "Production UI"),
@@ -334,7 +334,7 @@ def slide_9(prs):
         add_text(slide, role, 7.0, y + 0.24, 2.75, 0.32, size=12, color=MUTED)
         add_pill(slide, proof, 10.15, y + 0.33, 1.95, fill=GREEN_PALE, color=GREEN)
     add_box(slide, 5.15, 6.1, 7.45, 0.45, fill=GREEN_PALE, line=GREEN_PALE)
-    add_text(slide, "Indexer checkpoint restored successfully after a live service restart", 5.35, 6.2, 7.0, 0.23, size=10, color=GREEN, bold=True)
+    add_text(slide, "Audit-scope verifier binds source, bytecode, custody and policy across 2 RPCs", 5.35, 6.2, 7.0, 0.23, size=10, color=GREEN, bold=True)
     add_footer(slide)
 
 
@@ -348,9 +348,10 @@ def slide_10(prs):
              0.75, 3.65, 7.1, 0.65, size=17, color=MUTED)
     add_link(slide, "Open the Veylott live demo", APP_URL, 0.75, 4.65, 4.5, 0.36, size=14)
     add_link(slide, "github.com/Webghost01-NG/veylott", "https://github.com/Webghost01-NG/veylott", 0.75, 5.18, 6.6, 0.36, size=11)
+    add_pill(slide, "Unaudited · sponsor-funded · max 12", 0.75, 5.85, 3.25, fill=AMBER_PALE, color=AMBER)
     add_box(slide, 8.6, 1.55, 3.75, 4.65, fill=BLUE_PALE, line=LINE)
     add_text(slide, "ACTIVE POOL", 8.95, 1.95, 2.8, 0.25, size=8, color=BLUE, bold=True, font=MONO)
-    add_text(slide, "0x54FdC46D\n0EA722Ef\nA4853192\n678b35fC\nABFad99C", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
+    add_text(slide, "0x2150d7D8\n2117b927\nDd325393\n5E34f67D\n8B37d424", 8.95, 2.55, 2.8, 2.25, size=18, color=INK, bold=True, font=MONO, line_spacing=1.05)
     add_pill(slide, "Ethereum Sepolia", 8.95, 5.25, 1.6, fill=GREEN_PALE, color=GREEN)
     add_footer(slide, "Veylott · Zama fhEVM · Research deployment")
 

@@ -2,7 +2,7 @@
 
 ## Product
 
-Veylott is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC deposit, position, withdrawal, prize counter, and winning outcome encrypted while selecting a winner over encrypted balance weights.
+Veylott is a confidential prize-savings prototype on Zama fhEVM. It keeps each saver’s cUSDC position, withdrawal amount, prize counter, and draw weight encrypted while performing weighted winner selection over ciphertexts.
 
 - Application: [Veylott live demo](https://veylott-git-feat-veylott-rebrand-webghost01-ngs-projects.vercel.app/)
 - Pool: [`0x2150d7D82117b927Dd3253935E34f67D8B37d424`](https://sepolia.etherscan.io/address/0x2150d7D82117b927Dd3253935E34f67D8B37d424)
@@ -13,25 +13,23 @@ Veylott is a confidential prize-savings prototype on Zama fhEVM. It keeps each s
 
 1. A wallet encrypts a `uint64` deposit for the official cUSDC contract.
 2. `confidentialTransferAndCall` moves cUSDC and passes the actual encrypted result to Veylott.
-3. Veylott updates the user position and aggregate liability homomorphically. The active deployment admits a new draw participant only after a KMS proof verifies the encrypted positive-position predicate.
-4. A sponsor contributes encrypted cUSDC to the Sepolia prize reserve; this is explicitly not presented as generated yield.
-5. Any wallet requests the next cadence-eligible, policy-sized draw, anchoring publicly decryptable aggregate weight and reserve handles while balance mutations are locked.
-6. A KMS proof verifies both aggregate handles. `FHE.randEuint64` and encrypted cumulative intervals award the prize without revealing the winning address.
-7. Each saver can privately reveal only their own prize counter; a winner claims through the same encrypted withdrawal path as principal, so the public call does not identify whether withdrawn value was winnings or savings.
-8. A saver withdraws directly with an encrypted amount; Veylott and cUSDC update both sides using the actual encrypted transfer result.
+3. Veylott updates encrypted positions and liabilities. A KMS proof of a positive position activates a bounded participant slot without revealing the amount.
+4. A sponsor contributes encrypted cUSDC to the Sepolia prize reserve; this is not presented as generated yield.
+5. Any wallet requests a cadence-eligible, fixed-prize draw. Position-changing writes remain locked while settlement is pending.
+6. The KMS publicly decrypts only a proof-bound readiness predicate. If true, `FHE.randEuint64` and encrypted cumulative intervals select a winner without disclosing aggregate weight, reserve, or winner.
+7. A saver privately reveals only their own prize counter. A winner claims through the ordinary encrypted withdrawal path, so public calls do not label prize claims.
+8. Direct withdrawals use encrypted amounts, and accounting follows the token-returned transfer result.
 
-## Evidence
+## Verified Evidence
 
-- The active readiness-only runtime is 14,855 bytes and matches hash `0x38dcfee7fcbecb12f8be9c4d73c596e7f9bc1b0a3d910e49cc8d8a3cc7af4ed4`.
-- The active pool completed a real three-wallet encrypted round: [request](https://sepolia.etherscan.io/tx/0x7d49133e11b8685a080ee3303ecedbd3ebd4441b5631922c4ba6ad87cc56bf54), [readiness-only KMS finalization](https://sepolia.etherscan.io/tx/0x0970fff858788dcbf926730c495fac1bd9ded55114d730aeae0c20b9d642b320), [private winner claim](https://sepolia.etherscan.io/tx/0xb8f29170094ac40f14df409838a08b5303265d6a3b6988a49a7f796db33fd50a), all principal exits, and participant-slot reclamation back to zero.
-- Predecessor pool `0x9c939b82…191e0` completed a real encrypted 0.5 cUSDC deposit, KMS-finalized weighted draw, private winner check, indistinguishable prize claim, and principal withdrawal before the permissionless-finalization migration.
-- Draw 1 finalized with verified weight and prize of 500,000 base units; authorized post-settlement KMS decryption returned a zero private position and zero prize counter.
-- Full transaction evidence is recorded in [the Sepolia operations guide](../operations/sepolia-deployment.md).
+- The deployed runtime is 14,855 bytes with hash `0x38dcfee7fcbecb12f8be9c4d73c596e7f9bc1b0a3d910e49cc8d8a3cc7af4ed4`.
+- Three separately keyed wallets deposited 0.1 cUSDC each and completed a real active-pool round. This demonstrates multi-key behavior; it is not represented as three independent human testers.
+- The sponsor [funded 0.5 cUSDC](https://sepolia.etherscan.io/tx/0x30d5b85a4e51c495b4e92ecab20b922328c6fc6dc7715479eef5ec073dc8363b), a wallet [requested draw 1](https://sepolia.etherscan.io/tx/0x7d49133e11b8685a080ee3303ecedbd3ebd4441b5631922c4ba6ad87cc56bf54), the KMS [finalized readiness-only settlement](https://sepolia.etherscan.io/tx/0x0970fff858788dcbf926730c495fac1bd9ded55114d730aeae0c20b9d642b320), and the winner [claimed privately](https://sepolia.etherscan.io/tx/0xb8f29170094ac40f14df409838a08b5303265d6a3b6988a49a7f796db33fd50a).
+- All three principals exited, zero-position proofs reclaimed all participant slots, and authorized post-settlement KMS checks returned zero pool position and zero prize for each test wallet.
+- All receipt hashes, blocks, retry evidence, and exit transactions are in the [live lifecycle record](../operations/live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle).
 
-## Data Integrity
+## Data Integrity and Limitations
 
-The chain ID, reviewed contract addresses, deployment block, runtime hash, token metadata, and explorer URL are intentionally pinned deployment identifiers—not simulated application data. Live pool state comes from the verified contract or read-only indexer, and unavailable sources remain visibly unavailable rather than falling back to sample balances. Synthetic addresses appear only in automated tests. RPC, database, signing, and deployment credentials stay in ignored environment files or external secret stores.
+Deployment identifiers are pinned, not sample data. Live state comes from the reviewed contract or read-only indexer; unavailable data remains unavailable. Secrets stay in ignored files or external secret stores.
 
-## Submission Readiness
-
-Contract custody is ERC-7984-native. The placeholder vault that mislabeled donated tokens as yield has been removed. Sepolia prizes use the truthful sponsor-reserve fallback documented in [the funding model](../operations/reserve-funding.md); production yield requires a compatible audited confidential batcher route. The current screenshot, presentation, and captioned walkthrough were refreshed against the active deployment on 4 September 2026. A final human-presented walkthrough is still recommended for bounty submission so judges can see wallet prompts and receipts without any simulated interaction.
+This is unaudited research software using test assets. Sepolia prizes are sponsor-funded because the official cUSDC wrapper does not match a verified Sepolia yield venue. Winner selection is intentionally capped at 12 active participants. Independent human wallet/device QA remains open. The final screenshots, deck, and captioned walkthrough were refreshed against the canonical deployment on 5 September 2026.
