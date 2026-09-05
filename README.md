@@ -41,6 +41,8 @@ Deposits use `confidentialTransferAndCall`. The pool credits the encrypted amoun
 
 The Sepolia prize reserve is explicitly sponsor-funded. The official Zama cUSDCMock wraps `0x9b5C...DFfF`, whereas Aave Sepolia’s deployed USDC market uses `0x94a9...E4C8`; treating either a passive token holder or an unrelated Aave position as pool yield would be false. The rejected strategy and production path are documented in [the reserve funding model](docs/operations/reserve-funding.md).
 
+The active deployment has completed a real three-wallet round: three encrypted deposits, a readiness-only KMS settlement, one private winner reveal and ordinary withdrawal claim, three principal exits, and proof-bound participant-slot reclamation back to zero. Every confirmed receipt and the observed activation-retry path are recorded in the [live lifecycle evidence](docs/operations/live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle).
+
 ## Live Sepolia Deployment
 
 | Component | Address |

@@ -51,7 +51,9 @@ Pool `0x9c939b82a1B23b77746f934A1Ff2b9a5bCf191e0` completed the full real flow b
 
 ## Runtime Activation
 
-The backend uses `INDEXER_START_BLOCK=11636641` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. The active deployment starts with no participants, reserve, or finalized rounds; historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation and zero-balance slot reclamation are active in this runtime.
+The backend uses `INDEXER_START_BLOCK=11636641` and namespaces its checkpoint by chain ID plus lowercased pool address. The frontend and backend were independently verified against the address, custody asset, and runtime hash above before writes were enabled. Historical predecessor receipts are not copied into its live indexer state. KMS-verified positive-position activation and zero-balance slot reclamation are active in this runtime.
+
+On 5 September 2026, the active pool completed draw 1 over three separately keyed wallets. The reserve funding, deposits, readiness-only KMS finalization, private winner claim, principal withdrawals, and return to zero active participants are linked in the [active-deployment lifecycle](live-prize-lifecycle.md#completed-active-deployment-three-wallet-lifecycle).
 
 Frontend public reads use the comma-separated `VITE_SEPOLIA_RPC_URLS` list and require at least two HTTPS endpoints. These endpoints are independent of the injected wallet. The reviewed `VITE_POOL_RUNTIME_CODE_HASH` selects the `readiness-v2` ABI; unknown bytecode fails closed instead of trying an assumed ABI. A connected wallet must independently see the same runtime on chain ID `11155111` before transactions are enabled. The deployed creation input exactly matches the local initcode plus constructor arguments, and four independent RPCs returned the same runtime hash.
 
