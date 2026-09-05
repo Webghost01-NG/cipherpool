@@ -1,6 +1,13 @@
 # Evidence-Linked X Thread
 
-Publish as a nine-post thread. Attach `presentation/assets/live-dashboard.png` to post 1 and export page 8 of `presentation/Veylott-Presentation.pdf` for post 6.
+Publish as a nine-post thread. Download the prepared attachments from [`x-thread-assets/`](x-thread-assets/):
+
+- Post 1: `01-live-product.png`
+- Post 3: `02-architecture.png`
+- Post 4: `03-security-controls.png`
+- Post 6: `04-verified-live-round.png`
+- Post 8: `05-engineering-proof.png`
+- Post 9: `06-project-links.png`
 
 ## 1/9
 
