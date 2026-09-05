@@ -45,6 +45,8 @@ The active deployment has completed a real three-wallet round: three encrypted d
 
 Production rendering is reproducibly captured at desktop, tablet, and mobile widths in the [real-wallet and cross-device QA matrix](docs/qa/real-wallet-e2e-matrix.md). The matrix distinguishes confirmed live-chain activity from deterministic wallet tests and keeps independent tester steps visibly open.
 
+The contracts are not independently audited. The [external audit package](docs/audit/README.md) freezes the exact deployed source/hash, removes stale sign-off claims, maps current threats, and supplies reproducible verification for a qualified reviewer.
+
 ## Live Sepolia Deployment
 
 | Component | Address |

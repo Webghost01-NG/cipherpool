@@ -21,6 +21,19 @@ contract SponsorReserveTest is ConfidentialPoolTestBase, IPoolErrors {
         assertTrue(pool.getPrizeReserveHandle() != bytes32(0));
     }
 
+    function test_SubsequentSponsorFundingAccumulatesEncryptedReserve() public {
+        _fundReserve(sponsor, 600);
+        bytes32 firstReserveHandle = pool.getPrizeReserveHandle();
+
+        _fundReserve(sponsor, 400);
+
+        assertTrue(pool.getPrizeReserveHandle() != firstReserveHandle);
+        _deposit(saver, 10_000);
+        pool.requestDraw(DRAW_PRIZE);
+        pool.finalizeDraw(true, _drawReadinessProof(true));
+        assertTrue(pool.lastDrawReady());
+    }
+
     function test_ZeroTokenTransferCannotCreateSpendableReserve() public {
         _deposit(saver, 10_000);
         token.setForceZeroIncomingTransfer(true);
