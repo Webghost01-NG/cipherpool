@@ -1,0 +1,46 @@
+{
+  "project": "Veylott",
+  "status": "unaudited",
+  "network": {
+    "name": "Ethereum Sepolia",
+    "chainId": 11155111
+  },
+  "source": {
+    "repository": "https://github.com/Webghost01-NG/veylott",
+    "contractCommit": "92a51ab869e706a3b53e3be63d411b01eb06ac09",
+    "compiler": "0.8.27",
+    "optimizer": true,
+    "optimizerRuns": 200
+  },
+  "deployment": {
+    "poolAddress": "0x2150d7D82117b927Dd3253935E34f67D8B37d424",
+    "runtimeCodeHash": "0x38dcfee7fcbecb12f8be9c4d73c596e7f9bc1b0a3d910e49cc8d8a3cc7af4ed4",
+    "transactionHash": "0x89f75d0986b7d4bd5000a5e72acec640cfd32d00c09f78f96a060087f48a19f0",
+    "blockNumber": 11636641,
+    "custodyAsset": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+    "owner": "0xF19125e08AFC9502DCde60703c1E24C334902356",
+    "cancellationDelaySeconds": 86400,
+    "drawIntervalSeconds": 604800,
+    "fixedPrizeBaseUnits": 500000,
+    "maximumParticipants": 12
+  },
+  "inScope": [
+    "contracts/ConfidentialPool.sol",
+    "contracts/interfaces/IConfidentialPool.sol",
+    "contracts/interfaces/IERC7984.sol",
+    "contracts/interfaces/IERC7984Receiver.sol",
+    "contracts/interfaces/IPoolErrors.sol",
+    "contracts/interfaces/IPoolEvents.sol",
+    "contracts/interfaces/IPoolTypes.sol",
+    "script/DeploySepolia.s.sol",
+    "foundry.toml"
+  ],
+  "outOfScope": [
+    "unused legacy contracts/base/RequestBindingState.sol and its isolated regression test",
+    "frontend and backend application code",
+    "Vercel, Render, RPC, and database infrastructure",
+    "Zama protocol contracts and KMS/coprocessor implementation",
+    "upgradeable official cUSDCMock implementation",
+    "production yield strategy, which is not implemented"
+  ]
+}

@@ -41,6 +41,17 @@ contract DrawLotteryTest is ConfidentialPoolTestBase, IPoolErrors {
         assertEq(pool.nextDrawRequestTimestamp(), requestedAt + DRAW_INTERVAL);
     }
 
+    function test_RevertWhen_RequestAlreadyPending() public {
+        _deposit(alice, 10_000);
+        _fundReserve(sponsor, 1_000);
+        pool.requestDraw(DRAW_PRIZE);
+        bytes32 requestHash = pool.getPendingDraw().requestHash;
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(ActiveDrawRequestExists.selector, requestHash));
+        pool.requestDraw(DRAW_PRIZE);
+    }
+
     function test_RevertWhen_RequestBeforeNextCadenceWindow() public {
         _deposit(alice, 10_000);
         _fundReserve(sponsor, 2_000);

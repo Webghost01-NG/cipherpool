@@ -15,6 +15,7 @@
     "verify:frontend-bundle": "node scripts/verify-frontend-bundle.mjs",
     "verify:yield-route": "node scripts/verify-sepolia-yield-route.mjs",
     "qa:live-ui": "node scripts/capture-live-ui.mjs",
+    "verify:audit-scope": "node scripts/verify-audit-scope.mjs",
     "test:frontend": "tsx --test frontend/test/*.test.ts",
     "fund:sponsor-reserve": "tsx scripts/fund-sponsor-reserve.ts",
     "lifecycle:sepolia": "tsx scripts/live-prize-lifecycle.ts"
